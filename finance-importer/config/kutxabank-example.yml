@@ -1,0 +1,37 @@
+# Configuración privada: indica el nombre accesible de la cuenta que grabó codegen.
+finance:
+  importer:
+    jobs:
+      kutxabank-excel:
+        product-id: account-main
+        provider: KUTXABANK
+        input-file: ./private/movimientos.xls
+      kutxabank-card-excel:
+        product-id: card-main
+        provider: KUTXABANK
+        input-file: ./private/card-movimientos.xls
+      kutxabank-card-browser:
+        product-id: card-main
+        provider: KUTXABANK
+        export-key: tarjeta
+      kutxabank-browser:
+        product-id: account-main
+        provider: KUTXABANK
+        export-key: cuenta-principal
+  browser:
+    enabled: true
+    channel: chrome
+    providers:
+      KUTXABANK:
+        login-url: https://clientes.kutxabank.es/
+        exports:
+          cuenta-principal:
+            flow: KUTXABANK_ACCOUNT
+            account-name: 2095 0537 90
+            from: 2026-09-01
+            to: 2026-10-01
+          tarjeta:
+            flow: KUTXABANK_CARD
+            card-name: 4921074096005205
+            from: 2026-09-01
+            to: 2026-10-01

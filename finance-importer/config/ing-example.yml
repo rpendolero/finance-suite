@@ -1,0 +1,36 @@
+finance:
+  importer:
+    jobs:
+      ing-excel:
+        product-id: ing-main
+        provider: ING
+        input-file: ./private/movements.xls
+      ing-browser:
+        product-id: ing-main
+        provider: ING
+        export-key: cuenta-principal
+      ing-credit-excel:
+        product-id: ing-credit
+        provider: ING
+        input-file: ./private/credit-movements.xls
+      ing-credit-browser:
+        product-id: ing-credit
+        provider: ING
+        export-key: tarjeta-credito
+  browser:
+    enabled: true
+    channel: chrome
+    providers:
+      ING:
+        login-url: https://www.ing.es/
+        exports:
+          cuenta-principal:
+            flow: ING_ACCOUNT
+            account-name:  Cuenta NÓMINA  Terminada en 8258.
+            from: 2026-09-01
+            to: 2026-10-01
+          tarjeta-credito:
+            flow: ING_CREDIT_CARD
+            card-name: Tarjeta Crédito Terminada en 0096
+            from: 2026-09-01
+            to: 2026-10-01

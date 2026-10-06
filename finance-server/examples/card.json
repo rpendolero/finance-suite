@@ -1,0 +1,11 @@
+{
+  "id": "card-main",
+  "name": "Tarjeta (demo)",
+  "type": "CREDIT_CARD",
+  "currency": "EUR",
+  "balance": -150.0,
+  "balanceAt": "2026-10-02T06:00:00Z",
+  "linkedAccountId": "account-main",
+  "creditLimit": 2000.0,
+  "provider": "KUTXABANK"
+}

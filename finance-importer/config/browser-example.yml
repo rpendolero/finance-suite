@@ -1,0 +1,26 @@
+# Copia a config/browser.yml tras verificar URLs y selectores. Perfiles aislados por proveedor.
+finance:
+  browser:
+    enabled: true
+    providers:
+      KUTXABANK:
+        login-url: https://clientes.kutxabank.es/
+        exports:
+          cuenta-principal:
+            url: ${KUTXABANK_ACCOUNT_EXPORT_URL}
+            authenticated-selector: ${KUTXABANK_AUTHENTICATED_SELECTOR}
+            export-selector: ${KUTXABANK_ACCOUNT_EXPORT_SELECTOR}
+      ING:
+        login-url: https://www.ing.es/
+        exports:
+          cuenta-principal:
+            url: ${ING_ACCOUNT_EXPORT_URL}
+            authenticated-selector: ${ING_AUTHENTICATED_SELECTOR}
+            export-selector: ${ING_ACCOUNT_EXPORT_SELECTOR}
+      PAYPAL:
+        login-url: https://www.paypal.com/signin
+        exports:
+          actividad:
+            url: ${PAYPAL_ACTIVITY_EXPORT_URL}
+            authenticated-selector: ${PAYPAL_AUTHENTICATED_SELECTOR}
+            export-selector: ${PAYPAL_ACTIVITY_EXPORT_SELECTOR}

@@ -1,0 +1,26 @@
+# Se interpreta desde el directorio finance-importer. Selecciona un trabajo por ejecución.
+finance:
+  importer:
+    jobs:
+      demo-account:
+        product-id: account-main
+        provider: KUTXABANK
+        input-file: ../finance-server/examples/account.csv
+        product-file: ../finance-server/examples/account.json
+      demo-card:
+        product-id: card-main
+        provider: KUTXABANK
+        input-file: ../finance-server/examples/card.csv
+        product-file: ../finance-server/examples/card.json
+      kutxabank-account:
+        product-id: account-main
+        provider: KUTXABANK
+        export-key: cuenta-principal
+      ing-account:
+        product-id: ing-main
+        provider: ING
+        export-key: cuenta-principal
+      paypal:
+        product-id: paypal-wallet
+        provider: PAYPAL
+        export-key: actividad

@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.finance</groupId>
+    <artifactId>finance-suite</artifactId>
+    <version>0.4.3</version>
+  </parent>
+  <artifactId>finance-domain</artifactId>
+</project>

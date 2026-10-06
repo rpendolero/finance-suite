@@ -1,0 +1,7 @@
+target/
+../.env
+private/
+*.log
+.idea/
+node_modules/
+config/browser.yml

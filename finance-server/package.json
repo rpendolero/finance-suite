@@ -1,0 +1,12 @@
+{
+  "name": "finance-openclaw-bridge",
+  "private": true,
+  "type": "module",
+  "version": "0.4.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.27.1"
+  }
+}

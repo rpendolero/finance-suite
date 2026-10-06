@@ -1,0 +1,9 @@
+{
+  "id": "account-main",
+  "name": "Cuenta principal (demo)",
+  "type": "ACCOUNT",
+  "currency": "EUR",
+  "balance": 5000.0,
+  "balanceAt": "2026-10-02T06:00:00Z",
+  "provider": "KUTXABANK"
+}
