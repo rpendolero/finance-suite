@@ -1,4 +1,6 @@
-# Finance Suite 0.4.5
+# Finance Suite 0.4.6
+
+Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
 Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
@@ -168,7 +170,7 @@ Quedan pendientes las exportaciones anonimizadas de Kutxabank/ING/PayPal para ad
 ## Actualización 0.2.2: cuentas ING
 
 Adaptador XLS real y recorrido Chrome de cuenta NÓMINA. Consulta
-`finance-importer/README.md` y `finance-importer/config/ing-example.yml`.
+`finance-importer/README.md` y `finance-importer/config/ing.yml`.
 La descarga requiere validación en el equipo del usuario. Ahora incluye el XLS
 y el recorrido separado de tarjeta de crédito ING; no incluye tarjeta de débito.
 
