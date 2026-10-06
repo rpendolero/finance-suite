@@ -9,11 +9,18 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "product")
+@Table(name = "product", uniqueConstraints =
+    @UniqueConstraint(name = "uk_product_provider_external", columnNames = {"provider", "external_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
 public class ProductEntity {
+  @Column(name = "external_id", length = 160)
+  private String externalId;
+
+  @Column(name = "masked_pan", length = 9)
+  private String maskedPan;
+
   @Id
   @Column(length = 64)
   private String id;

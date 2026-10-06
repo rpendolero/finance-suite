@@ -33,8 +33,32 @@ public class JpaLedgerAdapter implements LedgerPort {
 
   @Transactional
   public void saveProduct(Product product) {
-    entities.find(ProductEntity.class, product.id(), LockModeType.PESSIMISTIC_WRITE);
-    entities.merge(mapper.toEntity(product));
+    var existing = entities.find(ProductEntity.class, product.id(), LockModeType.PESSIMISTIC_WRITE);
+    var incoming = mapper.toEntity(product);
+    if (existing != null) {
+      if (existing.getProvider() != product.provider() || existing.getType() != product.type())
+        throw new IllegalArgumentException("No reutilices el ID de un producto para otro banco o tipo");
+      if (existing.getExternalId() != null && product.externalId() != null
+          && !existing.getExternalId().equals(product.externalId()))
+        throw new IllegalArgumentException("No reutilices el ID de un producto para otra referencia bancaria");
+      // Older snapshots omit these optional fields; keep the registered identity.
+      if (incoming.getExternalId() == null) incoming.setExternalId(existing.getExternalId());
+      if (incoming.getMaskedPan() == null) incoming.setMaskedPan(existing.getMaskedPan());
+    }
+    if (incoming.getExternalId() != null && !entities.createQuery(
+        "select p.id from ProductEntity p where p.provider = :provider"
+            + " and p.externalId = :externalId and p.id <> :id", String.class)
+        .setParameter("provider", product.provider())
+        .setParameter("externalId", incoming.getExternalId())
+        .setParameter("id", product.id()).getResultList().isEmpty())
+      throw new IllegalArgumentException("La referencia bancaria ya está registrada con otro ID");
+    if (product.linkedAccountId() != null) {
+      var account = entities.find(ProductEntity.class, product.linkedAccountId());
+      if (account == null || account.getType() != Product.ProductType.ACCOUNT
+          || account.getProvider() != product.provider())
+        throw new IllegalArgumentException("La cuenta vinculada debe existir y pertenecer al mismo banco");
+    }
+    entities.merge(incoming);
     entities.flush();
     log.debug("Product snapshot persisted using JPA");
   }

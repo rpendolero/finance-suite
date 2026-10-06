@@ -6,12 +6,18 @@ import static org.mockito.Mockito.*;
 import com.finance.domain.Product;
 import com.finance.importer.application.port.*;
 import com.finance.importer.application.service.ImporterService;
+import com.finance.importer.application.service.ImportCleanupService;
+import com.finance.importer.infrastructure.adapter.file.LocalFileCleanupAdapter;
 import java.nio.file.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class ImporterServiceTest {
   @TempDir Path dir;
+
+  private ImportCleanupService cleanup() {
+    return new ImportCleanupService(new LocalFileCleanupAdapter());
+  }
 
   @Test
   void sendsConvertedCsvAndKeepsManualOriginal() throws Exception {
@@ -22,7 +28,7 @@ class ImporterServiceTest {
     var preparation = mock(StatementPreparationPort.class);
     when(preparation.prepare(original, Product.Provider.ING)).thenReturn(converted);
     when(remote.upload("a", converted, null)).thenReturn(new IngestionPort.Result(1, 1, 0));
-    new ImporterService(bank, remote, preparation)
+    new ImporterService(bank, remote, preparation, cleanup())
         .execute(new ImporterService.Job("a", Product.Provider.ING, null, original, null));
     assertThat(original).exists();
     assertThat(converted).doesNotExist();
@@ -37,7 +43,7 @@ class ImporterServiceTest {
     var preparation = mock(StatementPreparationPort.class, CALLS_REAL_METHODS);
     when(bank.download(Product.Provider.ING, "account")).thenReturn(file);
     when(remote.upload("a", file, null)).thenReturn(new IngestionPort.Result(1, 1, 0));
-    new ImporterService(bank, remote, preparation)
+    new ImporterService(bank, remote, preparation, cleanup())
         .execute(new ImporterService.Job("a", Product.Provider.ING, "account", null, null));
     assertThat(file).doesNotExist();
     verify(preparation).validate(file);
@@ -53,7 +59,7 @@ class ImporterServiceTest {
     assertThatThrownBy(
             () ->
                 new ImporterService(
-                        bank, remote, mock(StatementPreparationPort.class, CALLS_REAL_METHODS))
+                        bank, remote, mock(StatementPreparationPort.class, CALLS_REAL_METHODS), cleanup())
                     .execute(
                         new ImporterService.Job("a", Product.Provider.ING, "account", null, null)))
         .isInstanceOf(IllegalStateException.class);
@@ -66,7 +72,7 @@ class ImporterServiceTest {
     var bank = mock(BankDownloadPort.class);
     var remote = mock(IngestionPort.class);
     when(remote.upload("a", file, null)).thenReturn(new IngestionPort.Result(1, 1, 0));
-    new ImporterService(bank, remote, mock(StatementPreparationPort.class, CALLS_REAL_METHODS))
+    new ImporterService(bank, remote, mock(StatementPreparationPort.class, CALLS_REAL_METHODS), cleanup())
         .execute(new ImporterService.Job("a", Product.Provider.PAYPAL, null, file, null));
     assertThat(file).exists();
     verifyNoInteractions(bank);

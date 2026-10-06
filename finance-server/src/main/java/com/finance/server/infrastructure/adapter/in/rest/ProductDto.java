@@ -20,6 +20,13 @@ public class ProductDto {
   @Size(max = 100)
   private String name;
 
+  @Size(max = 160)
+  @Pattern(regexp = ".*\\S.*")
+  private String externalId;
+
+  @Pattern(regexp = "\\*{4} [0-9]{4}")
+  private String maskedPan;
+
   @NotNull private ProductType type;
 
   @NotBlank

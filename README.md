@@ -1,3 +1,7 @@
+# Finance Suite 0.4.4
+
+Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
+
 # Finance Suite 0.4.0 — importación local y análisis remoto
 
 Dos aplicaciones Java 21 independientes, con arquitectura hexagonal:

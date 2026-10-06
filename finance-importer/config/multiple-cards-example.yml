@@ -1,0 +1,15 @@
+# Desde finance-importer. Registra primero account-main en el servidor.
+# Cada archivo debe corresponder a la tarjeta indicada; no se detecta su identidad por OCR.
+finance:
+  importer:
+    jobs:
+      kutxa-card-a:
+        product-id: kutxa-card-a
+        provider: KUTXABANK
+        input-file: ./private/card-a.xls
+        product-file: ../finance-server/examples/card-a.json
+      kutxa-card-b:
+        product-id: kutxa-card-b
+        provider: KUTXABANK
+        input-file: ./private/card-b.xls
+        product-file: ../finance-server/examples/card-b.json
