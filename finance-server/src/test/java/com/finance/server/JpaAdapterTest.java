@@ -173,6 +173,34 @@ class JpaAdapterTest {
         null, "**** 1234")).isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  void duplicateWithinOneBatchIsCountedOnceAndPromotesPending() {
+    ledger.saveProduct(product("batch-account", Product.Provider.ING));
+    var date = LocalDate.of(2026, 10, 1);
+    var booked = movement("batch-account", "same-reference", "-10.00", date);
+    var pending = new Movement(UUID.randomUUID().toString(), booked.productId(),
+        booked.externalId(), booked.date(), booked.amount(), booked.currency(),
+        booked.description(), booked.merchant(), booked.category(), booked.kind(), Movement.Status.PENDING);
+    assertThat(ledger.insert(List.of(pending, booked))).isOne();
+    assertThat(ledger.movements(new com.finance.domain.Period(date, date), "batch-account"))
+        .singleElement().extracting(Movement::status).isEqualTo(Movement.Status.BOOKED);
+  }
+
+  @Test
+  void repositoryQueriesPreserveInclusiveDatesAndOrdering() {
+    ledger.saveProduct(product("range-account", Product.Provider.ING));
+    var from = LocalDate.of(2026, 10, 1);
+    var to = from.plusDays(2);
+    ledger.insert(List.of(movement("range-account", "last", "-1.00", to),
+        movement("range-account", "first", "-1.00", from),
+        movement("range-account", "outside", "-1.00", to.plusDays(1))));
+    var period = new com.finance.domain.Period(from, to);
+    assertThat(ledger.movements(period, "range-account")).extracting(Movement::externalId)
+        .containsExactly("first", "last");
+    assertThat(ledger.movements(period, "")).extracting(Movement::externalId)
+        .containsExactly("first", "last");
+  }
+
   private Product card(String id, String externalId, String maskedPan) {
     return new Product(id, id, Product.ProductType.CREDIT_CARD, "EUR",
         new BigDecimal("-100.00"), Instant.parse("2026-10-02T06:00:00Z"),

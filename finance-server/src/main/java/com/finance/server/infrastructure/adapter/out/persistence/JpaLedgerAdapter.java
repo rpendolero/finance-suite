@@ -1,10 +1,15 @@
 package com.finance.server.infrastructure.adapter.out.persistence;
 
-import com.finance.domain.*;
+import com.finance.domain.Movement;
+import com.finance.domain.Period;
+import com.finance.domain.Product;
 import com.finance.server.application.port.LedgerPort;
-import com.finance.server.infrastructure.adapter.out.persistence.entity.*;
-import jakarta.persistence.*;
-import java.util.*;
+import com.finance.server.infrastructure.adapter.out.persistence.entity.MovementEntity;
+import com.finance.server.infrastructure.adapter.out.persistence.entity.ProductEntity;
+import com.finance.server.infrastructure.adapter.out.persistence.repository.MovementRepository;
+import com.finance.server.infrastructure.adapter.out.persistence.repository.ProductRepository;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -15,134 +20,254 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Transactional(readOnly = true)
 public class JpaLedgerAdapter implements LedgerPort {
-  private final EntityManager entities;
+
+  private static final String PRODUCT_NOT_FOUND = "Producto inexistente";
+
+  private final ProductRepository productRepository;
+  private final MovementRepository movementRepository;
   private final PersistenceMapper mapper;
 
+  @Override
   public List<Product> products() {
-    return entities
-        .createQuery("select p from ProductEntity p order by p.id", ProductEntity.class)
-        .getResultList()
-        .stream()
-        .map(mapper::toDomain)
-        .toList();
+    return productRepository.findAllByOrderByIdAsc()
+            .stream()
+            .map(mapper::toDomain)
+            .toList();
   }
 
+  @Override
   public Optional<Product> product(String id) {
-    return Optional.ofNullable(entities.find(ProductEntity.class, id)).map(mapper::toDomain);
+    return productRepository.findById(id)
+            .map(mapper::toDomain);
   }
 
+  @Override
   @Transactional
   public void saveProduct(Product product) {
-    var existing = entities.find(ProductEntity.class, product.id(), LockModeType.PESSIMISTIC_WRITE);
-    var incoming = mapper.toEntity(product);
-    if (existing != null) {
-      if (existing.getProvider() != product.provider() || existing.getType() != product.type())
-        throw new IllegalArgumentException("No reutilices el ID de un producto para otro banco o tipo");
-      if (existing.getExternalId() != null && product.externalId() != null
-          && !existing.getExternalId().equals(product.externalId()))
-        throw new IllegalArgumentException("No reutilices el ID de un producto para otra referencia bancaria");
-      // Older snapshots omit these optional fields; keep the registered identity.
-      if (incoming.getExternalId() == null) incoming.setExternalId(existing.getExternalId());
-      if (incoming.getMaskedPan() == null) incoming.setMaskedPan(existing.getMaskedPan());
-    }
-    if (incoming.getExternalId() != null && !entities.createQuery(
-        "select p.id from ProductEntity p where p.provider = :provider"
-            + " and p.externalId = :externalId and p.id <> :id", String.class)
-        .setParameter("provider", product.provider())
-        .setParameter("externalId", incoming.getExternalId())
-        .setParameter("id", product.id()).getResultList().isEmpty())
-      throw new IllegalArgumentException("La referencia bancaria ya está registrada con otro ID");
-    if (product.linkedAccountId() != null) {
-      var account = entities.find(ProductEntity.class, product.linkedAccountId());
-      if (account == null || account.getType() != Product.ProductType.ACCOUNT
-          || account.getProvider() != product.provider())
-        throw new IllegalArgumentException("La cuenta vinculada debe existir y pertenecer al mismo banco");
-    }
-    entities.merge(incoming);
-    entities.flush();
-    log.debug("Product snapshot persisted using JPA");
+    ProductEntity incoming = mapper.toEntity(product);
+
+    productRepository.findByIdForUpdate(product.id())
+            .ifPresent(existing -> mergeAndValidate(existing, incoming, product));
+
+    validateExternalIdUniqueness(product, incoming);
+    validateLinkedAccount(product);
+
+    productRepository.saveAndFlush(incoming);
+
+    log.debug(
+            "Product persisted: id={}, provider={}, type={}",
+            product.id(),
+            product.provider(),
+            product.type());
   }
 
+  @Override
   public List<Movement> movements(Period period, String productId) {
-    boolean filtered = productId != null && !productId.isBlank();
-    var query =
-        entities
-            .createQuery(
-                "select m from MovementEntity m where m.bookingDate between :from and :to"
-                    + (filtered ? " and m.productId = :productId" : "")
-                    + " order by m.bookingDate, m.id",
-                MovementEntity.class)
-            .setParameter("from", period.from())
-            .setParameter("to", period.to());
-    if (filtered) query.setParameter("productId", productId);
-    return query.getResultList().stream().map(mapper::toDomain).toList();
+    List<MovementEntity> entities =
+            hasText(productId)
+                    ? movementRepository
+                    .findByProductIdAndBookingDateBetweenOrderByBookingDateAscIdAsc(
+                            productId, period.from(), period.to())
+                    : movementRepository
+                    .findByBookingDateBetweenOrderByBookingDateAscIdAsc(
+                            period.from(), period.to());
+
+    return entities.stream()
+            .map(mapper::toDomain)
+            .toList();
   }
 
+  @Override
   @Transactional
   public int insert(List<Movement> movements) {
+    if (movements.isEmpty()) {
+      return 0;
+    }
+
     lockProducts(movements);
+
     int inserted = 0;
-    for (var movement : movements) {
-      var existing =
-          entities
-              .createQuery(
-                  "select m from MovementEntity m where m.productId = :productId and m.externalId ="
-                      + " :externalId",
-                  MovementEntity.class)
-              .setParameter("productId", movement.productId())
-              .setParameter("externalId", movement.externalId())
-              .getResultList();
-      if (existing.isEmpty()) {
-        entities.persist(mapper.toEntity(movement));
+
+    for (Movement movement : movements) {
+      if (insertOrReconcile(movement)) {
         inserted++;
-      } else {
-        reconcile(existing.getFirst(), movement);
       }
     }
-    entities.flush();
+
+    movementRepository.flush();
+
     log.debug(
-        "JPA batch processed: read={}, inserted={}, duplicates={}",
-        movements.size(),
-        inserted,
-        movements.size() - inserted);
+            "JPA batch processed: read={}, inserted={}, duplicates={}",
+            movements.size(),
+            inserted,
+            movements.size() - inserted);
+
     return inserted;
   }
 
-  private void lockProducts(List<Movement> movements) {
-    // Serialize imports per product; sort locks to avoid cross-product lock inversion.
-    for (String id : movements.stream().map(Movement::productId).distinct().sorted().toList())
-      if (entities.find(ProductEntity.class, id, LockModeType.PESSIMISTIC_WRITE) == null)
-        throw new IllegalArgumentException("Producto inexistente");
-  }
-
-  private void reconcile(MovementEntity existing, Movement incoming) {
-    if (!existing.getBookingDate().equals(incoming.date())
-        || existing.getAmount().compareTo(incoming.amount()) != 0
-        || !existing.getDescription().equals(incoming.description()))
-      throw new IllegalArgumentException(
-          "Identificador bancario reutilizado con datos diferentes: revisar importación");
-    if (existing.getStatus() == Movement.Status.PENDING
-        && incoming.status() == Movement.Status.BOOKED) existing.setStatus(Movement.Status.BOOKED);
-  }
-
+  @Override
   @Transactional
   public void classify(String id, String category, Movement.Kind kind) {
-    var movement = entities.find(MovementEntity.class, id);
-    if (movement == null) throw new IllegalArgumentException("Movimiento inexistente");
+    MovementEntity movement = movementRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Movimiento inexistente: " + id));
+
     movement.setCategory(category);
     movement.setKind(kind);
+
+    // No save() required: entity is managed by JPA.
   }
 
+  @Override
   @Transactional
   public void deleteProduct(String id) {
-    var product = entities.find(ProductEntity.class, id, LockModeType.PESSIMISTIC_WRITE);
-    if (product == null) return;
-    entities
-        .createQuery("delete from MovementEntity m where m.productId = :id")
-        .setParameter("id", id)
-        .executeUpdate();
-    entities.remove(product);
-    entities.flush();
-    log.debug("Product and associated movements deleted using JPA");
+    productRepository.findByIdForUpdate(id)
+            .ifPresent(product -> {
+              movementRepository.deleteAllByProductId(id);
+              productRepository.delete(product);
+              productRepository.flush();
+
+              log.debug("Product and associated movements deleted: id={}", id);
+            });
+  }
+
+  private boolean insertOrReconcile(Movement movement) {
+    return movementRepository
+            .findByProductIdAndExternalId(
+                    movement.productId(),
+                    movement.externalId())
+            .map(existing -> {
+              reconcile(existing, movement);
+              return false;
+            })
+            .orElseGet(() -> {
+              movementRepository.save(mapper.toEntity(movement));
+              return true;
+            });
+  }
+
+  private void lockProducts(List<Movement> movements) {
+    movements.stream()
+            .map(Movement::productId)
+            .distinct()
+            .sorted()
+            .forEach(this::lockProduct);
+  }
+
+  private void lockProduct(String productId) {
+    productRepository.findByIdForUpdate(productId)
+            .orElseThrow(
+                    () -> new IllegalArgumentException(
+                            PRODUCT_NOT_FOUND + ": " + productId));
+  }
+
+  private void mergeAndValidate(
+          ProductEntity existing,
+          ProductEntity incoming,
+          Product product) {
+
+    validateProductIdentity(existing, product);
+
+    // Old snapshots may omit optional identity fields.
+    if (incoming.getExternalId() == null) {
+      incoming.setExternalId(existing.getExternalId());
+    }
+
+    if (incoming.getMaskedPan() == null) {
+      incoming.setMaskedPan(existing.getMaskedPan());
+    }
+  }
+
+  private void validateProductIdentity(
+          ProductEntity existing,
+          Product product) {
+
+    if (existing.getProvider() != product.provider()
+            || existing.getType() != product.type()) {
+
+      throw new IllegalArgumentException(
+              "No reutilices el ID de un producto para otro banco o tipo");
+    }
+
+    if (existing.getExternalId() != null
+            && product.externalId() != null
+            && !existing.getExternalId().equals(product.externalId())) {
+
+      throw new IllegalArgumentException(
+              "No reutilices el ID de un producto para otra referencia bancaria");
+    }
+  }
+
+  private void validateExternalIdUniqueness(
+          Product product,
+          ProductEntity incoming) {
+
+    if (incoming.getExternalId() == null) {
+      return;
+    }
+
+    boolean duplicated =
+            productRepository.existsByProviderAndExternalIdAndIdNot(
+                    product.provider(),
+                    incoming.getExternalId(),
+                    product.id());
+
+    if (duplicated) {
+      throw new IllegalArgumentException(
+              "La referencia bancaria ya está registrada con otro ID");
+    }
+  }
+
+  private void validateLinkedAccount(Product product) {
+    if (product.linkedAccountId() == null) {
+      return;
+    }
+
+    ProductEntity account =
+            productRepository.findById(product.linkedAccountId())
+                    .orElseThrow(
+                            () -> new IllegalArgumentException(
+                                    "La cuenta vinculada no existe: "
+                                            + product.linkedAccountId()));
+
+    if (account.getType() != Product.ProductType.ACCOUNT) {
+      throw new IllegalArgumentException(
+              "El producto vinculado no es una cuenta");
+    }
+
+    if (account.getProvider() != product.provider()) {
+      throw new IllegalArgumentException(
+              "La cuenta vinculada pertenece a otro banco");
+    }
+  }
+
+  private void reconcile(
+          MovementEntity existing,
+          Movement incoming) {
+
+    if (hasMovementChanged(existing, incoming)) {
+      throw new IllegalArgumentException(
+              "Identificador bancario reutilizado con datos diferentes: "
+                      + incoming.externalId());
+    }
+
+    if (existing.getStatus() == Movement.Status.PENDING
+            && incoming.status() == Movement.Status.BOOKED) {
+
+      existing.setStatus(Movement.Status.BOOKED);
+      // Dirty checking persists the change.
+    }
+  }
+
+  private boolean hasMovementChanged(
+          MovementEntity existing,
+          Movement incoming) {
+
+    return !existing.getBookingDate().equals(incoming.date())
+            || existing.getAmount().compareTo(incoming.amount()) != 0
+            || !existing.getDescription().equals(incoming.description());
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.isBlank();
   }
 }

@@ -82,7 +82,7 @@ bancarias verificadas nuevas.
 
 ## Persistencia JPA
 
-`JpaLedgerAdapter` y `JpaSettingsAdapter` implementan los puertos existentes con EntityManager y JPQL. Las entidades y la clave compuesta BudgetId residen en `infrastructure.adapter.out.persistence.entity`; PersistenceMapper convierte entre entidades y records del dominio con MapStruct. Lombok genera accesores y constructores sin argumentos de las entidades. No se generan toString ni equals sobre datos bancarios.
+`JpaLedgerAdapter` y `JpaSettingsAdapter` implementan los puertos existentes mediante repositorios Spring Data JPA (`JpaRepository`) en `infrastructure.adapter.out.persistence.repository`. Las consultas derivadas resuelven filtros y ordenación; `@Query` se reserva para el bloqueo pesimista del producto y el borrado de movimientos por producto. Los adaptadores no acceden directamente a EntityManager. Las entidades y la clave compuesta BudgetId residen en `infrastructure.adapter.out.persistence.entity`; PersistenceMapper convierte entre entidades y records del dominio con MapStruct. Lombok genera accesores y constructores sin argumentos de las entidades. No se generan toString ni equals sobre datos bancarios.
 
 Flyway sigue siendo propietario del esquema existente. Hibernate arranca con `ddl-auto=validate`, `open-in-view=false` y zona JDBC UTC. Las transacciones se delimitan en adaptadores y en el caso de ingestión que incluye snapshot y movimientos. La deduplicación conserva la restricción única producto/external_id; las importaciones bloquean el producto con PESSIMISTIC_WRITE y adquieren múltiples bloqueos en orden de identificador. Los errores revierten el lote.
 

@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.finance</groupId>
     <artifactId>finance-suite</artifactId>
-    <version>0.4.4</version>
+    <version>0.4.6</version>
   </parent>
   <artifactId>finance-server</artifactId>
   <name>finance-server</name>
@@ -15,6 +15,10 @@
   </properties>
   <dependencyManagement>
     <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
       <dependency>
         <groupId>org.springframework.ai</groupId>
         <artifactId>spring-ai-bom</artifactId>
