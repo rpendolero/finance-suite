@@ -12,6 +12,16 @@ import com.tngtech.archunit.lang.ArchRule;
     importOptions = com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
   @ArchTest
+  static final ArchRule persistenceUsesSpringDataRepositories =
+      noClasses().that().resideInAPackage("..infrastructure.adapter.out.persistence..")
+          .should().dependOnClassesThat().haveFullyQualifiedName("jakarta.persistence.EntityManager");
+
+  @ArchTest
+  static final ArchRule springDataRepositoriesStayInInfrastructure =
+      classes().that().areAssignableTo(org.springframework.data.jpa.repository.JpaRepository.class)
+          .should().resideInAPackage("..infrastructure.adapter.out.persistence.repository..");
+
+  @ArchTest
   static final ArchRule domainIsIndependent =
       noClasses()
           .that()
