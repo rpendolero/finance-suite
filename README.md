@@ -1,4 +1,6 @@
-# Finance Suite 0.4.5
+# Finance Suite 0.4.6
+
+Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
 Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
