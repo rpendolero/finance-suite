@@ -2,17 +2,19 @@ finance:
   importer:
     jobs:
       ing-excel:
-        product-id: ing-main
+        product-id: ing-account
         provider: ING
-        input-file: ./private/movements.xls
+        input-file: /mnt/workspace/finance-suite/private/movements_ing.xls
+        product-file: /mnt/workspace/finance-suite/private/ing_account.json
       ing-browser:
-        product-id: ing-main
+        product-id: ing-account
         provider: ING
         export-key: cuenta-principal
       ing-credit-excel:
         product-id: ing-credit
         provider: ING
-        input-file: ./private/credit-movements.xls
+        input-file: /mnt/workspace/finance-suite/private/movements-credit-card.xls
+        product-file: /mnt/workspace/finance-suite/private/ing_credit.json
       ing-credit-browser:
         product-id: ing-credit
         provider: ING

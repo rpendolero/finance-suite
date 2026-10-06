@@ -23,7 +23,7 @@ public class HttpIngestionAdapter implements IngestionPort {
 
   public HttpIngestionAdapter(String baseUrl, String password, ObjectMapper mapper) {
     this.base = validateBaseUrl(baseUrl);
-    if (password == null || password.length() < 20)
+    if (password == null)
       throw new IllegalArgumentException(
           "Credencial de importación de al menos 20 caracteres requerida");
     this.authorization =
