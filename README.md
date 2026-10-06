@@ -1,4 +1,6 @@
-# Finance Suite 0.4.4
+# Finance Suite 0.4.5
+
+Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
 
