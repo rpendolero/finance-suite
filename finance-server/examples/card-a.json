@@ -1,0 +1,13 @@
+{
+  "id": "kutxa-card-a",
+  "name": "Tarjeta Kutxabank A",
+  "type": "CREDIT_CARD",
+  "currency": "EUR",
+  "balance": -150.0,
+  "balanceAt": "2026-10-02T06:00:00Z",
+  "linkedAccountId": "account-main",
+  "creditLimit": 2000.0,
+  "provider": "KUTXABANK",
+  "externalId": "demo-card-reference-a",
+  "maskedPan": "**** 1234"
+}

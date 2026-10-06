@@ -19,7 +19,19 @@ class KutxabankCardExportFlowTest {
     var download = mock(Download.class);
     when(page.getByRole(any(AriaRole.class), any(Page.GetByRoleOptions.class))).thenReturn(control);
     when(page.getByText(anyString(), any(Page.GetByTextOptions.class))).thenReturn(control);
-    when(page.locator(anyString())).thenReturn(control);
+    var dates = new java.util.HashMap<String, Locator>();
+    when(page.locator(anyString())).thenAnswer(call -> {
+      String selector = call.getArgument(0);
+      if (!selector.contains("formCriterios:calendario")) return control;
+      return dates.computeIfAbsent(selector, key -> {
+        var input = mock(Locator.class);
+        var value = new java.util.concurrent.atomic.AtomicReference<>("");
+        doAnswer(fill -> { value.set(fill.getArgument(0)); return null; })
+            .when(input).fill(anyString());
+        when(input.inputValue()).thenAnswer(read -> value.get());
+        return input;
+      });
+    });
     when(control.filter(any(Locator.FilterOptions.class))).thenReturn(control);
     when(page.waitForDownload(any(Runnable.class)))
         .thenAnswer(
@@ -37,10 +49,12 @@ class KutxabankCardExportFlowTest {
     assertThat(flow.supports(Provider.ING, export)).isFalse();
     assertThat(flow.download(page, Provider.KUTXABANK, export)).isSameAs(download);
     verify(page, times(1)).waitForDownload(any(Runnable.class));
-    verify(control).fill("09");
-    verify(control).fill("10");
-    verify(control).fill("02");
-    verify(control, times(2)).fill("2026");
+    verify(dates.get("[id=\"formCriterios:calendarioDesde_cmb_dias\"]")).fill("01");
+    verify(dates.get("[id=\"formCriterios:calendarioDesde_cmb_mes\"]")).fill("09");
+    verify(dates.get("[id=\"formCriterios:calendarioDesde_cmb_anyo\"]")).fill("2026");
+    verify(dates.get("[id=\"formCriterios:calendarioHasta_cmb_dias\"]")).fill("02");
+    verify(dates.get("[id=\"formCriterios:calendarioHasta_cmb_mes\"]")).fill("10");
+    verify(dates.get("[id=\"formCriterios:calendarioHasta_cmb_anyo\"]")).fill("2026");
   }
 
   @Test

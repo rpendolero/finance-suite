@@ -29,7 +29,7 @@ public class FinanceTools {
   @Tool(
       name = "bank_get_products",
       description =
-          "Lista cuentas y tarjetas con saldo, moneda y fecha del saldo. Saldo negativo de tarjeta"
+          "Lista cuentas y tarjetas: id propio por tarjeta, banco, externalId, maskedPan, cuenta vinculada, saldo y fecha. Saldo negativo de tarjeta"
               + " representa deuda.")
   public Object products() {
     return queries.products();

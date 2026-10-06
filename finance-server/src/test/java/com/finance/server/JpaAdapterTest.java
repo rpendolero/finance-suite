@@ -119,6 +119,67 @@ class JpaAdapterTest {
     assertThat(ledger.movements(new com.finance.domain.Period(date, date), id)).isEmpty();
   }
 
+  @Test
+  void twoCardsFromTheSameBankKeepSeparateMovementsAndIdentity() {
+    ledger.saveProduct(product("shared-account", Product.Provider.KUTXABANK));
+    ledger.saveProduct(card("card-a", "bank-card-a", "**** 1234"));
+    ledger.saveProduct(card("card-b", "bank-card-b", "**** 1234"));
+    var date = LocalDate.of(2026, 10, 1);
+    var first = movement("card-a", "same-bank-id", "-10.00", date);
+    var second = movement("card-b", "same-bank-id", "-10.00", date);
+    assertThat(ledger.insert(List.of(first, second))).isEqualTo(2);
+    assertThat(ledger.insert(List.of(first, second))).isZero();
+    var period = new com.finance.domain.Period(date, date);
+    assertThat(ledger.movements(period, "card-a")).extracting(Movement::productId)
+        .containsExactly("card-a");
+    assertThat(ledger.movements(period, "card-b")).extracting(Movement::productId)
+        .containsExactly("card-b");
+    assertThat(ledger.product("card-a").orElseThrow().externalId()).isEqualTo("bank-card-a");
+    assertThat(ledger.product("card-b").orElseThrow().maskedPan()).isEqualTo("**** 1234");
+  }
+
+  @Test
+  void olderSnapshotsKeepCardMetadataAndDifferentReferenceIsRejected() {
+    ledger.saveProduct(product("shared-account", Product.Provider.KUTXABANK));
+    ledger.saveProduct(card("card-a", "bank-card-a", "**** 1234"));
+    ledger.saveProduct(card("card-a", null, null));
+    assertThat(ledger.product("card-a").orElseThrow().externalId()).isEqualTo("bank-card-a");
+    assertThat(ledger.product("card-a").orElseThrow().maskedPan()).isEqualTo("**** 1234");
+    assertThatThrownBy(() -> ledger.saveProduct(card("card-a", "bank-card-b", "**** 5678")))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void linkedAccountMustBelongToSameBank() {
+    ledger.saveProduct(product("shared-account", Product.Provider.ING));
+    assertThatThrownBy(() -> ledger.saveProduct(card("card-a", "bank-card-a", "**** 1234")))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void sameBankReferenceCannotBeRegisteredTwice() {
+    ledger.saveProduct(product("shared-account", Product.Provider.KUTXABANK));
+    ledger.saveProduct(card("card-a", "bank-card-a", "**** 1234"));
+    assertThatThrownBy(() -> ledger.saveProduct(card("card-b", "bank-card-a", "**** 1234")))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void fullPanAndCardMetadataOnAccountsAreRejected() {
+    assertThatThrownBy(() -> card("card-a", null, "1234567890123456"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Product("account", "Account", Product.ProductType.ACCOUNT,
+        "EUR", BigDecimal.ZERO, Instant.now(), null, null, Product.Provider.ING,
+        null, "**** 1234")).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private Product card(String id, String externalId, String maskedPan) {
+    return new Product(id, id, Product.ProductType.CREDIT_CARD, "EUR",
+        new BigDecimal("-100.00"), Instant.parse("2026-10-02T06:00:00Z"),
+        "shared-account", new BigDecimal("2000.00"), Product.Provider.KUTXABANK,
+        externalId, maskedPan);
+  }
+
   private Movement movement(String productId, String externalId, String amount, LocalDate date) {
     return new Movement(
         UUID.randomUUID().toString(),
