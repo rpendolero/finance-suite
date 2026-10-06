@@ -3,19 +3,21 @@ finance:
   importer:
     jobs:
       kutxabank-excel:
-        product-id: account-main
+        product-id: kutxa-account
         provider: KUTXABANK
-        input-file: ./private/movimientos.xls
+        input-file: /mnt/workspace/finance-suite/private/kutxa-account.xls
+        product-file: /mnt/workspace/finance-suite/private/kutxa_account.json
       kutxabank-card-excel:
-        product-id: card-main
+        product-id: kutxa-credit
         provider: KUTXABANK
-        input-file: ./private/card-movimientos.xls
+        input-file: /mnt/workspace/finance-suite/private/kutxa-credit.xls
+        product-file: /mnt/workspace/finance-suite/private/kutxa_credit.json
       kutxabank-card-browser:
-        product-id: card-main
+        product-id: kutxa-credit
         provider: KUTXABANK
         export-key: tarjeta
       kutxabank-browser:
-        product-id: account-main
+        product-id: kutxa-account
         provider: KUTXABANK
         export-key: cuenta-principal
   browser:

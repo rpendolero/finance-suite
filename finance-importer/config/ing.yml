@@ -4,7 +4,7 @@ finance:
       ing-excel:
         product-id: ing-account
         provider: ING
-        input-file: /mnt/workspace/finance-suite/private/movements_ing.xls
+        input-file: /mnt/workspace/finance-suite/private/ing-account.xls
         product-file: /mnt/workspace/finance-suite/private/ing_account.json
       ing-browser:
         product-id: ing-account
@@ -13,7 +13,7 @@ finance:
       ing-credit-excel:
         product-id: ing-credit
         provider: ING
-        input-file: /mnt/workspace/finance-suite/private/movements-credit-card.xls
+        input-file: /mnt/workspace/finance-suite/private/ing-credit.xls
         product-file: /mnt/workspace/finance-suite/private/ing_credit.json
       ing-credit-browser:
         product-id: ing-credit

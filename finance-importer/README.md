@@ -23,7 +23,7 @@ XLS a `../.private` y configura `FINANCE_SERVER_URL` y
 
 ```bash
 java -jar target/finance-importer-0.4.3.jar \
-  --spring.config.additional-location=file:./config/ing-example.yml \
+  --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-excel
 ```
 
@@ -31,7 +31,7 @@ Para descargar con Chrome y perfil bancario local separado:
 
 ```bash
 java -jar target/finance-importer-0.4.3.jar \
-  --spring.config.additional-location=file:./config/ing-example.yml \
+  --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-browser
 ```
 
@@ -66,7 +66,7 @@ Para importar el fichero, coloca una copia en `../.private`:
 
 ```bash
 java -jar target/finance-importer-0.4.3.jar \
-  --spring.config.additional-location=file:./config/ing-example.yml \
+  --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-credit-excel
 ```
 
@@ -74,11 +74,11 @@ Para descargarlo mediante el recorrido grabado:
 
 ```bash
 java -jar target/finance-importer-0.4.3.jar \
-  --spring.config.additional-location=file:./config/ing-example.yml \
+  --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-credit-browser
 ```
 
-Ajusta `card-name`, `from` y `to` en `ing-example.yml`. El recorrido selecciona
+Ajusta `card-name`, `from` y `to` en `ing.yml`. El recorrido selecciona
 la tarjeta tras login, abre Más opciones de búsqueda, rellena Desde/Hasta,
 busca y guarda Descargar Excel. Debe existir el producto `ing-credit` de tipo
 `CREDIT_CARD`, proveedor `ING`, vinculado a `ing-main`. No uses el mismo ID de
