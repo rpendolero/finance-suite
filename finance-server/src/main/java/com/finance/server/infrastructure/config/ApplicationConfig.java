@@ -121,8 +121,8 @@ public class ApplicationConfig {
   @Bean
   @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
   BankingAuthorizationService bankingAuthorizationService(
-      BankingAuthorizationPort authorizationPort, Clock clock) {
-    return new BankingAuthorizationService(authorizationPort, clock);
+      BankingAuthorizationPort authorizationPort, BankConnectionPort connections, Clock clock) {
+    return new BankingAuthorizationService(authorizationPort, connections, clock);
   }
 
   @Bean
