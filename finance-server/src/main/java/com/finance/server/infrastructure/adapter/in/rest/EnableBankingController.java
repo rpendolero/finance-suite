@@ -24,13 +24,13 @@ public class EnableBankingController {
   public ResponseEntity<AuthorizationResponse> authorize(@RequestBody AuthorizationRequest request) {
     var result = authorizations.start(request.getBankName(), properties.getCountry(), properties.getConsentDays());
     return ResponseEntity.created(URI.create(result.authorizationUrl()))
-        .body(new AuthorizationResponse(result.authorizationUrl(), result.state()));
+        .body(new AuthorizationResponse(result.connectionId(), result.authorizationUrl(), result.state()));
   }
 
   @GetMapping("/callback")
   public ResponseEntity<SessionResponse> callback(@RequestParam @NotBlank String code, @RequestParam(required = false) String state) {
-    var session = authorizations.complete(code);
-    return ResponseEntity.ok(new SessionResponse(session.id(), state));
+    var connection = authorizations.complete(code, state);
+    return ResponseEntity.ok(new SessionResponse(connection.id(), connection.status().name()));
   }
 
   @Data
@@ -38,6 +38,6 @@ public class EnableBankingController {
     @NotBlank private String bankName;
   }
 
-  public record AuthorizationResponse(String authorizationUrl, String state) {}
-  public record SessionResponse(String sessionId, String state) {}
+  public record AuthorizationResponse(String connectionId, String authorizationUrl, String state) {}
+  public record SessionResponse(String connectionId, String status) {}
 }
