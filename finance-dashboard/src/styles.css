@@ -223,6 +223,19 @@ header p {
     padding: 5px
 }
 
+.legend-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px
+}
+
+.legend-label i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: 0 0 9px
+}
+
 .forecast > strong {
     font-size: 28px
 }
