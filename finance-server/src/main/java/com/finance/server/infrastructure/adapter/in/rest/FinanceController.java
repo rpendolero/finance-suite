@@ -6,6 +6,8 @@ import com.finance.server.application.port.LedgerPort;
 import com.finance.server.application.port.MovementSearchPort;
 import java.math.BigDecimal;
 import com.finance.server.application.service.*;
+import com.finance.server.infrastructure.adapter.in.dto.ProductDto;
+import com.finance.server.infrastructure.adapter.in.mapper.ProductMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.io.IOException;

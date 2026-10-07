@@ -1,4 +1,4 @@
-package com.finance.server.infrastructure.adapter.in.rest;
+package com.finance.server.infrastructure.adapter.in.dto;
 
 import com.finance.domain.Product.ProductType;
 import jakarta.validation.constraints.*;

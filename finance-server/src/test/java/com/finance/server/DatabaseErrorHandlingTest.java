@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import com.finance.server.infrastructure.adapter.in.rest.ApiErrors;
 import com.finance.server.infrastructure.adapter.out.persistence.*;
+import com.finance.server.infrastructure.adapter.out.persistence.mapper.PersistenceMapper;
 import com.finance.server.infrastructure.adapter.out.persistence.repository.*;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;

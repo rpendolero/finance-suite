@@ -7,6 +7,7 @@ import com.finance.server.application.port.LedgerPort;
 import com.finance.server.application.port.MovementSearchPort;
 import com.finance.server.infrastructure.adapter.out.persistence.entity.MovementEntity;
 import com.finance.server.infrastructure.adapter.out.persistence.entity.ProductEntity;
+import com.finance.server.infrastructure.adapter.out.persistence.mapper.PersistenceMapper;
 import com.finance.server.infrastructure.adapter.out.persistence.repository.MovementRepository;
 import com.finance.server.infrastructure.adapter.out.persistence.repository.ProductRepository;
 import java.util.List;
