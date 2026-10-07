@@ -113,7 +113,7 @@ public class ApplicationConfig {
 
   @Bean
   @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
-  BankingAuthorizationPort enableBankingAuthorizationPort(
+  EnableBankingAuthorizationAdapter enableBankingAdapter(
       EnableBankingProperties properties, ObjectMapper mapper) {
     return new EnableBankingAuthorizationAdapter(properties, mapper);
   }
@@ -121,8 +121,20 @@ public class ApplicationConfig {
   @Bean
   @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
   BankingAuthorizationService bankingAuthorizationService(
-      BankingAuthorizationPort authorizationPort, BankConnectionPort connections, Clock clock) {
+      EnableBankingAuthorizationAdapter authorizationPort, BankConnectionPort connections, Clock clock) {
     return new BankingAuthorizationService(authorizationPort, connections, clock);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  BankingSyncService bankingSyncService(
+      EnableBankingAuthorizationAdapter banking,
+      BankConnectionPort connections,
+      LedgerPort ledger,
+      SettingsPort settings,
+      MovementClassificationService classification,
+      Clock clock) {
+    return new BankingSyncService(banking, connections, ledger, settings, classification, clock);
   }
 
   @Bean
