@@ -25,6 +25,15 @@ public class DataQualityService {
     if (ms.isEmpty()) warnings.add("Sin movimientos en el periodo");
     if (ms.stream().anyMatch(m -> !m.included()))
       warnings.add("Hay movimientos excluidos: validar cobertura de compras y liquidaciones");
+    long unclassified =
+        ms.stream()
+            .filter(
+                m ->
+                    m.classificationSource() == Movement.ClassificationSource.UNCLASSIFIED
+                        || "UNCLASSIFIED".equalsIgnoreCase(m.category()))
+            .count();
+    if (unclassified > 0)
+      warnings.add("Hay " + unclassified + " movimientos pendientes de categorizar");
     if (products().stream()
         .anyMatch(x -> x.balanceAt().isBefore(clock.instant().minus(Duration.ofDays(2)))))
       warnings.add("Saldos con más de 48 horas de antigüedad");
@@ -40,7 +49,7 @@ public class DataQualityService {
         products().size(),
         ms.size(),
         (int) ms.stream().filter(m -> m.status() == Movement.Status.PENDING).count(),
-        (int) ms.stream().filter(m -> m.category().equals("UNCLASSIFIED")).count(),
+        (int) unclassified,
         (int) ms.stream().filter(m -> !m.included()).count(),
         duplicates,
         ms.stream().map(Movement::date).min(LocalDate::compareTo).orElse(null),
