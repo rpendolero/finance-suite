@@ -63,8 +63,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CategoryCatalogService categoryCatalog() {
-    return new CategoryCatalogService();
+  CategoryCatalogService categoryCatalog(CategoryCatalogPort catalog) {
+    return new CategoryCatalogService(catalog);
   }
 
   @Bean
