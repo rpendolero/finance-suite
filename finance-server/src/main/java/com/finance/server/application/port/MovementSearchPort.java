@@ -18,8 +18,13 @@ public interface MovementSearchPort {
       BigDecimal maxAmount,
       Movement.Kind kind,
       Movement.Status status,
+      SortField sortBy,
+      SortDirection sortDirection,
       int offset,
-      int limit) {}
+      int limit) {
+    public enum SortField { DATE, AMOUNT, MERCHANT, CATEGORY }
+    public enum SortDirection { ASC, DESC }
+  }
 
   record Page(List<Movement> items, long total, int offset, int limit) {}
 }
