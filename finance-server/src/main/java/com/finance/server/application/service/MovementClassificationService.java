@@ -66,6 +66,15 @@ public final class MovementClassificationService {
           new BigDecimal("0.9900"));
     }
 
+    if (normalized.kind() == Movement.Kind.WALLET_SETTLEMENT) {
+      return normalized.withClassification(
+          "TRANSFERENCIAS",
+          "LIQUIDACION_MONEDERO",
+          Movement.Kind.WALLET_SETTLEMENT,
+          Movement.ClassificationSource.AUTOMATIC,
+          new BigDecimal("0.9900"));
+    }
+
     var detected = kindDetection.detect(normalized);
     if (detected.isPresent()) {
       var value = detected.orElseThrow();
