@@ -258,7 +258,9 @@ function SectionView({
                          calendar,
                          insights,
                          anomalies,
-                         session
+                         session,
+                         from,
+                         to
                      }: any) {
     if (view === 'trend') return <Page title="Evolución financiera">
         <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
@@ -281,7 +283,7 @@ function SectionView({
                 <b>{s.name}</b><span>{s.provider}</span><span>{s.type}</span><span>{eur(s.balance)}</span><strong>{eur(s.expenses)}</strong>
             </div>)}</div>
     </Page>;
-    if (view === 'movements') return <MovementSearch products={products} initialFrom={arguments[0].from} initialTo={arguments[0].to} canEdit={session?.roles?.includes('ADMIN')}/>;
+    if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')}/>;
     if (view === 'recurring') return <Page title="Gastos recurrentes">
         <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
             className="list-item" key={i}>
