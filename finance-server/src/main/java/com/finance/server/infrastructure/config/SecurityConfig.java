@@ -37,9 +37,19 @@ public class SecurityConfig {
   }
 
   @Bean
-  SecurityFilterChain security(HttpSecurity http) throws Exception {
+  SecurityFilterChain security(
+      HttpSecurity http,
+      @Value("${finance.security.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
+          String allowedOrigins)
+      throws Exception {
+    var trustedOrigins =
+        java.util.Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(value -> !value.isBlank())
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+
     return http.addFilterBefore(
-            new OriginFilter(),
+            new OriginFilter(trustedOrigins),
             org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)
         .csrf(csrf -> csrf.disable())
         .sessionManagement(
