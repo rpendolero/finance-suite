@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.*;
 import java.util.*;
 import java.time.LocalDate;
 
-public interface MovementRepository extends JpaRepository<MovementEntity, String> {
+public interface MovementRepository extends JpaRepository<MovementEntity, String>, JpaSpecificationExecutor<MovementEntity> {
   List<MovementEntity> findByBookingDateBetweenOrderByBookingDateAscIdAsc(LocalDate from, LocalDate to);
   List<MovementEntity> findByProductIdAndBookingDateBetweenOrderByBookingDateAscIdAsc(String productId, LocalDate from, LocalDate to);
   Optional<MovementEntity> findByProductIdAndExternalId(String productId, String externalId);

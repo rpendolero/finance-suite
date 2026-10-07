@@ -26,8 +26,7 @@ public class LiquidityForecastService {
 
   public Forecast forecast(Period p, int days) {
     if (days < 1 || days > 90) throw new IllegalArgumentException("Horizonte entre 1 y 90 días");
-    if (ChronoUnit.DAYS.between(p.from(), p.to()) < 27)
-      throw new IllegalArgumentException("Histórico de al menos 28 días");
+
     BigDecimal balances =
         products().stream()
             .filter(Product::liquid)

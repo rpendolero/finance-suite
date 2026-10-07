@@ -2,7 +2,7 @@ package com.finance.server.infrastructure.adapter.out.persistence;
 
 import com.finance.domain.*;
 import com.finance.server.application.port.SettingsPort;
-import com.finance.server.infrastructure.adapter.out.persistence.entity.*;
+import com.finance.server.infrastructure.adapter.out.persistence.mapper.PersistenceMapper;
 import com.finance.server.infrastructure.adapter.out.persistence.repository.*;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

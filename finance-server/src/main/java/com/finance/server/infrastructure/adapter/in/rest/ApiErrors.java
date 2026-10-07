@@ -1,5 +1,6 @@
 package com.finance.server.infrastructure.adapter.in.rest;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.TransactionException;
 import jakarta.persistence.PersistenceException;
@@ -9,7 +10,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 @RestControllerAdvice
 public class ApiErrors {
   @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})

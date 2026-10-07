@@ -1,0 +1,338 @@
+import {useEffect, useState} from 'react';
+import {
+    CalendarDays,
+    CreditCard,
+    Landmark,
+    LayoutDashboard,
+    Lightbulb,
+    PiggyBank,
+    ReceiptText,
+    RefreshCw,
+    Search,
+    TrendingDown,
+    TrendingUp,
+    TriangleAlert,
+    Wallet
+} from 'lucide-react';
+import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {
+    Anomaly,
+    api,
+    CalendarDay,
+    CategoryStat,
+    Insight,
+    MerchantStat,
+    Movement,
+    Overview,
+    Product,
+    ProductStat,
+    Recurring,
+    TrendPoint
+} from './api';
+
+const eur = (n: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(Number(n || 0));
+const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
+    day: '2-digit',
+    month: 'short'
+}).format(new Date(d + 'T00:00:00'));
+
+function Card({title, value, sub, icon: Icon, tone = 'blue'}: {
+    title: string;
+    value: string;
+    sub: string;
+    icon: any;
+    tone?: string
+}) {
+    return <div className="card kpi">
+        <div className={'icon ' + tone}><Icon size={21}/></div>
+        <div><span className="muted">{title}</span><strong>{value}</strong><small>{sub}</small></div>
+    </div>
+}
+
+function Title({t}: { t: string }) {
+    return <div className="title"><h2>{t}</h2></div>
+}
+
+function Empty({children}: { children: string }) {
+    return <div className="empty">{children}</div>
+}
+
+type View =
+    'overview'
+    | 'trend'
+    | 'expenses'
+    | 'products'
+    | 'movements'
+    | 'recurring'
+    | 'calendar'
+    | 'insights'
+    | 'review';
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert]];
+
+export default function App() {
+    const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
+        to = now.toISOString().slice(0, 10);
+    useEffect(() => {
+        let active = true;
+        setLoading(true);
+        setError('');
+        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.merchants(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, mer, ps, cal, rec, ano]) => {
+            if (!active) return;
+            setOverview(o);
+            setTrend(t);
+            setCategories(c);
+            setProducts(p);
+            setMovements(m);
+            setInsights(i);
+            setForecast(f);
+            setMerchants(mer);
+            setProductStats(ps);
+            setCalendar(cal);
+            setRecurring(rec);
+            setAnomalies(ano)
+        }).catch(e => {
+            if (active) setError(e instanceof Error ? e.message : 'No se pudo cargar el dashboard')
+        }).finally(() => active && setLoading(false));
+        return () => {
+            active = false
+        }
+    }, [from, to]);
+    const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
+    return <div className="shell">
+        <aside>
+            <div className="brand"><b>▥</b><span>Finance Suite</span></div>
+            <nav>{menu.map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+                                                          onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
+            <div className="version"><span
+                className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
+            </div>
+        </aside>
+        <main>
+            <header>
+                <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
+                    importados</p></div>
+                <div className="period">Este mes · {from} — {to}</div>
+            </header>
+            {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
+            {loading ?
+                <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
+                    <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
+                                                    sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
+                        title="Ingresos del mes" value={eur(overview.income)} sub="Movimientos contabilizados"
+                        icon={TrendingUp}/><Card title="Gastos del mes" value={eur(overview.expenses)}
+                                                 sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
+                                                 tone="red"/><Card title="Ahorro del mes" value={eur(overview.savings)}
+                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % tasa de ahorro'}
+                                                                   icon={PiggyBank} tone="purple"/></section>
+                    <section className="grid3">
+                        <div className="card wide"><Title t="Evolución financiera"/>{trend.length ?
+                            <ResponsiveContainer width="100%" height={245}><BarChart data={trend}><CartesianGrid
+                                strokeDasharray="3 3" vertical={false}/><XAxis dataKey="date"
+                                                                               tickFormatter={dateLabel}/><YAxis/><Tooltip
+                                labelFormatter={(v) => dateLabel(String(v))} formatter={(v) => eur(Number(v))}/><Bar
+                                dataKey="income" name="Ingresos" fill="#42c997" radius={[5, 5, 0, 0]}/><Bar
+                                dataKey="expenses" name="Gastos" fill="#ff7474"
+                                radius={[5, 5, 0, 0]}/></BarChart></ResponsiveContainer> :
+                            <Empty>Sin movimientos en el período.</Empty>}</div>
+                        <div className="card"><Title t="Gastos por categoría"/>{categories.length ?
+                            <div className="pie"><ResponsiveContainer width="48%" height={220}><PieChart><Pie
+                                data={categories} dataKey="amount" nameKey="category" innerRadius={55}
+                                outerRadius={82}>{categories.map((_, i) => <Cell key={i}/>)}</Pie><Tooltip
+                                formatter={(v) => eur(Number(v))}/></PieChart></ResponsiveContainer>
+                                <div className="legend">{categories.slice(0, 7).map(c => <div key={c.category}>
+                                    <span>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
+                            </div> : <Empty>Sin gastos clasificados.</Empty>}</div>
+                        <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
+                                <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
+                                30 días.</p></> :
+                            <Empty>El servidor no dispone de una proyección para este período.</Empty>}</div>
+                    </section>
+                    <section className="bottom">
+                        <div className="card"><Title t="Movimientos recientes"/>{movements.length ?
+                            <div className="rows">{movements.slice(0, 5).map(m => <div className="row" key={m.id}>
+                                <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b><em
+                                className={Number(m.amount) > 0 ? 'pos' : 'neg'}>{eur(m.amount)}</em><small>{m.category || 'Sin categoría'}</small>
+                            </div>)}</div> : <Empty>Sin movimientos recientes.</Empty>}</div>
+                        <div className="card"><Title t="Financial Insights"/>{insights.length ? insights.map(i => <div
+                            key={i.code}
+                            className={'insight ' + (i.severity === 'POSITIVE' ? 'good' : i.severity === 'WARNING' ? 'warn' : '')}>
+                            <b>{i.title}</b><br/>{i.detail}</div>) : <Empty>No hay insights para este período.</Empty>}
+                        </div>
+                        <div className="card"><Title
+                            t="Productos financieros"/>{products.length ? products.slice(0, 5).map(p => <div
+                            className="product" key={p.id}>
+                            <Landmark/><span><b>{p.name}</b><small>{p.provider} · {p.type}{p.maskedPan ? ' · ' + p.maskedPan : ''}</small></span><strong>{eur(p.balance)}</strong>
+                        </div>) : <Empty>No hay productos registrados.</Empty>}</div>
+                    </section>
+                </> : !loading && overview ?
+                    <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
+                                 productStats={productStats} products={products} movements={movements}
+                                 recurring={recurring} calendar={calendar} insights={insights}
+                                 anomalies={anomalies}/> : null}</main>
+    </div>
+}
+
+function SectionView({
+                         view,
+                         trend,
+                         categories,
+                         merchants,
+                         productStats,
+                         products,
+                         movements,
+                         recurring,
+                         calendar,
+                         insights,
+                         anomalies
+                     }: any) {
+    if (view === 'trend') return <Page title="Evolución financiera">
+        <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
+            data={trend}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="date" tickFormatter={dateLabel}/><YAxis/><Tooltip
+            formatter={(v) => eur(Number(v))}/><Bar dataKey="income" name="Ingresos" fill="#42c997"/><Bar
+            dataKey="expenses" name="Gastos" fill="#ff7474"/><Bar dataKey="savings" name="Ahorro"
+                                                                  fill="#6c7cff"/></BarChart></ResponsiveContainer>
+        </div>
+    </Page>;
+    if (view === 'expenses') return <Page title="Análisis de gastos">
+        <div className="two-cols"><Rank title="Categorías"
+                                        rows={categories.map((x: CategoryStat) => [x.category, x.amount, x.operations, x.share])}/><Rank
+            title="Comercios" rows={merchants.map((x: MerchantStat) => [x.merchant, x.amount, x.operations, x.share])}/>
+        </div>
+    </Page>;
+    if (view === 'products') return <Page title="Productos financieros">
+        <div className="card table">
+            <div className="thead"><b>Producto</b><b>Entidad</b><b>Tipo</b><b>Saldo</b><b>Gasto período</b></div>
+            {productStats.map((s: ProductStat) => <div className="trow" key={s.productId}>
+                <b>{s.name}</b><span>{s.provider}</span><span>{s.type}</span><span>{eur(s.balance)}</span><strong>{eur(s.expenses)}</strong>
+            </div>)}</div>
+    </Page>;
+    if (view === 'movements') return <MovementSearch products={products}/>;
+    if (view === 'recurring') return <Page title="Gastos recurrentes">
+        <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
+            className="list-item" key={i}>
+            <RefreshCw/><span><b>{String(r.merchant || r.description || 'Movimiento recurrente')}</b><small>{String(r.category || '')}</small></span><strong>{r.amount != null ? eur(Number(r.amount)) : ''}</strong>
+        </div>) : <Empty>No se han detectado movimientos recurrentes.</Empty>}</div>
+    </Page>;
+    if (view === 'calendar') return <Page title="Calendario financiero">
+        <div className="calendar-grid">{calendar.map((d: CalendarDay) => <div
+            className={'day ' + (d.expenses > 0 ? 'has-expense' : '')} key={d.date}>
+            <b>{new Date(d.date + 'T00:00:00').getDate()}</b><small>{d.operations} op.</small><span
+            className="neg">{d.expenses ? '-' + eur(d.expenses) : ''}</span><span
+            className="pos">{d.income ? '+' + eur(d.income) : ''}</span></div>)}</div>
+    </Page>;
+    if (view === 'insights') return <Page title="Insights financieros">
+        <div className="insight-grid">{insights.length ? insights.map((i: Insight) => <div
+            className={'card insight ' + (i.severity === 'POSITIVE' ? 'good' : i.severity === 'WARNING' ? 'warn' : '')}
+            key={i.code}><b>{i.title}</b><p>{i.detail}</p><strong>{i.value != null ? eur(Number(i.value)) : ''}</strong>
+        </div>) : <Empty>No hay insights para este período.</Empty>}</div>
+    </Page>;
+    if (view === 'review') return <Page title="Movimientos a revisar">
+        <div className="card list-cards">{anomalies.length ? anomalies.map((a: Anomaly, i: number) => <div
+            className="list-item warning-item" key={i}>
+            <TriangleAlert/><span><b>{String(a.merchant || a.description || 'Movimiento anómalo')}</b><small>{String(a.category || 'Requiere revisión')}</small></span><strong>{a.amount != null ? eur(Number(a.amount)) : ''}</strong>
+        </div>) : <Empty>No se han detectado anomalías.</Empty>}</div>
+    </Page>;
+    return null
+}
+
+function Page({title, children}: { title: string; children: any }) {
+    return <section className="page">
+        <div className="section-head"><h2>{title}</h2></div>
+        {children}</section>
+}
+
+function Rank({title, rows}: { title: string; rows: [string, number, number, number][] }) {
+    return <div className="card"><Title t={title}/>{rows.length ? rows.map(([name, amount, ops, share]) => <div
+        className="rank" key={name}>
+        <span><b>{name}</b><small>{ops} operaciones · {Number(share).toFixed(1)} %</small></span><strong>{eur(amount)}</strong>
+    </div>) : <Empty>Sin datos.</Empty>}</div>
+}
+
+function MovementSearch({products}: { products: Product[] }) {
+    const now = new Date(), defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
+        defaultTo = now.toISOString().slice(0, 10);
+    const [filters, setFilters] = useState<any>({
+        from: defaultFrom,
+        to: defaultTo,
+        sortBy: 'DATE',
+        sortDirection: 'DESC',
+        offset: 0,
+        limit: 25
+    }), [page, setPage] = useState<any>({
+        items: [],
+        total: 0,
+        offset: 0,
+        limit: 25
+    }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+    const load = (next = filters) => {
+        setBusy(true);
+        setErr('');
+        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false))
+    };
+    useEffect(() => {
+        load(filters)
+    }, []);
+    const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
+    const submit = (e: any) => {
+        e.preventDefault();
+        load(filters)
+    };
+    const move = (offset: number) => {
+        const next = {...filters, offset};
+        setFilters(next);
+        load(next)
+    };
+    return <Page title="Movimientos">
+        <form className="filters card" onSubmit={submit}><label>Desde<input type="date" value={filters.from}
+                                                                            onChange={e => change('from', e.target.value)}/></label><label>Hasta<input
+            type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label><input
+            placeholder="Buscar concepto o comercio" value={filters.text || ''}
+            onChange={e => change('text', e.target.value)}/><select value={filters.productId || ''}
+                                                                    onChange={e => change('productId', e.target.value)}>
+            <option value="">Todos los productos</option>
+            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select><input
+            placeholder="Categoría" value={filters.category || ''}
+            onChange={e => change('category', e.target.value)}/><input type="number" step="0.01"
+                                                                       placeholder="Importe mín."
+                                                                       value={filters.minAmount ?? ''}
+                                                                       onChange={e => change('minAmount', e.target.value)}/><input
+            type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''}
+            onChange={e => change('maxAmount', e.target.value)}/><select value={filters.status || ''}
+                                                                         onChange={e => change('status', e.target.value)}>
+            <option value="">Todos los estados</option>
+            <option value="BOOKED">Contabilizado</option>
+            <option value="PENDING">Pendiente</option>
+        </select><select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}>
+            <option value="DATE">Ordenar por fecha</option>
+            <option value="AMOUNT">Ordenar por importe</option>
+            <option value="MERCHANT">Ordenar por comercio</option>
+            <option value="CATEGORY">Ordenar por categoría</option>
+        </select><select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}>
+            <option value="DESC">Descendente</option>
+            <option value="ASC">Ascendente</option>
+        </select>
+            <button type="submit"><Search size={16}/>Buscar</button>
+            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV
+            </button>
+        </form>
+        {err && <div className="api-error">{err}</div>}
+        <div className="card table">{busy ? <div className="loading">Buscando movimientos…</div> : <>
+            <div className="thead movement-grid"><b>Fecha</b><b>Concepto</b><b>Categoría</b><b>Importe</b></div>
+            {page.items.length ? page.items.map((m: Movement) => <div className="trow movement-grid" key={m.id}>
+                    <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b><span>{m.category || 'Sin categoría'}</span><strong
+                    className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong></div>) :
+                <Empty>No hay movimientos con esos filtros.</Empty>}
+            <div className="pagination"><span>{page.total} movimientos</span>
+                <div>
+                    <button disabled={page.offset <= 0}
+                            onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior
+                    </button>
+                    <button disabled={page.offset + page.limit >= page.total}
+                            onClick={() => move(page.offset + page.limit)}>Siguiente
+                    </button>
+                </div>
+            </div>
+        </>}</div>
+    </Page>
+}

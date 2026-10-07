@@ -53,6 +53,16 @@ public class ApplicationConfig {
   }
 
   @Bean
+  MovementExportService movementExport(MovementSearchPort movementSearch) {
+    return new MovementExportService(movementSearch);
+  }
+
+  @Bean
+  DashboardAnalysisService dashboardAnalysis(LedgerPort ledger) {
+    return new DashboardAnalysisService(ledger);
+  }
+
+  @Bean
   MovementClassificationService classification() {
     return new MovementClassificationService();
   }

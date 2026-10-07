@@ -1,4 +1,4 @@
-package com.finance.server.infrastructure.adapter.out.persistence;
+package com.finance.server.infrastructure.adapter.out.persistence.mapper;
 
 import com.finance.domain.*;
 import com.finance.server.infrastructure.adapter.out.persistence.entity.*;

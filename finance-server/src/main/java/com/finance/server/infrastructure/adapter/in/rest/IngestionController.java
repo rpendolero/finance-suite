@@ -2,6 +2,8 @@ package com.finance.server.infrastructure.adapter.in.rest;
 
 import com.finance.domain.Product;
 import com.finance.server.application.service.ImportService;
+import com.finance.server.infrastructure.adapter.in.dto.ProductDto;
+import com.finance.server.infrastructure.adapter.in.mapper.ProductMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
