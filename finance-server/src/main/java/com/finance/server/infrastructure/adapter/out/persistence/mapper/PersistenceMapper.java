@@ -13,6 +13,7 @@ public interface PersistenceMapper {
   @Mapping(target = "bookingDate", source = "date")
   MovementEntity toEntity(Movement movement);
 
+  @BeanMapping(builder = @Builder(disableBuilder = true))
   @Mapping(target = "date", source = "bookingDate")
   Movement toDomain(MovementEntity entity);
 
