@@ -26,6 +26,7 @@ public record Movement(
     INTERNAL_TRANSFER,
     CARD_SETTLEMENT,
     WALLET_SETTLEMENT,
+    NON_COMPUTABLE,
     DUPLICATE
   }
 
