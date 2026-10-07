@@ -101,8 +101,9 @@ public class ApplicationConfig {
       LedgerPort ledger,
       StatementParserPort parser,
       SettingsPort settings,
-      MovementClassificationService classification) {
-    return new ImportService(settings, ledger, parser, classification);
+      MovementClassificationService classification,
+      UnitOfWorkPort unitOfWork) {
+    return new ImportService(settings, ledger, parser, classification, unitOfWork);
   }
 
   @Bean
