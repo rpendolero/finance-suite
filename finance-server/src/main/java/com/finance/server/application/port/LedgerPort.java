@@ -13,8 +13,15 @@ public interface LedgerPort {
 
   List<Movement> movements(Period period, String productId);
 
+  Optional<Movement> movement(String id);
+
+  List<Movement> allMovements();
+
   int insert(List<Movement> movements);
 
+  int updateClassifications(List<Movement> movements);
+
+  /** Backward-compatible manual classification entry point. */
   void classify(String id, String category, Movement.Kind kind);
 
   void deleteProduct(String id);

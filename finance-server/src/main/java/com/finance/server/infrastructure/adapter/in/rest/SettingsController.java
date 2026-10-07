@@ -3,6 +3,7 @@ package com.finance.server.infrastructure.adapter.in.rest;
 import com.finance.domain.*;
 import com.finance.domain.Period;
 import com.finance.server.application.port.SettingsPort;
+import com.finance.server.application.service.ClassificationManagementService;
 import com.finance.server.application.service.ExtendedAnalysisService;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 public class SettingsController {
   private final SettingsPort settings;
   private final ExtendedAnalysisService analysis;
+  private final ClassificationManagementService classification;
 
   @GetMapping("/rules")
   public Object rules() {
@@ -23,7 +25,7 @@ public class SettingsController {
   @PutMapping("/rules/{id}")
   public void rule(@PathVariable String id, @RequestBody ClassificationRule rule) {
     if (!id.equals(rule.id())) throw new IllegalArgumentException("id inconsistente");
-    settings.saveRule(rule);
+    classification.saveRule(rule);
   }
 
   @DeleteMapping("/rules/{id}")

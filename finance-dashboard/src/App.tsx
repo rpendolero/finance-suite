@@ -20,6 +20,7 @@ import {
     api,
     CalendarDay,
     CategoryStat,
+    CategoryDefinition,
     Insight,
     MerchantStat,
     Movement,
@@ -31,6 +32,19 @@ import {
 } from './api';
 
 const eur = (n: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(Number(n || 0));
+
+const CATEGORY_COLORS = [
+    '#2563eb',
+    '#16a34a',
+    '#f59e0b',
+    '#dc2626',
+    '#7c3aed',
+    '#0891b2',
+    '#db2777',
+    '#65a30d',
+    '#ea580c',
+    '#4f46e5'
+];
 const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
     month: 'short'
@@ -70,6 +84,20 @@ type View =
 const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert]];
 
 export default function App() {
+    const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
+    useEffect(()=>{api.me().then(setSession).catch(()=>setSession(null)).finally(()=>setAuthLoading(false))},[]);
+    if(authLoading)return <div className="auth-screen"><div className="login-card"><div className="login-logo">▥</div><h1>Finance Suite</h1><p>Comprobando sesión…</p></div></div>;
+    if(!session)return <Login onLogin={setSession}/>;
+    return <Dashboard session={session} onLogout={()=>api.logout().finally(()=>setSession(null))}/>;
+}
+
+function Login({onLogin}:{onLogin:(session:any)=>void}){
+ const[username,setUsername]=useState('reader'),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const submit=(e:any)=>{e.preventDefault();setBusy(true);setError('');api.login(username,password).then(onLogin).catch(()=>setError('Usuario o contraseña incorrectos')).finally(()=>setBusy(false))};
+ return <div className="auth-screen"><form className="login-card" onSubmit={submit}><div className="login-logo">▥</div><h1>Finance Suite</h1><p>Accede a tu panel financiero</p><label>Usuario<input autoFocus autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="login-error">{error}</div>}<button disabled={busy||!username||!password}>{busy?'Accediendo…':'Iniciar sesión'}</button></form></div>
+}
+
+function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
     const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
         to = now.toISOString().slice(0, 10);
@@ -112,7 +140,7 @@ export default function App() {
             <header>
                 <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
                     importados</p></div>
-                <div className="period">Este mes · {from} — {to}</div>
+                <div className="header-actions"><div className="period">Este mes · {from} — {to}</div><button className="logout" onClick={onLogout}>{session.username} · Salir</button></div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
             {loading ?
@@ -138,10 +166,12 @@ export default function App() {
                         <div className="card"><Title t="Gastos por categoría"/>{categories.length ?
                             <div className="pie"><ResponsiveContainer width="48%" height={220}><PieChart><Pie
                                 data={categories} dataKey="amount" nameKey="category" innerRadius={55}
-                                outerRadius={82}>{categories.map((_, i) => <Cell key={i}/>)}</Pie><Tooltip
+                                outerRadius={82}>{categories.map((_, i) => <Cell key={i}
+                                fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}/>)}</Pie><Tooltip
                                 formatter={(v) => eur(Number(v))}/></PieChart></ResponsiveContainer>
-                                <div className="legend">{categories.slice(0, 7).map(c => <div key={c.category}>
-                                    <span>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
+                                <div className="legend">{categories.slice(0, 7).map((c, i) => <div key={c.category}>
+                                    <span className="legend-label"><i
+                                        style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
                             </div> : <Empty>Sin gastos clasificados.</Empty>}</div>
                         <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
                                 <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
@@ -227,13 +257,178 @@ function SectionView({
             key={i.code}><b>{i.title}</b><p>{i.detail}</p><strong>{i.value != null ? eur(Number(i.value)) : ''}</strong>
         </div>) : <Empty>No hay insights para este período.</Empty>}</div>
     </Page>;
-    if (view === 'review') return <Page title="Movimientos a revisar">
-        <div className="card list-cards">{anomalies.length ? anomalies.map((a: Anomaly, i: number) => <div
-            className="list-item warning-item" key={i}>
-            <TriangleAlert/><span><b>{String(a.merchant || a.description || 'Movimiento anómalo')}</b><small>{String(a.category || 'Requiere revisión')}</small></span><strong>{a.amount != null ? eur(Number(a.amount)) : ''}</strong>
-        </div>) : <Empty>No se han detectado anomalías.</Empty>}</div>
-    </Page>;
+    if (view === 'review') return <ClassificationReview />;
     return null
+}
+
+const TREATMENTS = [
+    {code: 'NORMAL', label: 'Gasto / ingreso normal', computable: true},
+    {code: 'REFUND', label: 'Devolución', computable: true},
+    {code: 'CARD_SETTLEMENT', label: 'No computable - Liquidación tarjeta', computable: false},
+    {code: 'WALLET_SETTLEMENT', label: 'No computable - PayPal / monedero', computable: false},
+    {code: 'INTERNAL_TRANSFER', label: 'No computable - Transferencia interna', computable: false}
+] as const;
+
+type ClassificationChoice = {
+    category?: string;
+    subcategory?: string;
+    kind?: string;
+};
+
+function treatmentDefaults(kind: string): ClassificationChoice {
+    switch (kind) {
+        case 'CARD_SETTLEMENT':
+            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_TARJETA'};
+        case 'WALLET_SETTLEMENT':
+            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_PAYPAL'};
+        case 'INTERNAL_TRANSFER':
+            return {kind, category: 'TRANSFERENCIAS', subcategory: 'TRASPASO_INTERNO'};
+        default:
+            return {kind};
+    }
+}
+
+function ClassificationReview() {
+    const now = new Date(),
+        from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
+        to = now.toISOString().slice(0, 10);
+    const [rows, setRows] = useState<Movement[]>([]);
+    const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [choices, setChoices] = useState<Record<string, ClassificationChoice>>({});
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    const load = () => {
+        setBusy(true);
+        setError('');
+        Promise.all([api.unclassified(from, to), api.categoriesCatalog()])
+            .then(([movements, categories]) => {
+                setRows(movements);
+                setCatalog(categories);
+            })
+            .catch(e => setError(e instanceof Error ? e.message : 'No se pudieron cargar los movimientos'))
+            .finally(() => setBusy(false));
+    };
+
+    useEffect(() => {
+        load()
+    }, []);
+
+    const choose = (id: string, key: 'category' | 'subcategory', value: string) => {
+        setChoices(current => ({
+            ...current,
+            [id]: {
+                ...current[id],
+                [key]: value || undefined,
+                ...(key === 'category' ? {subcategory: undefined} : {})
+            }
+        }))
+    };
+
+    const chooseTreatment = (id: string, kind: string) => {
+        setChoices(current => ({
+            ...current,
+            [id]: treatmentDefaults(kind)
+        }))
+    };
+
+    const save = async (movement: Movement, createRule: boolean) => {
+        const selected = choices[movement.id] || treatmentDefaults(movement.kind || 'NORMAL');
+        if (!selected.category) {
+            setError('Selecciona una categoría antes de guardar.');
+            return;
+        }
+        setBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            await api.classifyMovement(movement.id, {
+                category: selected.category,
+                subcategory: selected.subcategory,
+                kind: selected.kind || movement.kind || 'NORMAL',
+                createRule,
+                applyToSimilar: createRule
+            });
+            const treatment = TREATMENTS.find(t => t.code === (selected.kind || movement.kind || 'NORMAL'));
+            setMessage(createRule
+                ? `Clasificación guardada y aplicada a movimientos equivalentes. Tratamiento: ${treatment?.label || 'Normal'}.`
+                : `Clasificación manual guardada. Tratamiento: ${treatment?.label || 'Normal'}.`);
+            load();
+        } catch (e) {
+            setBusy(false);
+            setError(e instanceof Error ? e.message : 'No se pudo guardar la clasificación')
+        }
+    };
+
+    const reclassify = async () => {
+        setBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            const result = await api.reclassify();
+            setMessage(`Recategorización completada: ${result.updated} de ${result.scanned} movimientos actualizados; ${result.unclassified} pendientes.`);
+            load();
+        } catch (e) {
+            setBusy(false);
+            setError(e instanceof Error ? e.message : 'No se pudo recategorizar el histórico')
+        }
+    };
+
+    return <Page title="Movimientos pendientes de categorizar">
+        <div className="classification-toolbar">
+            <span>{rows.length} movimientos pendientes este mes</span>
+            <button onClick={reclassify} disabled={busy}>Recategorizar histórico</button>
+        </div>
+        {message && <div className="classification-message">{message}</div>}
+        {error && <div className="api-error">{error}</div>}
+        <div className="card classification-list">
+            {busy && !rows.length ? <div className="loading">Cargando clasificación…</div> :
+                rows.length ? rows.map(m => {
+                    const selected = choices[m.id] || treatmentDefaults(m.kind || 'NORMAL');
+                    const definition = catalog.find(c => c.code === selected.category);
+                    const treatment = TREATMENTS.find(t => t.code === (selected.kind || m.kind || 'NORMAL'));
+                    return <div className="classification-row" key={m.id}>
+                        <div className="classification-movement">
+                            <b>{m.normalizedMerchant || m.merchant || m.description}</b>
+                            <small>{dateLabel(m.date)} · {eur(m.amount)}</small>
+                            <span>{m.description}</span>
+                        </div>
+                        <div className="classification-field">
+                            <label>Tratamiento</label>
+                            <select value={selected.kind || m.kind || 'NORMAL'}
+                                    onChange={e => chooseTreatment(m.id, e.target.value)}>
+                                {TREATMENTS.map(t => <option value={t.code} key={t.code}>{t.label}</option>)}
+                            </select>
+                            {treatment && !treatment.computable &&
+                                <small className="non-computable">No se incluirá en gastos, ingresos ni ahorro.</small>}
+                        </div>
+                        <div className="classification-field">
+                            <label>Categoría</label>
+                            <select value={selected.category || ''}
+                                    onChange={e => choose(m.id, 'category', e.target.value)}>
+                                <option value="">Selecciona categoría</option>
+                                {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
+                            </select>
+                        </div>
+                        <div className="classification-field">
+                            <label>Subcategoría</label>
+                            <select value={selected.subcategory || ''} disabled={!definition}
+                                    onChange={e => choose(m.id, 'subcategory', e.target.value)}>
+                                <option value="">Sin subcategoría</option>
+                                {(definition?.subcategories || []).map(s =>
+                                    <option value={s} key={s}>{s.replaceAll('_', ' ')}</option>)}
+                            </select>
+                        </div>
+                        <div className="classification-actions">
+                            <button disabled={!selected.category || busy} onClick={() => save(m, false)}>Solo este</button>
+                            <button className="secondary" disabled={!selected.category || busy}
+                                    onClick={() => save(m, true)}>Aplicar al comercio</button>
+                        </div>
+                    </div>
+                }) : <Empty>No quedan movimientos pendientes este mes.</Empty>}
+        </div>
+    </Page>
 }
 
 function Page({title, children}: { title: string; children: any }) {

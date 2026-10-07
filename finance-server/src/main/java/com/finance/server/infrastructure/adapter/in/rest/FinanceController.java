@@ -34,6 +34,7 @@ public class FinanceController {
   private final LedgerPort ledger;
   private final MovementSearchPort movementSearch;
   private final MovementExportService movementExport;
+  private final ClassificationManagementService classification;
   private final ProductMapper mapper;
 
   private Period period(String from, String to) {
@@ -119,11 +120,21 @@ public class FinanceController {
   }
 
   public record Classification(
-      @NotBlank @Size(max = 64) String category, @NotNull Movement.Kind kind) {}
+      @NotBlank @Size(max = 64) String category,
+      @Size(max = 64) String subcategory,
+      @NotNull Movement.Kind kind,
+      boolean createRule,
+      boolean applyToSimilar) {}
 
   @PatchMapping("/movements/{id}/classification")
-  public void classify(@PathVariable String id, @Valid @RequestBody Classification c) {
-    ledger.classify(id, c.category(), c.kind());
+  public Object classify(@PathVariable String id, @Valid @RequestBody Classification c) {
+    return classification.classifyManually(
+        id,
+        c.category(),
+        c.subcategory(),
+        c.kind(),
+        c.createRule(),
+        c.applyToSimilar());
   }
 
   @GetMapping("/analysis/summary")

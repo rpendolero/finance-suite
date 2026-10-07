@@ -1,3 +1,4 @@
+export type UserSession = { username: string; roles: string[] };
 export type Product = {
     id: string;
     name: string;
@@ -14,7 +15,22 @@ export type Movement = {
     amount: number;
     description: string;
     merchant?: string;
-    category?: string
+    normalizedMerchant?: string;
+    category?: string;
+    subcategory?: string;
+    kind: string;
+    classificationSource?: string;
+    classificationConfidence?: number
+};
+export type CategoryDefinition = {
+    code: string;
+    label: string;
+    subcategories: string[]
+};
+export type ReclassificationResult = {
+    scanned: number;
+    updated: number;
+    unclassified: number
 };
 export type Overview = {
     totalBalance: number;
@@ -80,15 +96,41 @@ export type Anomaly = {
     [key: string]: unknown
 };
 
-const json = async <T>(url: string): Promise<T> => {
-    const r = await fetch(url, {credentials: 'include'});
+const json = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
+    const r = await fetch(url, {...init, credentials: 'include'});
     if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
-    return r.json()
+    return r.status === 204 ? undefined as T : r.json()
+};
+const sendJson = async <T>(url: string, method: 'POST' | 'PATCH', body?: unknown): Promise<T> => {
+    const r = await fetch(url, {
+        method,
+        credentials: 'include',
+        headers: body === undefined ? undefined : {'Content-Type': 'application/json'},
+        body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+    return r.status === 204 ? undefined as T : r.json()
 };
 const q = (from: string, to: string, productId?: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`;
 
 export const api = {
+    login: (username: string, password: string) => json<UserSession>('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password})}),
+    me: () => json<UserSession>('/api/auth/me'),
+    logout: () => json<void>('/api/auth/logout', {method: 'POST'}),
     products: () => json<Product[]>('/api/products'),
+    categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
+    unclassified: (from: string, to: string, productId?: string, limit = 100) =>
+        json<Movement[]>(`/api/classification/unclassified?${q(from, to, productId)}&limit=${limit}`),
+    classifyMovement: (
+        id: string,
+        classification: {
+            category: string;
+            subcategory?: string;
+            kind: string;
+            createRule: boolean;
+            applyToSimilar: boolean
+        }) => sendJson<unknown>(`/api/movements/${encodeURIComponent(id)}/classification`, 'PATCH', classification),
+    reclassify: () => sendJson<ReclassificationResult>('/api/classification/reclassify', 'POST'),
     movements: (from: string, to: string, productId?: string, limit = 10) => json<Movement[]>(`/api/movements?${q(from, to, productId)}&limit=${limit}`),
     exportMovements: (f: MovementFilters) => {
         const p = new URLSearchParams();

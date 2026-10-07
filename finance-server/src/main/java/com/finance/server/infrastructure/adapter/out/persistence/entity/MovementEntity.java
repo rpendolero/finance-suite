@@ -46,8 +46,14 @@ public class MovementEntity {
   @Column(length = 200)
   private String merchant;
 
+  @Column(name = "normalized_merchant", length = 200)
+  private String normalizedMerchant;
+
   @Column(nullable = false, length = 64)
   private String category;
+
+  @Column(length = 64)
+  private String subcategory;
 
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.VARCHAR)
@@ -58,4 +64,12 @@ public class MovementEntity {
   @JdbcTypeCode(SqlTypes.VARCHAR)
   @Column(nullable = false, length = 16)
   private Movement.Status status;
+
+  @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.VARCHAR)
+  @Column(name = "classification_source", nullable = false, length = 24)
+  private Movement.ClassificationSource classificationSource;
+
+  @Column(name = "classification_confidence", nullable = false, precision = 5, scale = 4)
+  private BigDecimal classificationConfidence;
 }
