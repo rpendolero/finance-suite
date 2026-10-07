@@ -24,7 +24,14 @@ public final class CategoryCatalogService {
           category("COMPRAS", "Compras", "ONLINE", "ROPA", "HOGAR", "TECNOLOGIA", "OTRAS_COMPRAS"),
           category("SUSCRIPCIONES", "Suscripciones", "STREAMING", "SOFTWARE", "TELEFONIA", "OTRAS_SUSCRIPCIONES"),
           category("IMPUESTOS", "Impuestos", "HACIENDA", "TASAS", "MULTAS"),
-          category("TRANSFERENCIAS", "Transferencias", "TRASPASO_INTERNO", "LIQUIDACION_TARJETA", "TRANSFERENCIA_EXTERNA"),
+          category(
+              "TRANSFERENCIAS",
+              "Transferencias",
+              "TRASPASO_INTERNO",
+              "LIQUIDACION_TARJETA",
+              "LIQUIDACION_PAYPAL",
+              "LIQUIDACION_MONEDERO",
+              "TRANSFERENCIA_EXTERNA"),
           category("EFECTIVO", "Efectivo", "RETIRADA_CAJERO"),
           category("OTROS", "Otros", "OTROS"));
 
