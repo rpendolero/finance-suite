@@ -96,8 +96,20 @@ export type Anomaly = {
     [key: string]: unknown
 };
 
+const csrfToken = () => document.cookie
+    .split('; ')
+    .find(cookie => cookie.startsWith('XSRF-TOKEN='))
+    ?.split('=').slice(1).join('=');
+
+const withCsrf = (headers: HeadersInit = {}): HeadersInit => {
+    const token = csrfToken();
+    return token ? {...headers, 'X-XSRF-TOKEN': decodeURIComponent(token)} : headers;
+};
+
 const json = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
-    const r = await fetch(url, {...init, credentials: 'include'});
+    const method = (init.method || 'GET').toUpperCase();
+    const headers = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? withCsrf(init.headers) : init.headers;
+    const r = await fetch(url, {...init, headers, credentials: 'include'});
     if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
     return r.status === 204 ? undefined as T : r.json()
 };
@@ -105,7 +117,7 @@ const sendJson = async <T>(url: string, method: 'POST' | 'PATCH', body?: unknown
     const r = await fetch(url, {
         method,
         credentials: 'include',
-        headers: body === undefined ? undefined : {'Content-Type': 'application/json'},
+        headers: withCsrf(body === undefined ? {} : {'Content-Type': 'application/json'}),
         body: body === undefined ? undefined : JSON.stringify(body)
     });
     if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
