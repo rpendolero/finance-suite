@@ -1,3 +1,4 @@
+export type UserSession = { username:string; roles:string[] };
 export type Product = {
     id: string;
     name: string;
@@ -80,14 +81,18 @@ export type Anomaly = {
     [key: string]: unknown
 };
 
-const json = async <T>(url: string): Promise<T> => {
-    const r = await fetch(url, {credentials: 'include'});
+const json = async <T>(url: string, init:RequestInit = {}): Promise<T> => {
+    const r = await fetch(url, {...init, credentials: 'include'});
     if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+    if (r.status === 204) return undefined as T;
     return r.json()
 };
 const q = (from: string, to: string, productId?: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`;
 
 export const api = {
+    login: (username:string,password:string) => json<UserSession>('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})}),
+    me: () => json<UserSession>('/api/auth/me'),
+    logout: () => json<void>('/api/auth/logout',{method:'POST'}),
     products: () => json<Product[]>('/api/products'),
     movements: (from: string, to: string, productId?: string, limit = 10) => json<Movement[]>(`/api/movements?${q(from, to, productId)}&limit=${limit}`),
     exportMovements: (f: MovementFilters) => {
