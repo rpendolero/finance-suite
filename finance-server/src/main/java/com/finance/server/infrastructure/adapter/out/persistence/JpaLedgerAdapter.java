@@ -108,7 +108,7 @@ public class JpaLedgerAdapter implements LedgerPort, MovementSearchPort {
     };
 
     var result = movementRepository.findAll(
-        spec, PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "bookingDate").and(Sort.by(Sort.Direction.DESC, "id"))));
+        spec, PageRequest.of(page, limit, movementSort(criteria)));
     var items = result.getContent().stream().map(mapper::toDomain).toList();
     log.debug("Movement search completed: offset={}, limit={}, returned={}, total={}", offset, limit, items.size(), result.getTotalElements());
     return new MovementSearchPort.Page(items, result.getTotalElements(), offset, limit);
@@ -302,6 +302,18 @@ public class JpaLedgerAdapter implements LedgerPort, MovementSearchPort {
     return !existing.getBookingDate().equals(incoming.date())
             || existing.getAmount().compareTo(incoming.amount()) != 0
             || !existing.getDescription().equals(incoming.description());
+  }
+
+  private Sort movementSort(MovementSearchPort.Criteria criteria) {
+    String property = switch (criteria.sortBy() == null ? MovementSearchPort.Criteria.SortField.DATE : criteria.sortBy()) {
+      case DATE -> "bookingDate";
+      case AMOUNT -> "amount";
+      case MERCHANT -> "merchant";
+      case CATEGORY -> "category";
+    };
+    Sort.Direction direction = criteria.sortDirection() == MovementSearchPort.Criteria.SortDirection.ASC
+        ? Sort.Direction.ASC : Sort.Direction.DESC;
+    return Sort.by(direction, property).and(Sort.by(direction, "id"));
   }
 
   private boolean hasText(String value) {
