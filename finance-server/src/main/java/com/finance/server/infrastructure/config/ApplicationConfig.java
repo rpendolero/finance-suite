@@ -8,6 +8,9 @@ import java.time.Clock;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finance.server.infrastructure.adapter.out.enablebanking.EnableBankingAuthorizationAdapter;
 
 @Configuration
 public class ApplicationConfig {
@@ -106,6 +109,20 @@ public class ApplicationConfig {
       CashFlowService cashFlow) {
     return new ExtendedAnalysisService(
         trends, merchants, budgets, reconciliation, increases, cashFlow);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  BankingAuthorizationPort enableBankingAuthorizationPort(
+      EnableBankingProperties properties, ObjectMapper mapper) {
+    return new EnableBankingAuthorizationAdapter(properties, mapper);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  BankingAuthorizationService bankingAuthorizationService(
+      BankingAuthorizationPort authorizationPort, Clock clock) {
+    return new BankingAuthorizationService(authorizationPort, clock);
   }
 
   @Bean
