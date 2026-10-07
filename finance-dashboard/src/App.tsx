@@ -12,11 +12,12 @@ import {
     TrendingDown,
     TrendingUp,
     TriangleAlert,
-    Wallet
+    Wallet,
+    Tags
 } from 'lucide-react';
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
-    Anomaly,
+    AdminCategory,
     api,
     CalendarDay,
     CategoryStat,
@@ -80,8 +81,9 @@ type View =
     | 'recurring'
     | 'calendar'
     | 'insights'
-    | 'review';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert]];
+    | 'review'
+    | 'categoryAdmin';
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -130,7 +132,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     return <div className="shell">
         <aside>
             <div className="brand"><b>▥</b><span>Finance Suite</span></div>
-            <nav>{menu.map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+            <nav>{menu.filter(([id]) => id !== 'categoryAdmin' || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
                 className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
@@ -199,7 +201,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
                                  productStats={productStats} products={products} movements={movements}
                                  recurring={recurring} calendar={calendar} insights={insights}
-                                 anomalies={anomalies}/> : null}</main>
+                                 anomalies={anomalies} session={session}/> : null}</main>
     </div>
 }
 
@@ -214,7 +216,8 @@ function SectionView({
                          recurring,
                          calendar,
                          insights,
-                         anomalies
+                         anomalies,
+                         session
                      }: any) {
     if (view === 'trend') return <Page title="Evolución financiera">
         <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
@@ -258,6 +261,7 @@ function SectionView({
         </div>) : <Empty>No hay insights para este período.</Empty>}</div>
     </Page>;
     if (view === 'review') return <ClassificationReview />;
+    if (view === 'categoryAdmin' && session?.roles?.includes('ADMIN')) return <CategoryAdministration />;
     return null
 }
 
@@ -429,6 +433,91 @@ function ClassificationReview() {
                 }) : <Empty>No quedan movimientos pendientes este mes.</Empty>}
         </div>
     </Page>
+}
+
+
+function CategoryAdministration() {
+    const [categories, setCategories] = useState<AdminCategory[]>([]);
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
+    const [newCategory, setNewCategory] = useState({code: '', name: '', active: true, displayOrder: 150});
+
+    const load = () => api.adminCategories().then(setCategories).catch(e => setError(e instanceof Error ? e.message : 'No se pudo cargar el catálogo'));
+    useEffect(() => { load() }, []);
+
+    const saveCategory = async (category: AdminCategory) => {
+        setError(''); setMessage('');
+        try {
+            await api.updateCategory(category.code, {code: category.code, name: category.name, active: category.active, displayOrder: category.displayOrder});
+            setMessage('Categoría actualizada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo actualizar'); }
+    };
+
+    const createCategory = async () => {
+        if (!newCategory.code.trim() || !newCategory.name.trim()) return;
+        setError(''); setMessage('');
+        try {
+            await api.createCategory(newCategory);
+            setNewCategory({code: '', name: '', active: true, displayOrder: 150});
+            setMessage('Categoría creada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear'); }
+    };
+
+    const patchCategory = (code: string, patch: Partial<AdminCategory>) =>
+        setCategories(current => current.map(c => c.code === code ? {...c, ...patch} : c));
+
+    const patchSubcategory = (categoryCode: string, subCode: string, patch: any) =>
+        setCategories(current => current.map(c => c.code !== categoryCode ? c : {...c, subcategories: c.subcategories.map(s => s.code === subCode ? {...s, ...patch} : s)}));
+
+    const saveSubcategory = async (category: AdminCategory, sub: any) => {
+        setError(''); setMessage('');
+        try {
+            await api.updateSubcategory(category.code, sub.code, {code: sub.code, name: sub.name, active: sub.active, displayOrder: sub.displayOrder});
+            setMessage('Subcategoría actualizada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo actualizar'); }
+    };
+
+    const addSubcategory = async (category: AdminCategory) => {
+        const code = window.prompt('Código de la subcategoría (ej. IBI)');
+        if (!code) return;
+        const name = window.prompt('Nombre visible', code.replaceAll('_', ' '));
+        if (!name) return;
+        try {
+            await api.createSubcategory(category.code, {code, name, active: true, displayOrder: (category.subcategories.length + 1) * 10});
+            setMessage('Subcategoría creada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear'); }
+    };
+
+    return <Page title="Administración de categorías">
+        <div className="card category-create">
+            <input placeholder="CÓDIGO" value={newCategory.code} onChange={e => setNewCategory({...newCategory, code: e.target.value.toUpperCase().replaceAll(' ', '_')})}/>
+            <input placeholder="Nombre" value={newCategory.name} onChange={e => setNewCategory({...newCategory, name: e.target.value})}/>
+            <input type="number" min="0" value={newCategory.displayOrder} onChange={e => setNewCategory({...newCategory, displayOrder: Number(e.target.value)})}/>
+            <button onClick={createCategory}>Nueva categoría</button>
+        </div>
+        {message && <div className="classification-message">{message}</div>}
+        {error && <div className="api-error">{error}</div>}
+        <div className="category-admin-list">{categories.map(category =>
+            <div className="card category-admin" key={category.code}>
+                <div className="category-admin-head">
+                    <code>{category.code}</code>
+                    <input value={category.name} onChange={e => patchCategory(category.code, {name: e.target.value})}/>
+                    <input className="order-input" type="number" min="0" value={category.displayOrder} onChange={e => patchCategory(category.code, {displayOrder: Number(e.target.value)})}/>
+                    <label><input type="checkbox" checked={category.active} onChange={e => patchCategory(category.code, {active: e.target.checked})}/> Activa</label>
+                    <button onClick={() => saveCategory(category)}>Guardar</button>
+                    <button className="secondary" onClick={() => addSubcategory(category)}>+ Subcategoría</button>
+                </div>
+                <div className="subcategory-admin">
+                    {category.subcategories.map(sub => <div className="subcategory-admin-row" key={sub.code}>
+                        <code>{sub.code}</code>
+                        <input value={sub.name} onChange={e => patchSubcategory(category.code, sub.code, {name: e.target.value})}/>
+                        <input className="order-input" type="number" min="0" value={sub.displayOrder} onChange={e => patchSubcategory(category.code, sub.code, {displayOrder: Number(e.target.value)})}/>
+                        <label><input type="checkbox" checked={sub.active} onChange={e => patchSubcategory(category.code, sub.code, {active: e.target.checked})}/> Activa</label>
+                        <button onClick={() => saveSubcategory(category, sub)}>Guardar</button>
+                    </div>)}
+                </div>
+            </div>)}</div>
+    </Page>;
 }
 
 function Page({title, children}: { title: string; children: any }) {
