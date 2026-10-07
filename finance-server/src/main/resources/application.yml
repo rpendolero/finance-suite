@@ -31,6 +31,14 @@ spring:
           prompt: false
           completion: false
 finance:
+  enable-banking:
+    enabled: ${ENABLE_BANKING_ENABLED:false}
+    base-url: ${ENABLE_BANKING_BASE_URL:https://api.enablebanking.com}
+    application-id: ${ENABLE_BANKING_APPLICATION_ID:4791483b-a593-486c-afaf-dba0f051dc87}
+    private-key: ${ENABLE_BANKING_PRIVATE_KEY:}
+    redirect-url: ${ENABLE_BANKING_REDIRECT_URL:https://finances.myaihome.es/api/v1/banking/enable-banking/callback}
+    country: ${ENABLE_BANKING_COUNTRY:ES}
+    consent-days: ${ENABLE_BANKING_CONSENT_DAYS:90}
   security:
     reader-password: ${FINANCE_READER_PASSWORD}
     admin-password: ${FINANCE_ADMIN_PASSWORD}
