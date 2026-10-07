@@ -70,6 +70,20 @@ type View =
 const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert]];
 
 export default function App() {
+    const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
+    useEffect(()=>{api.me().then(setSession).catch(()=>setSession(null)).finally(()=>setAuthLoading(false))},[]);
+    if(authLoading)return <div className="auth-screen"><div className="login-card"><div className="login-logo">▥</div><h1>Finance Suite</h1><p>Comprobando sesión…</p></div></div>;
+    if(!session)return <Login onLogin={setSession}/>;
+    return <Dashboard session={session} onLogout={()=>api.logout().finally(()=>setSession(null))}/>;
+}
+
+function Login({onLogin}:{onLogin:(session:any)=>void}){
+ const[username,setUsername]=useState('reader'),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const submit=(e:any)=>{e.preventDefault();setBusy(true);setError('');api.login(username,password).then(onLogin).catch(()=>setError('Usuario o contraseña incorrectos')).finally(()=>setBusy(false))};
+ return <div className="auth-screen"><form className="login-card" onSubmit={submit}><div className="login-logo">▥</div><h1>Finance Suite</h1><p>Accede a tu panel financiero</p><label>Usuario<input autoFocus autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="login-error">{error}</div>}<button disabled={busy||!username||!password}>{busy?'Accediendo…':'Iniciar sesión'}</button></form></div>
+}
+
+function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
     const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
         to = now.toISOString().slice(0, 10);
@@ -112,7 +126,7 @@ export default function App() {
             <header>
                 <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
                     importados</p></div>
-                <div className="period">Este mes · {from} — {to}</div>
+                <div className="header-actions"><div className="period">Este mes · {from} — {to}</div><button className="logout" onClick={onLogout}>{session.username} · Salir</button></div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
             {loading ?
