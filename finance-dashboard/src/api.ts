@@ -1,3 +1,4 @@
+export type UserSession = { username: string; roles: string[] };
 export type Product = {
     id: string;
     name: string;
@@ -95,10 +96,10 @@ export type Anomaly = {
     [key: string]: unknown
 };
 
-const json = async <T>(url: string): Promise<T> => {
-    const r = await fetch(url, {credentials: 'include'});
+const json = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
+    const r = await fetch(url, {...init, credentials: 'include'});
     if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
-    return r.json()
+    return r.status === 204 ? undefined as T : r.json()
 };
 const sendJson = async <T>(url: string, method: 'POST' | 'PATCH', body?: unknown): Promise<T> => {
     const r = await fetch(url, {
@@ -113,6 +114,9 @@ const sendJson = async <T>(url: string, method: 'POST' | 'PATCH', body?: unknown
 const q = (from: string, to: string, productId?: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`;
 
 export const api = {
+    login: (username: string, password: string) => json<UserSession>('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password})}),
+    me: () => json<UserSession>('/api/auth/me'),
+    logout: () => json<void>('/api/auth/logout', {method: 'POST'}),
     products: () => json<Product[]>('/api/products'),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
     unclassified: (from: string, to: string, productId?: string, limit = 100) =>
