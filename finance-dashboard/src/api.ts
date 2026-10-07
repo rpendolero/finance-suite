@@ -27,6 +27,10 @@ export type CategoryDefinition = {
     label: string;
     subcategories: string[]
 };
+export type AdminSubcategory = { id: number; code: string; name: string; active: boolean; displayOrder: number };
+export type AdminCategory = { id: number; code: string; name: string; active: boolean; displayOrder: number; subcategories: AdminSubcategory[] };
+export type CatalogItemInput = { code: string; name: string; active: boolean; displayOrder: number };
+
 export type ReclassificationResult = {
     scanned: number;
     updated: number;
@@ -113,7 +117,7 @@ const json = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
     if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
     return r.status === 204 ? undefined as T : r.json()
 };
-const sendJson = async <T>(url: string, method: 'POST' | 'PATCH', body?: unknown): Promise<T> => {
+const sendJson = async <T>(url: string, method: 'POST' | 'PUT' | 'PATCH', body?: unknown): Promise<T> => {
     const r = await fetch(url, {
         method,
         credentials: 'include',
@@ -131,6 +135,11 @@ export const api = {
     logout: () => json<void>('/api/auth/logout', {method: 'POST'}),
     products: () => json<Product[]>('/api/products'),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
+    adminCategories: () => json<AdminCategory[]>('/api/admin/categories'),
+    createCategory: (item: CatalogItemInput) => sendJson<AdminCategory>('/api/admin/categories', 'POST', item),
+    updateCategory: (code: string, item: CatalogItemInput) => sendJson<AdminCategory>(`/api/admin/categories/${encodeURIComponent(code)}`, 'PUT', item),
+    createSubcategory: (category: string, item: CatalogItemInput) => sendJson<AdminSubcategory>(`/api/admin/categories/${encodeURIComponent(category)}/subcategories`, 'POST', item),
+    updateSubcategory: (category: string, code: string, item: CatalogItemInput) => sendJson<AdminSubcategory>(`/api/admin/categories/${encodeURIComponent(category)}/subcategories/${encodeURIComponent(code)}`, 'PUT', item),
     unclassified: (from: string, to: string, productId?: string, limit = 100) =>
         json<Movement[]>(`/api/classification/unclassified?${q(from, to, productId)}&limit=${limit}`),
     classifyMovement: (
