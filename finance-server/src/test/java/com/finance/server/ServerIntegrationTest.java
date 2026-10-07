@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.finance.domain.*;
-import com.finance.server.application.port.LedgerPort;
+import com.finance.server.infrastructure.adapter.out.persistence.JpaLedgerAdapter;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class ServerIntegrationTest {
   @Autowired MockMvc mvc;
-  @MockitoBean LedgerPort ledger;
+  @MockitoBean JpaLedgerAdapter ledger;
 
   @Test
   void requiresAuthentication() throws Exception {
