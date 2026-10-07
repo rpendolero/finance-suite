@@ -118,23 +118,23 @@ public record Movement(
       throw new IllegalArgumentException("Confianza de clasificación fuera de rango");
   }
 
-  public Movement normalizedMerchantAs(String value) {
+  public static Movement normalizedCopy(Movement source, String value) {
     return new Movement(
-        id,
-        productId,
-        externalId,
-        date,
-        amount,
-        currency,
-        description,
-        merchant,
-        category,
-        kind,
-        status,
+        source.id(),
+        source.productId(),
+        source.externalId(),
+        source.date(),
+        source.amount(),
+        source.currency(),
+        source.description(),
+        source.merchant(),
+        source.category(),
+        source.kind(),
+        source.status(),
         value,
-        subcategory,
-        classificationSource,
-        classificationConfidence);
+        source.subcategory(),
+        source.classificationSource(),
+        source.classificationConfidence());
   }
 
   public Movement withClassification(
