@@ -18,6 +18,7 @@ import {
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
     AdminCategory,
+    Anomaly,
     api,
     CalendarDay,
     CategoryStat,
@@ -46,6 +47,18 @@ const CATEGORY_COLORS = [
     '#ea580c',
     '#4f46e5'
 ];
+const localDate = (d: Date) => {
+    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+const periodRange = (preset: string, now = new Date()) => {
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (preset === 'LAST_MONTH') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: localDate(new Date(now.getFullYear(), now.getMonth(), 0))};
+    if (preset === '3M') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 2, 1)), to: localDate(end)};
+    if (preset === '6M') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 5, 1)), to: localDate(end)};
+    if (preset === 'YEAR') return {from: localDate(new Date(now.getFullYear(), 0, 1)), to: localDate(end)};
+    return {from: localDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: localDate(end)};
+};
 const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
     month: 'short'
@@ -101,8 +114,18 @@ function Login({onLogin}:{onLogin:(session:any)=>void}){
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
-        to = now.toISOString().slice(0, 10);
+    const initialPeriod = periodRange('THIS_MONTH', now);
+    const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
+    const [from, setFrom] = useState(initialPeriod.from);
+    const [to, setTo] = useState(initialPeriod.to);
+    const selectPeriod = (preset: string) => {
+        setPeriodPreset(preset);
+        if (preset !== 'CUSTOM') {
+            const range = periodRange(preset, now);
+            setFrom(range.from);
+            setTo(range.to);
+        }
+    };
     useEffect(() => {
         let active = true;
         setLoading(true);
@@ -142,7 +165,25 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             <header>
                 <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
                     importados</p></div>
-                <div className="header-actions"><div className="period">Este mes · {from} — {to}</div><button className="logout" onClick={onLogout}>{session.username} · Salir</button></div>
+                <div className="header-actions">
+                    <div className="period period-selector">
+                        <select aria-label="Período" value={periodPreset} onChange={e => selectPeriod(e.target.value)}>
+                            <option value="THIS_MONTH">Este mes</option>
+                            <option value="LAST_MONTH">Mes anterior</option>
+                            <option value="3M">Últimos 3 meses</option>
+                            <option value="6M">Últimos 6 meses</option>
+                            <option value="YEAR">Este año</option>
+                            <option value="CUSTOM">Personalizado</option>
+                        </select>
+                        {periodPreset === 'CUSTOM' && <>
+                            <input aria-label="Desde" type="date" value={from} max={to} onChange={e => setFrom(e.target.value)}/>
+                            <span>—</span>
+                            <input aria-label="Hasta" type="date" value={to} min={from} onChange={e => setTo(e.target.value)}/>
+                        </>}
+                        <small>{from} — {to}</small>
+                    </div>
+                    <button className="logout" onClick={onLogout}>{session.username} · Salir</button>
+                </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
             {loading ?
@@ -201,7 +242,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
                                  productStats={productStats} products={products} movements={movements}
                                  recurring={recurring} calendar={calendar} insights={insights}
-                                 anomalies={anomalies} session={session}/> : null}</main>
+                                 anomalies={anomalies} session={session} from={from} to={to}/> : null}</main>
     </div>
 }
 
@@ -240,7 +281,7 @@ function SectionView({
                 <b>{s.name}</b><span>{s.provider}</span><span>{s.type}</span><span>{eur(s.balance)}</span><strong>{eur(s.expenses)}</strong>
             </div>)}</div>
     </Page>;
-    if (view === 'movements') return <MovementSearch products={products}/>;
+    if (view === 'movements') return <MovementSearch products={products} initialFrom={arguments[0].from} initialTo={arguments[0].to} canEdit={session?.roles?.includes('ADMIN')}/>;
     if (view === 'recurring') return <Page title="Gastos recurrentes">
         <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
             className="list-item" key={i}>
@@ -533,90 +574,77 @@ function Rank({title, rows}: { title: string; rows: [string, number, number, num
     </div>) : <Empty>Sin datos.</Empty>}</div>
 }
 
-function MovementSearch({products}: { products: Product[] }) {
-    const now = new Date(), defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
-        defaultTo = now.toISOString().slice(0, 10);
-    const [filters, setFilters] = useState<any>({
-        from: defaultFrom,
-        to: defaultTo,
-        sortBy: 'DATE',
-        sortDirection: 'DESC',
-        offset: 0,
-        limit: 25
-    }), [page, setPage] = useState<any>({
-        items: [],
-        total: 0,
-        offset: 0,
-        limit: 25
-    }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+function MovementSearch({products, initialFrom, initialTo, canEdit}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean }) {
+    const [filters, setFilters] = useState<any>({from: initialFrom, to: initialTo, sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
+    const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
+    const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [editing, setEditing] = useState<string | null>(null);
+    const [choice, setChoice] = useState<ClassificationChoice>({});
+    const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+
     const load = (next = filters) => {
-        setBusy(true);
-        setErr('');
-        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false))
+        setBusy(true); setErr('');
+        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false));
     };
+    useEffect(() => { load(filters); api.categoriesCatalog().then(setCatalog).catch(() => undefined) }, []);
     useEffect(() => {
-        load(filters)
-    }, []);
+        const next = {...filters, from: initialFrom, to: initialTo, offset: 0};
+        setFilters(next); load(next);
+    }, [initialFrom, initialTo]);
+
     const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
-    const submit = (e: any) => {
-        e.preventDefault();
-        load(filters)
+    const submit = (e: any) => { e.preventDefault(); load(filters) };
+    const move = (offset: number) => { const next = {...filters, offset}; setFilters(next); load(next) };
+    const edit = (m: Movement) => {
+        setEditing(m.id);
+        setChoice({category: m.category || '', subcategory: m.subcategory || '', kind: m.kind || 'NORMAL'});
     };
-    const move = (offset: number) => {
-        const next = {...filters, offset};
-        setFilters(next);
-        load(next)
+    const saveClassification = async (m: Movement) => {
+        if (!choice.category) { setErr('Selecciona una categoría.'); return; }
+        setBusy(true); setErr('');
+        try {
+            await api.classifyMovement(m.id, {category: choice.category, subcategory: choice.subcategory, kind: choice.kind || m.kind || 'NORMAL', createRule: false, applyToSimilar: false});
+            setEditing(null);
+            load(filters);
+        } catch (e) {
+            setBusy(false);
+            setErr(e instanceof Error ? e.message : 'No se pudo actualizar la categoría');
+        }
     };
+    const selectedDefinition = catalog.find(c => c.code === choice.category);
+
     return <Page title="Movimientos">
-        <form className="filters card" onSubmit={submit}><label>Desde<input type="date" value={filters.from}
-                                                                            onChange={e => change('from', e.target.value)}/></label><label>Hasta<input
-            type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label><input
-            placeholder="Buscar concepto o comercio" value={filters.text || ''}
-            onChange={e => change('text', e.target.value)}/><select value={filters.productId || ''}
-                                                                    onChange={e => change('productId', e.target.value)}>
-            <option value="">Todos los productos</option>
-            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select><input
-            placeholder="Categoría" value={filters.category || ''}
-            onChange={e => change('category', e.target.value)}/><input type="number" step="0.01"
-                                                                       placeholder="Importe mín."
-                                                                       value={filters.minAmount ?? ''}
-                                                                       onChange={e => change('minAmount', e.target.value)}/><input
-            type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''}
-            onChange={e => change('maxAmount', e.target.value)}/><select value={filters.status || ''}
-                                                                         onChange={e => change('status', e.target.value)}>
-            <option value="">Todos los estados</option>
-            <option value="BOOKED">Contabilizado</option>
-            <option value="PENDING">Pendiente</option>
-        </select><select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}>
-            <option value="DATE">Ordenar por fecha</option>
-            <option value="AMOUNT">Ordenar por importe</option>
-            <option value="MERCHANT">Ordenar por comercio</option>
-            <option value="CATEGORY">Ordenar por categoría</option>
-        </select><select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}>
-            <option value="DESC">Descendente</option>
-            <option value="ASC">Ascendente</option>
-        </select>
+        <form className="filters card" onSubmit={submit}>
+            <label>Desde<input type="date" value={filters.from} onChange={e => change('from', e.target.value)}/></label>
+            <label>Hasta<input type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label>
+            <input placeholder="Buscar concepto o comercio" value={filters.text || ''} onChange={e => change('text', e.target.value)}/>
+            <select value={filters.productId || ''} onChange={e => change('productId', e.target.value)}><option value="">Todos los productos</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+            <input placeholder="Categoría" value={filters.category || ''} onChange={e => change('category', e.target.value)}/>
+            <input type="number" step="0.01" placeholder="Importe mín." value={filters.minAmount ?? ''} onChange={e => change('minAmount', e.target.value)}/>
+            <input type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''} onChange={e => change('maxAmount', e.target.value)}/>
+            <select value={filters.status || ''} onChange={e => change('status', e.target.value)}><option value="">Todos los estados</option><option value="BOOKED">Contabilizado</option><option value="PENDING">Pendiente</option></select>
+            <select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}><option value="DATE">Ordenar por fecha</option><option value="AMOUNT">Ordenar por importe</option><option value="MERCHANT">Ordenar por comercio</option><option value="CATEGORY">Ordenar por categoría</option></select>
+            <select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}><option value="DESC">Descendente</option><option value="ASC">Ascendente</option></select>
             <button type="submit"><Search size={16}/>Buscar</button>
-            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV
-            </button>
+            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV</button>
         </form>
         {err && <div className="api-error">{err}</div>}
-        <div className="card table">{busy ? <div className="loading">Buscando movimientos…</div> : <>
-            <div className="thead movement-grid"><b>Fecha</b><b>Concepto</b><b>Categoría</b><b>Importe</b></div>
-            {page.items.length ? page.items.map((m: Movement) => <div className="trow movement-grid" key={m.id}>
-                    <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b><span>{m.category || 'Sin categoría'}</span><strong
-                    className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong></div>) :
-                <Empty>No hay movimientos con esos filtros.</Empty>}
-            <div className="pagination"><span>{page.total} movimientos</span>
-                <div>
-                    <button disabled={page.offset <= 0}
-                            onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior
-                    </button>
-                    <button disabled={page.offset + page.limit >= page.total}
-                            onClick={() => move(page.offset + page.limit)}>Siguiente
-                    </button>
+        <div className="card table">{busy && !page.items.length ? <div className="loading">Buscando movimientos…</div> : <>
+            <div className="thead movement-grid editable-movement-grid"><b>Fecha</b><b>Concepto</b><b>Categoría</b><b>Importe</b>{canEdit && <b>Acción</b>}</div>
+            {page.items.length ? page.items.map((m: Movement) => <div key={m.id}>
+                <div className="trow movement-grid editable-movement-grid">
+                    <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b>
+                    <span>{m.category || 'Sin categoría'}{m.subcategory ? ' / ' + m.subcategory.replaceAll('_', ' ') : ''}</span>
+                    <strong className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong>
+                    {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
                 </div>
-            </div>
+                {canEdit && editing === m.id && <div className="movement-classification-editor">
+                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: choice.kind})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
+                    <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
+                    <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar categoría</button>
+                </div>}
+            </div>) : <Empty>No hay movimientos con esos filtros.</Empty>}
+            <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
         </>}</div>
     </Page>
 }
