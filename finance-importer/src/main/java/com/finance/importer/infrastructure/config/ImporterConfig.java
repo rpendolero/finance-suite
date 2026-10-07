@@ -13,6 +13,7 @@ import com.finance.importer.infrastructure.adapter.out.playwright.*;
 import java.util.List;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -91,8 +92,8 @@ public class ImporterConfig {
   }
 
   @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
   EnableBankingClient enableBankingClient(EnableBankingProperties properties, ObjectMapper mapper) {
-    if (!properties.isEnabled()) return null;
     return new EnableBankingClient(properties, mapper);
   }
 
