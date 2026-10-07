@@ -8,6 +8,7 @@ import com.finance.importer.infrastructure.adapter.file.LocalFileCleanupAdapter;
 import com.finance.importer.infrastructure.adapter.in.cli.ImporterJobRunner;
 import com.finance.importer.infrastructure.adapter.out.csv.*;
 import com.finance.importer.infrastructure.adapter.out.http.HttpIngestionAdapter;
+import com.finance.importer.infrastructure.adapter.out.enablebanking.EnableBankingClient;
 import com.finance.importer.infrastructure.adapter.out.playwright.*;
 import java.util.List;
 import org.springframework.boot.ApplicationRunner;
@@ -18,7 +19,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties({
         ImporterProperties.class,
-        BrowserProperties.class
+        BrowserProperties.class,
+        EnableBankingProperties.class
 })
 public class ImporterConfig {
 
@@ -86,6 +88,12 @@ public class ImporterConfig {
             urlPolicy,
             storage,
             browserFactory);
+  }
+
+  @Bean
+  EnableBankingClient enableBankingClient(EnableBankingProperties properties, ObjectMapper mapper) {
+    if (!properties.isEnabled()) return null;
+    return new EnableBankingClient(properties, mapper);
   }
 
   // -------------------------------------------------------------------------
