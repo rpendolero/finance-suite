@@ -15,14 +15,6 @@ public final class MovementClassificationService {
   private final CategoryCatalogService categories;
   private final MovementKindDetectionService kindDetection;
 
-  /** Backward-compatible constructor used outside the Spring configuration. */
-  public MovementClassificationService() {
-    this(
-        new MerchantNormalizationService(),
-        new CategoryCatalogService(),
-        new MovementKindDetectionService());
-  }
-
   public Movement classify(Movement movement, List<ClassificationRule> rules) {
     Movement normalized =
         Movement.normalizedCopy(
