@@ -6,7 +6,7 @@ CREATE TABLE category (
   display_order INT NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   CONSTRAINT uk_category_code UNIQUE (code)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE subcategory (
   id BIGINT NOT NULL AUTO_INCREMENT,
@@ -18,7 +18,7 @@ CREATE TABLE subcategory (
   PRIMARY KEY (id),
   CONSTRAINT uk_subcategory_category_code UNIQUE (category_id, code),
   CONSTRAINT fk_subcategory_category FOREIGN KEY (category_id) REFERENCES category(id)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO category (code, name, display_order) VALUES
 ('INGRESOS','Ingresos',10),('VIVIENDA','Vivienda',20),('ALIMENTACION','Alimentación',30),
@@ -49,4 +49,4 @@ JOIN (
  SELECT 'TRANSFERENCIAS','TRASPASO_INTERNO','Traspaso interno',10 UNION ALL SELECT 'TRANSFERENCIAS','LIQUIDACION_TARJETA','Liquidación tarjeta',20 UNION ALL
  SELECT 'TRANSFERENCIAS','LIQUIDACION_PAYPAL','Liquidación PayPal',30 UNION ALL SELECT 'TRANSFERENCIAS','LIQUIDACION_MONEDERO','Liquidación monedero',40 UNION ALL SELECT 'TRANSFERENCIAS','TRANSFERENCIA_EXTERNA','Transferencia externa',50 UNION ALL
  SELECT 'EFECTIVO','RETIRADA_CAJERO','Retirada cajero',10 UNION ALL SELECT 'OTROS','OTROS','Otros',10
-) s ON s.category_code = c.code;
+) s ON CONVERT(s.category_code USING utf8mb4) COLLATE utf8mb4_unicode_ci = c.code COLLATE utf8mb4_unicode_ci;
