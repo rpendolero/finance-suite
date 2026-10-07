@@ -507,6 +507,7 @@ function CategoryAdministration() {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [newCategory, setNewCategory] = useState({code: '', name: '', active: true, displayOrder: 150});
+    const [subcategoryModal, setSubcategoryModal] = useState<{category: AdminCategory; code: string; name: string; displayOrder: number} | null>(null);
 
     const load = () => api.adminCategories().then(setCategories).catch(e => setError(e instanceof Error ? e.message : 'No se pudo cargar el catálogo'));
     useEffect(() => { load() }, []);
@@ -543,15 +544,31 @@ function CategoryAdministration() {
         } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo actualizar'); }
     };
 
-    const addSubcategory = async (category: AdminCategory) => {
-        const code = window.prompt('Código de la subcategoría (ej. IBI)');
-        if (!code) return;
-        const name = window.prompt('Nombre visible', code.replaceAll('_', ' '));
-        if (!name) return;
+    const openSubcategoryModal = (category: AdminCategory) => {
+        setError(''); setMessage('');
+        setSubcategoryModal({category, code: '', name: '', displayOrder: (category.subcategories.length + 1) * 10});
+    };
+
+    const createSubcategory = async () => {
+        if (!subcategoryModal) return;
+        const code = subcategoryModal.code.trim();
+        const name = subcategoryModal.name.trim();
+        if (!code || !name) {
+            setError('El código y el nombre de la subcategoría son obligatorios.');
+            return;
+        }
+        setError(''); setMessage('');
         try {
-            await api.createSubcategory(category.code, {code, name, active: true, displayOrder: (category.subcategories.length + 1) * 10});
-            setMessage('Subcategoría creada.'); load();
-        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear'); }
+            await api.createSubcategory(subcategoryModal.category.code, {
+                code,
+                name,
+                active: true,
+                displayOrder: subcategoryModal.displayOrder
+            });
+            setSubcategoryModal(null);
+            setMessage('Subcategoría creada.');
+            load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear la subcategoría'); }
     };
 
     return <Page title="Administración de categorías">
@@ -563,6 +580,37 @@ function CategoryAdministration() {
         </div>
         {message && <div className="classification-message">{message}</div>}
         {error && <div className="api-error">{error}</div>}
+        {subcategoryModal && <div className="app-modal-backdrop" role="presentation" onMouseDown={e => {
+            if (e.target === e.currentTarget) setSubcategoryModal(null);
+        }}>
+            <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="subcategory-modal-title">
+                <div className="app-modal-head">
+                    <div><h3 id="subcategory-modal-title">Nueva subcategoría</h3><p>{subcategoryModal.category.name}</p></div>
+                    <button type="button" className="modal-close" aria-label="Cerrar" onClick={() => setSubcategoryModal(null)}>×</button>
+                </div>
+                <div className="app-modal-body">
+                    <label>Código
+                        <input autoFocus placeholder="Ej. PLAN_PENSIONES" value={subcategoryModal.code}
+                            onChange={e => {
+                                const code = e.target.value.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+/, '');
+                                setSubcategoryModal({...subcategoryModal, code});
+                            }}/>
+                    </label>
+                    <label>Nombre
+                        <input placeholder="Nombre visible" value={subcategoryModal.name}
+                            onChange={e => setSubcategoryModal({...subcategoryModal, name: e.target.value})}/>
+                    </label>
+                    <label>Orden
+                        <input type="number" min="0" value={subcategoryModal.displayOrder}
+                            onChange={e => setSubcategoryModal({...subcategoryModal, displayOrder: Number(e.target.value)})}/>
+                    </label>
+                </div>
+                <div className="app-modal-actions">
+                    <button type="button" className="secondary" onClick={() => setSubcategoryModal(null)}>Cancelar</button>
+                    <button type="button" disabled={!subcategoryModal.code.trim() || !subcategoryModal.name.trim()} onClick={createSubcategory}>Crear subcategoría</button>
+                </div>
+            </div>
+        </div>}
         <div className="category-admin-list">{categories.map(category =>
             <div className="card category-admin" key={category.code}>
                 <div className="category-admin-head">
@@ -571,7 +619,7 @@ function CategoryAdministration() {
                     <input className="order-input" type="number" min="0" value={category.displayOrder} onChange={e => patchCategory(category.code, {displayOrder: Number(e.target.value)})}/>
                     <label><input type="checkbox" checked={category.active} onChange={e => patchCategory(category.code, {active: e.target.checked})}/> Activa</label>
                     <button onClick={() => saveCategory(category)}>Guardar</button>
-                    <button className="secondary" onClick={() => addSubcategory(category)}>+ Subcategoría</button>
+                    <button className="secondary" onClick={() => openSubcategoryModal(category)}>+ Subcategoría</button>
                 </div>
                 <div className="subcategory-admin">
                     {category.subcategories.map(sub => <div className="subcategory-admin-row" key={sub.code}>
