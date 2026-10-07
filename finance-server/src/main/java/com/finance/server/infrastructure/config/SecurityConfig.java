@@ -3,6 +3,9 @@ package com.finance.server.infrastructure.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,6 +40,11 @@ public class SecurityConfig {
   }
 
   @Bean
+  AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    return configuration.getAuthenticationManager();
+  }
+
+  @Bean
   SecurityFilterChain security(
       HttpSecurity http,
       @Value("${finance.security.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
@@ -51,14 +59,13 @@ public class SecurityConfig {
     return http.addFilterBefore(
             new OriginFilter(trustedOrigins),
             org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)
-        .csrf(csrf -> csrf.disable())
-        .sessionManagement(
-            s ->
-                s.sessionCreationPolicy(
-                    org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/auth/login"))
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/api/importer/**")
+                a.requestMatchers("/api/auth/login").permitAll()
+                    .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
+                    .requestMatchers("/api/importer/**")
                     .hasRole("IMPORTER")
                     .requestMatchers("/mcp", "/mcp/**")
                     .hasRole("READER")
@@ -68,7 +75,7 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
                     .anyRequest()
                     .denyAll())
-        .httpBasic(b -> {})
+        .httpBasic(b -> b.disable())
         .build();
   }
 }
