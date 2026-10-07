@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.finance.domain.ClassificationRule;
 import com.finance.domain.Movement;
+import com.finance.server.application.port.CategoryCatalogPort;
 import com.finance.server.application.port.LedgerPort;
 import com.finance.server.application.port.SettingsPort;
 import com.finance.server.application.service.*;
@@ -21,7 +22,23 @@ class ClassificationManagementServiceTest {
   LedgerPort ledger = mock(LedgerPort.class);
   SettingsPort settings = mock(SettingsPort.class);
   MerchantNormalizationService merchants = new MerchantNormalizationService();
-  CategoryCatalogService categories = new CategoryCatalogService();
+  CategoryCatalogPort catalog = mock(CategoryCatalogPort.class);
+  CategoryCatalogService categories = new CategoryCatalogService(catalog);
+
+  {
+    when(catalog.findActiveByCode(anyString())).thenAnswer(invocation -> {
+      String code = invocation.getArgument(0);
+      return switch (code) {
+        case "ALIMENTACION" -> Optional.of(new CategoryCatalogPort.Category(
+            "ALIMENTACION", "Alimentación",
+            List.of(new CategoryCatalogPort.Subcategory("SUPERMERCADO", "Supermercado"))));
+        case "TRANSFERENCIAS" -> Optional.of(new CategoryCatalogPort.Category(
+            "TRANSFERENCIAS", "Transferencias",
+            List.of(new CategoryCatalogPort.Subcategory("LIQUIDACION_PAYPAL", "Liquidación PayPal"))));
+        default -> Optional.empty();
+      };
+    });
+  }
   MovementClassificationService classifier =
       new MovementClassificationService(
           merchants, categories, new MovementKindDetectionService());
