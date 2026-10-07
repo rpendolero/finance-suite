@@ -232,13 +232,40 @@ function SectionView({
     return null
 }
 
+const TREATMENTS = [
+    {code: 'NORMAL', label: 'Gasto / ingreso normal', computable: true},
+    {code: 'REFUND', label: 'Devolución', computable: true},
+    {code: 'CARD_SETTLEMENT', label: 'No computable - Liquidación tarjeta', computable: false},
+    {code: 'WALLET_SETTLEMENT', label: 'No computable - PayPal / monedero', computable: false},
+    {code: 'INTERNAL_TRANSFER', label: 'No computable - Transferencia interna', computable: false}
+] as const;
+
+type ClassificationChoice = {
+    category?: string;
+    subcategory?: string;
+    kind?: string;
+};
+
+function treatmentDefaults(kind: string): ClassificationChoice {
+    switch (kind) {
+        case 'CARD_SETTLEMENT':
+            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_TARJETA'};
+        case 'WALLET_SETTLEMENT':
+            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_PAYPAL'};
+        case 'INTERNAL_TRANSFER':
+            return {kind, category: 'TRANSFERENCIAS', subcategory: 'TRASPASO_INTERNO'};
+        default:
+            return {kind};
+    }
+}
+
 function ClassificationReview() {
     const now = new Date(),
         from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
         to = now.toISOString().slice(0, 10);
     const [rows, setRows] = useState<Movement[]>([]);
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
-    const [choices, setChoices] = useState<Record<string, {category?: string; subcategory?: string}>>({});
+    const [choices, setChoices] = useState<Record<string, ClassificationChoice>>({});
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
@@ -270,9 +297,19 @@ function ClassificationReview() {
         }))
     };
 
+    const chooseTreatment = (id: string, kind: string) => {
+        setChoices(current => ({
+            ...current,
+            [id]: treatmentDefaults(kind)
+        }))
+    };
+
     const save = async (movement: Movement, createRule: boolean) => {
-        const selected = choices[movement.id];
-        if (!selected?.category) return;
+        const selected = choices[movement.id] || treatmentDefaults(movement.kind || 'NORMAL');
+        if (!selected.category) {
+            setError('Selecciona una categoría antes de guardar.');
+            return;
+        }
         setBusy(true);
         setError('');
         setMessage('');
@@ -280,13 +317,14 @@ function ClassificationReview() {
             await api.classifyMovement(movement.id, {
                 category: selected.category,
                 subcategory: selected.subcategory,
-                kind: movement.kind || 'NORMAL',
+                kind: selected.kind || movement.kind || 'NORMAL',
                 createRule,
                 applyToSimilar: createRule
             });
+            const treatment = TREATMENTS.find(t => t.code === (selected.kind || movement.kind || 'NORMAL'));
             setMessage(createRule
-                ? 'Clasificación guardada y aplicada a movimientos equivalentes.'
-                : 'Clasificación manual guardada.');
+                ? `Clasificación guardada y aplicada a movimientos equivalentes. Tratamiento: ${treatment?.label || 'Normal'}.`
+                : `Clasificación manual guardada. Tratamiento: ${treatment?.label || 'Normal'}.`);
             load();
         } catch (e) {
             setBusy(false);
@@ -318,23 +356,41 @@ function ClassificationReview() {
         <div className="card classification-list">
             {busy && !rows.length ? <div className="loading">Cargando clasificación…</div> :
                 rows.length ? rows.map(m => {
-                    const selected = choices[m.id] || {};
+                    const selected = choices[m.id] || treatmentDefaults(m.kind || 'NORMAL');
                     const definition = catalog.find(c => c.code === selected.category);
+                    const treatment = TREATMENTS.find(t => t.code === (selected.kind || m.kind || 'NORMAL'));
                     return <div className="classification-row" key={m.id}>
                         <div className="classification-movement">
                             <b>{m.normalizedMerchant || m.merchant || m.description}</b>
                             <small>{dateLabel(m.date)} · {eur(m.amount)}</small>
                             <span>{m.description}</span>
                         </div>
-                        <select value={selected.category || ''} onChange={e => choose(m.id, 'category', e.target.value)}>
-                            <option value="">Selecciona categoría</option>
-                            {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
-                        </select>
-                        <select value={selected.subcategory || ''} disabled={!definition}
-                                onChange={e => choose(m.id, 'subcategory', e.target.value)}>
-                            <option value="">Sin subcategoría</option>
-                            {(definition?.subcategories || []).map(s => <option value={s} key={s}>{s.replaceAll('_', ' ')}</option>)}
-                        </select>
+                        <div className="classification-field">
+                            <label>Tratamiento</label>
+                            <select value={selected.kind || m.kind || 'NORMAL'}
+                                    onChange={e => chooseTreatment(m.id, e.target.value)}>
+                                {TREATMENTS.map(t => <option value={t.code} key={t.code}>{t.label}</option>)}
+                            </select>
+                            {treatment && !treatment.computable &&
+                                <small className="non-computable">No se incluirá en gastos, ingresos ni ahorro.</small>}
+                        </div>
+                        <div className="classification-field">
+                            <label>Categoría</label>
+                            <select value={selected.category || ''}
+                                    onChange={e => choose(m.id, 'category', e.target.value)}>
+                                <option value="">Selecciona categoría</option>
+                                {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
+                            </select>
+                        </div>
+                        <div className="classification-field">
+                            <label>Subcategoría</label>
+                            <select value={selected.subcategory || ''} disabled={!definition}
+                                    onChange={e => choose(m.id, 'subcategory', e.target.value)}>
+                                <option value="">Sin subcategoría</option>
+                                {(definition?.subcategories || []).map(s =>
+                                    <option value={s} key={s}>{s.replaceAll('_', ' ')}</option>)}
+                            </select>
+                        </div>
                         <div className="classification-actions">
                             <button disabled={!selected.category || busy} onClick={() => save(m, false)}>Solo este</button>
                             <button className="secondary" disabled={!selected.category || busy}
