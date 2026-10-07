@@ -14,7 +14,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class EnableBankingAuthorizationAdapter implements BankingAuthorizationPort {
+public final class EnableBankingAuthorizationAdapter implements BankingAuthorizationPort, com.finance.server.application.port.BankingDataPort {
   private final URI base;
   private final String redirectUrl;
   private final ObjectMapper mapper;
@@ -52,7 +52,51 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
   public JsonNode session(String sessionId) { return get("sessions/" + encodePath(sessionId)); }
   public JsonNode account(String accountId) { return get("accounts/" + encodePath(accountId)); }
   public JsonNode balances(String accountId) { return get("accounts/" + encodePath(accountId) + "/balances"); }
-  public JsonNode transactions(String accountId) { return get("accounts/" + encodePath(accountId) + "/transactions"); }
+  @Override
+  public java.util.List<com.finance.server.application.port.BankingDataPort.Account> accounts(String sessionId) {
+    JsonNode root = session(sessionId);
+    JsonNode items = root.path("accounts");
+    if (!items.isArray()) return java.util.List.of();
+    java.util.List<com.finance.server.application.port.BankingDataPort.Account> result = new java.util.ArrayList<>();
+    for (JsonNode item : items) {
+      String id = firstText(item, "uid", "account_id", "id");
+      String name = firstText(item, "name", "product", "details");
+      String currency = firstText(item, "currency");
+      if (id != null) result.add(new com.finance.server.application.port.BankingDataPort.Account(id, name == null ? id : name, currency == null ? "EUR" : currency));
+    }
+    return result;
+  }
+
+  @Override
+  public java.util.List<com.finance.server.application.port.BankingDataPort.Transaction> transactions(String accountId) {
+    JsonNode root = get("accounts/" + encodePath(accountId) + "/transactions");
+    JsonNode items = root.path("transactions");
+    if (!items.isArray()) items = root;
+    if (!items.isArray()) return java.util.List.of();
+    java.util.List<com.finance.server.application.port.BankingDataPort.Transaction> result = new java.util.ArrayList<>();
+    for (JsonNode item : items) {
+      String id = firstText(item, "transaction_id", "entry_reference", "id");
+      String date = firstText(item, "booking_date", "value_date");
+      JsonNode amountNode = item.path("transaction_amount");
+      if (amountNode.isMissingNode()) amountNode = item.path("amount");
+      String amount = amountNode.isObject() ? firstText(amountNode, "amount") : amountNode.asText(null);
+      String currency = amountNode.isObject() ? firstText(amountNode, "currency") : firstText(item, "currency");
+      String description = firstText(item, "remittance_information", "reference", "additional_information");
+      String merchant = firstText(item, "creditor_name", "debtor_name");
+      String status = firstText(item, "status");
+      if (date != null && amount != null)
+        result.add(new com.finance.server.application.port.BankingDataPort.Transaction(id, java.time.LocalDate.parse(date.substring(0, 10)), new java.math.BigDecimal(amount), currency == null ? "EUR" : currency, description == null ? "" : description, merchant, "PDNG".equalsIgnoreCase(status) || "PENDING".equalsIgnoreCase(status)));
+    }
+    return result;
+  }
+
+  private String firstText(JsonNode node, String... fields) {
+    for (String field : fields) {
+      JsonNode value = node.path(field);
+      if (value.isTextual() && !value.asText().isBlank()) return value.asText();
+    }
+    return null;
+  }
 
   private JsonNode get(String path) {
     return send(HttpRequest.newBuilder(base.resolve(path)).GET().build());
