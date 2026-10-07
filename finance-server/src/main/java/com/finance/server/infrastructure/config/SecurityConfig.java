@@ -9,6 +9,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 
 @Configuration
 public class SecurityConfig {
@@ -35,6 +37,11 @@ public class SecurityConfig {
             .password(encoder.encode(admin))
             .roles("ADMIN", "READER", "IMPORTER")
             .build());
+  }
+
+  @Bean
+  AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    return configuration.getAuthenticationManager();
   }
 
   @Bean
