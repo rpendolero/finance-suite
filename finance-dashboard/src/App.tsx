@@ -477,7 +477,7 @@ function ClassificationReview() {
                             <select value={selected.category || ''}
                                     onChange={e => choose(m.id, 'category', e.target.value)}>
                                 <option value="">Selecciona categoría</option>
-                                <option value="UNCLASSIFIED">No categorizado</option>
+                                
                                 {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
                             </select>
                         </div>
@@ -712,9 +712,10 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
                     {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
                 </div>
                 {canEdit && editing === m.id && <div className="movement-classification-editor">
-                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: choice.kind})}><option value="">Selecciona categoría</option><option value="UNCLASSIFIED">No categorizado</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
+                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: choice.kind})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
                     <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
-                    <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar categoría</button>
+                    <label>Computación<select value={choice.kind === 'NON_COMPUTABLE' ? 'NON_COMPUTABLE' : 'COMPUTABLE'} onChange={e => setChoice({...choice, kind: e.target.value === 'NON_COMPUTABLE' ? 'NON_COMPUTABLE' : 'NORMAL'})}><option value="COMPUTABLE">Computable</option><option value="NON_COMPUTABLE">No computable</option></select></label>
+                    <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar</button>
                 </div>}
             </div>) : <Empty>No hay movimientos con esos filtros.</Empty>}
             <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
