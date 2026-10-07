@@ -16,12 +16,26 @@ public final class ImportService {
   private final LedgerPort ledger;
   private final StatementParserPort parser;
   private final MovementClassificationService classification;
+  private final UnitOfWorkPort unitOfWork;
 
   public ImportService(
           SettingsPort settings,
           LedgerPort ledger,
           StatementParserPort parser) {
-    this(settings, ledger, parser, new MovementClassificationService());
+    this(
+        settings,
+        ledger,
+        parser,
+        new MovementClassificationService(),
+        new DirectUnitOfWork());
+  }
+
+  public ImportService(
+      SettingsPort settings,
+      LedgerPort ledger,
+      StatementParserPort parser,
+      MovementClassificationService classification) {
+    this(settings, ledger, parser, classification, new DirectUnitOfWork());
   }
 
   public record Result(int read, int inserted, int duplicates) {}
@@ -34,11 +48,13 @@ public final class ImportService {
           String productId,
           Product snapshot) {
 
-    if (snapshot != null) {
-      validateAndSaveProduct(productId, snapshot);
-    }
-
-    return importCsv(input, productId);
+    return unitOfWork.execute(
+        () -> {
+          if (snapshot != null) {
+            validateAndSaveProduct(productId, snapshot);
+          }
+          return importCsv(input, productId);
+        });
   }
 
   /**
@@ -154,6 +170,13 @@ public final class ImportService {
             && incoming.balance().compareTo(existing.balance()) != 0) {
       throw new IllegalArgumentException(
               "Existe un saldo diferente para la misma fecha");
+    }
+  }
+
+  private static final class DirectUnitOfWork implements UnitOfWorkPort {
+    @Override
+    public <T> T execute(Work<T> work) {
+      return work.run();
     }
   }
 
