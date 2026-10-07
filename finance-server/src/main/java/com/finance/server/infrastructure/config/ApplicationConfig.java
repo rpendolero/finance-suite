@@ -68,6 +68,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  CategoryAdministrationService categoryAdministration(CategoryCatalogAdminPort catalog) {
+    return new CategoryAdministrationService(catalog);
+  }
+
+  @Bean
   MerchantNormalizationService merchantNormalization() {
     return new MerchantNormalizationService();
   }
