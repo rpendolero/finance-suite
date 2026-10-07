@@ -77,6 +77,30 @@ class MovementClassificationServiceTest {
   }
 
   @Test
+  void walletSettlementIsExcludedFromDashboardMetrics() {
+    Movement movement =
+        new Movement(
+            "id",
+            "account",
+            "wallet-settlement",
+            LocalDate.of(2026, 10, 1),
+            new BigDecimal("-75.00"),
+            "EUR",
+            "Cargo PayPal",
+            "PAYPAL",
+            "UNCLASSIFIED",
+            Movement.Kind.WALLET_SETTLEMENT,
+            Movement.Status.BOOKED);
+
+    Movement result = classifier.classify(movement, List.of());
+
+    assertThat(result.kind()).isEqualTo(Movement.Kind.WALLET_SETTLEMENT);
+    assertThat(result.category()).isEqualTo("TRANSFERENCIAS");
+    assertThat(result.subcategory()).isEqualTo("LIQUIDACION_MONEDERO");
+    assertThat(result.included()).isFalse();
+  }
+
+  @Test
   void legacyFoodCategoryIsCanonicalized() {
     Movement result = classifier.classify(movement("Compra", "Tienda", "FOOD"), List.of());
 
