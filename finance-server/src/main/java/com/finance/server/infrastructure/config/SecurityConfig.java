@@ -50,6 +50,8 @@ public class SecurityConfig {
             a ->
                 a.requestMatchers("/api/v1/banking/enable-banking/callback")
                     .permitAll()
+                    .requestMatchers("/api/v1/banking/enable-banking/authorizations", "/api/v1/banking/connections/**")
+                    .hasRole("ADMIN")
                     .requestMatchers("/api/importer/**")
                     .hasRole("IMPORTER")
                     .requestMatchers("/mcp", "/mcp/**")
