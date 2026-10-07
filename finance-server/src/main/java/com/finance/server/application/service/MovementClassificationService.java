@@ -25,7 +25,7 @@ public final class MovementClassificationService {
 
   public Movement classify(Movement movement, List<ClassificationRule> rules) {
     Movement normalized =
-        movement.withNormalizedMerchant(
+        movement.normalizedMerchantAs(
             merchants.normalize(movement.merchant(), movement.description()));
 
     if (normalized.classificationSource() == Movement.ClassificationSource.MANUAL) {
