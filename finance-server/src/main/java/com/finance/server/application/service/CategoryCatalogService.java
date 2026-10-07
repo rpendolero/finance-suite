@@ -1,58 +1,45 @@
 package com.finance.server.application.service;
 
+import com.finance.server.application.port.CategoryCatalogPort;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
-/** Defines the canonical categories exposed to the dashboard and classification use cases. */
+/** Provides and validates the canonical category catalog persisted in the database. */
+@RequiredArgsConstructor
 public final class CategoryCatalogService {
 
   public static final String UNCLASSIFIED = "UNCLASSIFIED";
 
   public record CategoryDefinition(String code, String label, List<String> subcategories) {}
 
-  private static final List<CategoryDefinition> CATEGORIES =
-      List.of(
-          category("INGRESOS", "Ingresos", "NOMINA", "DEVOLUCIONES", "OTROS_INGRESOS"),
-          category("VIVIENDA", "Vivienda", "HIPOTECA_ALQUILER", "ELECTRICIDAD", "GAS", "AGUA", "INTERNET", "COMUNIDAD"),
-          category("ALIMENTACION", "Alimentación", "SUPERMERCADO", "RESTAURANTES", "COMIDA_DOMICILIO"),
-          category("TRANSPORTE", "Transporte", "COMBUSTIBLE", "TRANSPORTE_PUBLICO", "APARCAMIENTO", "PEAJES", "MANTENIMIENTO_COCHE"),
-          category("OCIO", "Ocio", "VIAJES", "CINE_TEATRO", "DEPORTE", "OTROS_OCIO"),
-          category("SALUD", "Salud", "FARMACIA", "MEDICO", "DENTISTA", "OTROS_SALUD"),
-          category("EDUCACION", "Educación", "COLEGIO_UNIVERSIDAD", "CURSOS", "LIBROS_MATERIAL"),
-          category("SEGUROS", "Seguros", "HOGAR", "AUTO", "SALUD", "VIDA", "OTROS_SEGUROS"),
-          category("COMPRAS", "Compras", "ONLINE", "ROPA", "HOGAR", "TECNOLOGIA", "OTRAS_COMPRAS"),
-          category("SUSCRIPCIONES", "Suscripciones", "STREAMING", "SOFTWARE", "TELEFONIA", "OTRAS_SUSCRIPCIONES"),
-          category("IMPUESTOS", "Impuestos", "HACIENDA", "TASAS", "MULTAS"),
-          category(
-              "TRANSFERENCIAS",
-              "Transferencias",
-              "TRASPASO_INTERNO",
-              "LIQUIDACION_TARJETA",
-              "LIQUIDACION_PAYPAL",
-              "LIQUIDACION_MONEDERO",
-              "TRANSFERENCIA_EXTERNA"),
-          category("EFECTIVO", "Efectivo", "RETIRADA_CAJERO"),
-          category("OTROS", "Otros", "OTROS"));
+  private final CategoryCatalogPort catalog;
 
   private static final Map<String, String> ALIASES = aliases();
 
   public List<CategoryDefinition> categories() {
-    return CATEGORIES;
+    return catalog.findAllActive().stream()
+        .map(category -> new CategoryDefinition(
+            category.code(),
+            category.name(),
+            category.subcategories().stream().map(CategoryCatalogPort.Subcategory::code).toList()))
+        .toList();
   }
 
   public String normalizeCategory(String raw) {
     String code = normalizeCode(raw);
     if (code.isBlank() || UNCLASSIFIED.equals(code)) return UNCLASSIFIED;
     String aliased = ALIASES.getOrDefault(code, code);
-    return isCategory(aliased) ? aliased : UNCLASSIFIED;
+    return catalog.findActiveByCode(aliased).isPresent() ? aliased : UNCLASSIFIED;
   }
 
   public String normalizeSubcategory(String category, String raw) {
     if (raw == null || raw.isBlank()) return null;
+    String canonical = ALIASES.getOrDefault(normalizeCode(category), normalizeCode(category));
     String code = normalizeCode(raw);
-    return definition(category)
-        .filter(d -> d.subcategories().contains(code))
+    return catalog.findActiveByCode(canonical)
+        .filter(value -> value.subcategories().stream().anyMatch(subcategory -> subcategory.code().equals(code)))
         .map(ignored -> code)
         .orElse(null);
   }
@@ -62,23 +49,11 @@ public final class CategoryCatalogService {
     if (UNCLASSIFIED.equals(canonical)) {
       throw new IllegalArgumentException("Categoría no válida: " + category);
     }
-    if (subcategory != null && !subcategory.isBlank() && normalizeSubcategory(canonical, subcategory) == null) {
+    if (subcategory != null && !subcategory.isBlank()
+        && normalizeSubcategory(canonical, subcategory) == null) {
       throw new IllegalArgumentException(
           "Subcategoría no válida para " + canonical + ": " + subcategory);
     }
-  }
-
-  private boolean isCategory(String code) {
-    return CATEGORIES.stream().anyMatch(c -> c.code().equals(code));
-  }
-
-  private Optional<CategoryDefinition> definition(String category) {
-    String canonical = ALIASES.getOrDefault(normalizeCode(category), normalizeCode(category));
-    return CATEGORIES.stream().filter(c -> c.code().equals(canonical)).findFirst();
-  }
-
-  private static CategoryDefinition category(String code, String label, String... subcategories) {
-    return new CategoryDefinition(code, label, List.of(subcategories));
   }
 
   private static Map<String, String> aliases() {
