@@ -391,3 +391,4 @@ header p {
         display: none
     }
 }
+.api-error{display:flex;gap:10px;align-items:center;background:#fff0f0;color:#b4233c;border:1px solid #ffd2d8;border-radius:9px;padding:12px 15px;margin-bottom:14px;font-size:13px}.api-error span{color:#8b4350}.loading,.empty{min-height:110px;display:grid;place-items:center;color:#718096;font-size:13px}.loading{background:white;border:1px solid #e8edf4;border-radius:11px;min-height:260px}.insight b{font-weight:700}
