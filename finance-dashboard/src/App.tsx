@@ -20,6 +20,7 @@ import {
     api,
     CalendarDay,
     CategoryStat,
+    CategoryDefinition,
     Insight,
     MerchantStat,
     Movement,
@@ -227,13 +228,122 @@ function SectionView({
             key={i.code}><b>{i.title}</b><p>{i.detail}</p><strong>{i.value != null ? eur(Number(i.value)) : ''}</strong>
         </div>) : <Empty>No hay insights para este período.</Empty>}</div>
     </Page>;
-    if (view === 'review') return <Page title="Movimientos a revisar">
-        <div className="card list-cards">{anomalies.length ? anomalies.map((a: Anomaly, i: number) => <div
-            className="list-item warning-item" key={i}>
-            <TriangleAlert/><span><b>{String(a.merchant || a.description || 'Movimiento anómalo')}</b><small>{String(a.category || 'Requiere revisión')}</small></span><strong>{a.amount != null ? eur(Number(a.amount)) : ''}</strong>
-        </div>) : <Empty>No se han detectado anomalías.</Empty>}</div>
-    </Page>;
+    if (view === 'review') return <ClassificationReview />;
     return null
+}
+
+function ClassificationReview() {
+    const now = new Date(),
+        from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
+        to = now.toISOString().slice(0, 10);
+    const [rows, setRows] = useState<Movement[]>([]);
+    const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [choices, setChoices] = useState<Record<string, {category?: string; subcategory?: string}>>({});
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    const load = () => {
+        setBusy(true);
+        setError('');
+        Promise.all([api.unclassified(from, to), api.categoriesCatalog()])
+            .then(([movements, categories]) => {
+                setRows(movements);
+                setCatalog(categories);
+            })
+            .catch(e => setError(e instanceof Error ? e.message : 'No se pudieron cargar los movimientos'))
+            .finally(() => setBusy(false));
+    };
+
+    useEffect(() => {
+        load()
+    }, []);
+
+    const choose = (id: string, key: 'category' | 'subcategory', value: string) => {
+        setChoices(current => ({
+            ...current,
+            [id]: {
+                ...current[id],
+                [key]: value || undefined,
+                ...(key === 'category' ? {subcategory: undefined} : {})
+            }
+        }))
+    };
+
+    const save = async (movement: Movement, createRule: boolean) => {
+        const selected = choices[movement.id];
+        if (!selected?.category) return;
+        setBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            await api.classifyMovement(movement.id, {
+                category: selected.category,
+                subcategory: selected.subcategory,
+                kind: movement.kind || 'NORMAL',
+                createRule,
+                applyToSimilar: createRule
+            });
+            setMessage(createRule
+                ? 'Clasificación guardada y aplicada a movimientos equivalentes.'
+                : 'Clasificación manual guardada.');
+            load();
+        } catch (e) {
+            setBusy(false);
+            setError(e instanceof Error ? e.message : 'No se pudo guardar la clasificación')
+        }
+    };
+
+    const reclassify = async () => {
+        setBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            const result = await api.reclassify();
+            setMessage(`Recategorización completada: ${result.updated} de ${result.scanned} movimientos actualizados; ${result.unclassified} pendientes.`);
+            load();
+        } catch (e) {
+            setBusy(false);
+            setError(e instanceof Error ? e.message : 'No se pudo recategorizar el histórico')
+        }
+    };
+
+    return <Page title="Movimientos pendientes de categorizar">
+        <div className="classification-toolbar">
+            <span>{rows.length} movimientos pendientes este mes</span>
+            <button onClick={reclassify} disabled={busy}>Recategorizar histórico</button>
+        </div>
+        {message && <div className="classification-message">{message}</div>}
+        {error && <div className="api-error">{error}</div>}
+        <div className="card classification-list">
+            {busy && !rows.length ? <div className="loading">Cargando clasificación…</div> :
+                rows.length ? rows.map(m => {
+                    const selected = choices[m.id] || {};
+                    const definition = catalog.find(c => c.code === selected.category);
+                    return <div className="classification-row" key={m.id}>
+                        <div className="classification-movement">
+                            <b>{m.normalizedMerchant || m.merchant || m.description}</b>
+                            <small>{dateLabel(m.date)} · {eur(m.amount)}</small>
+                            <span>{m.description}</span>
+                        </div>
+                        <select value={selected.category || ''} onChange={e => choose(m.id, 'category', e.target.value)}>
+                            <option value="">Selecciona categoría</option>
+                            {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
+                        </select>
+                        <select value={selected.subcategory || ''} disabled={!definition}
+                                onChange={e => choose(m.id, 'subcategory', e.target.value)}>
+                            <option value="">Sin subcategoría</option>
+                            {(definition?.subcategories || []).map(s => <option value={s} key={s}>{s.replaceAll('_', ' ')}</option>)}
+                        </select>
+                        <div className="classification-actions">
+                            <button disabled={!selected.category || busy} onClick={() => save(m, false)}>Solo este</button>
+                            <button className="secondary" disabled={!selected.category || busy}
+                                    onClick={() => save(m, true)}>Aplicar al comercio</button>
+                        </div>
+                    </div>
+                }) : <Empty>No quedan movimientos pendientes este mes.</Empty>}
+        </div>
+    </Page>
 }
 
 function Page({title, children}: { title: string; children: any }) {
