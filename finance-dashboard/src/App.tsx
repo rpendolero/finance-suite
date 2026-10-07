@@ -336,9 +336,10 @@ function treatmentDefaults(kind: string): ClassificationChoice {
 }
 
 function ClassificationReview() {
-    const now = new Date(),
-        from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
-        to = now.toISOString().slice(0, 10);
+    const initial = periodRange('THIS_MONTH');
+    const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
+    const [from, setFrom] = useState(initial.from);
+    const [to, setTo] = useState(initial.to);
     const [rows, setRows] = useState<Movement[]>([]);
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
     const [choices, setChoices] = useState<Record<string, ClassificationChoice>>({});
@@ -360,7 +361,7 @@ function ClassificationReview() {
 
     useEffect(() => {
         load()
-    }, []);
+    }, [from, to]);
 
     const choose = (id: string, key: 'category' | 'subcategory', value: string) => {
         setChoices(current => ({
@@ -424,7 +425,28 @@ function ClassificationReview() {
 
     return <Page title="Movimientos pendientes de categorizar">
         <div className="classification-toolbar">
-            <span>{rows.length} movimientos pendientes este mes</span>
+            <div className="review-period">
+                <select value={periodPreset} onChange={e => {
+                    const preset = e.target.value;
+                    setPeriodPreset(preset);
+                    if (preset !== 'CUSTOM') {
+                        const range = periodRange(preset);
+                        setFrom(range.from); setTo(range.to);
+                    }
+                }}>
+                    <option value="THIS_MONTH">Este mes</option>
+                    <option value="LAST_MONTH">Mes anterior</option>
+                    <option value="3M">Últimos 3 meses</option>
+                    <option value="6M">Últimos 6 meses</option>
+                    <option value="YEAR">Este año</option>
+                    <option value="CUSTOM">Personalizado</option>
+                </select>
+                {periodPreset === 'CUSTOM' && <>
+                    <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)}/>
+                    <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)}/>
+                </>}
+                <span>{rows.length} movimientos pendientes · {from} — {to}</span>
+            </div>
             <button onClick={reclassify} disabled={busy}>Recategorizar histórico</button>
         </div>
         {message && <div className="classification-message">{message}</div>}
@@ -455,6 +477,7 @@ function ClassificationReview() {
                             <select value={selected.category || ''}
                                     onChange={e => choose(m.id, 'category', e.target.value)}>
                                 <option value="">Selecciona categoría</option>
+                                <option value="UNCLASSIFIED">No categorizado</option>
                                 {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
                             </select>
                         </div>
@@ -473,7 +496,7 @@ function ClassificationReview() {
                                     onClick={() => save(m, true)}>Aplicar al comercio</button>
                         </div>
                     </div>
-                }) : <Empty>No quedan movimientos pendientes este mes.</Empty>}
+                }) : <Empty>No quedan movimientos pendientes en el período seleccionado.</Empty>}
         </div>
     </Page>
 }
@@ -641,7 +664,7 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
                     {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
                 </div>
                 {canEdit && editing === m.id && <div className="movement-classification-editor">
-                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: choice.kind})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
+                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: choice.kind})}><option value="">Selecciona categoría</option><option value="UNCLASSIFIED">No categorizado</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
                     <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
                     <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar categoría</button>
                 </div>}
