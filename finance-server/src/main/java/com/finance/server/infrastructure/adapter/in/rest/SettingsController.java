@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class SettingsController {
   private final SettingsPort settings;
   private final ExtendedAnalysisService analysis;
+  private final ClassificationManagementService classification;
 
   @GetMapping("/rules")
   public Object rules() {
@@ -23,7 +24,7 @@ public class SettingsController {
   @PutMapping("/rules/{id}")
   public void rule(@PathVariable String id, @RequestBody ClassificationRule rule) {
     if (!id.equals(rule.id())) throw new IllegalArgumentException("id inconsistente");
-    settings.saveRule(rule);
+    classification.saveRule(rule);
   }
 
   @DeleteMapping("/rules/{id}")
