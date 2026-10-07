@@ -190,10 +190,10 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
-                        title="Ingresos del mes" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Gastos del mes" value={eur(overview.expenses)}
+                        title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
+                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
-                                                 tone="red"/><Card title="Ahorro del mes" value={eur(overview.savings)}
+                                                 tone="red"/><Card title="Ahorro del período" value={eur(overview.savings)}
                                                                    sub={Number(overview.savingsRate).toFixed(1) + ' % tasa de ahorro'}
                                                                    icon={PiggyBank} tone="purple"/></section>
                     <section className="grid3">
