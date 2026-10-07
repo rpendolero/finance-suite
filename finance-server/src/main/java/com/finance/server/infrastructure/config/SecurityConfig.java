@@ -48,7 +48,9 @@ public class SecurityConfig {
                     org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/api/importer/**")
+                a.requestMatchers("/api/v1/banking/enable-banking/callback")
+                    .permitAll()
+                    .requestMatchers("/api/importer/**")
                     .hasRole("IMPORTER")
                     .requestMatchers("/mcp", "/mcp/**")
                     .hasRole("READER")
