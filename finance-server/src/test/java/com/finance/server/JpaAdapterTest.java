@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.finance.domain.*;
 import com.finance.server.infrastructure.adapter.out.persistence.*;
+import com.finance.server.infrastructure.adapter.out.persistence.mapper.PersistenceMapperImpl;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
