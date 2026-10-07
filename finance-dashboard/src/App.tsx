@@ -32,6 +32,19 @@ import {
 } from './api';
 
 const eur = (n: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(Number(n || 0));
+
+const CATEGORY_COLORS = [
+    '#2563eb',
+    '#16a34a',
+    '#f59e0b',
+    '#dc2626',
+    '#7c3aed',
+    '#0891b2',
+    '#db2777',
+    '#65a30d',
+    '#ea580c',
+    '#4f46e5'
+];
 const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
     month: 'short'
@@ -139,10 +152,12 @@ export default function App() {
                         <div className="card"><Title t="Gastos por categoría"/>{categories.length ?
                             <div className="pie"><ResponsiveContainer width="48%" height={220}><PieChart><Pie
                                 data={categories} dataKey="amount" nameKey="category" innerRadius={55}
-                                outerRadius={82}>{categories.map((_, i) => <Cell key={i}/>)}</Pie><Tooltip
+                                outerRadius={82}>{categories.map((_, i) => <Cell key={i}
+                                fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}/>)}</Pie><Tooltip
                                 formatter={(v) => eur(Number(v))}/></PieChart></ResponsiveContainer>
-                                <div className="legend">{categories.slice(0, 7).map(c => <div key={c.category}>
-                                    <span>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
+                                <div className="legend">{categories.slice(0, 7).map((c, i) => <div key={c.category}>
+                                    <span className="legend-label"><i
+                                        style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
                             </div> : <Empty>Sin gastos clasificados.</Empty>}</div>
                         <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
                                 <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
