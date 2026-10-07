@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
+import org.springframework.http.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -84,10 +86,12 @@ public class FinanceController {
       @RequestParam(required = false) BigDecimal maxAmount,
       @RequestParam(required = false) Movement.Kind kind,
       @RequestParam(required = false) Movement.Status status,
+      @RequestParam(defaultValue = "DATE") MovementSearchPort.Criteria.SortField sortBy,
+      @RequestParam(defaultValue = "DESC") MovementSearchPort.Criteria.SortDirection sortDirection,
       @RequestParam(defaultValue = "0") @Min(0) int offset,
       @RequestParam(defaultValue = "25") @Min(1) @Max(200) int limit) {
     return movementSearch.search(new MovementSearchPort.Criteria(
-        period(from, to), productId, category, merchant, text, minAmount, maxAmount, kind, status, offset, limit));
+        period(from, to), productId, category, merchant, text, minAmount, maxAmount, kind, status, sortBy, sortDirection, offset, limit));
   }
 
   public record Classification(
