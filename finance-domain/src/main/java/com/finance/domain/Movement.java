@@ -118,7 +118,7 @@ public record Movement(
       throw new IllegalArgumentException("Confianza de clasificación fuera de rango");
   }
 
-  public Movement withNormalizedMerchant(String value) {
+  public Movement normalizedMerchantAs(String value) {
     return new Movement(
         id,
         productId,
