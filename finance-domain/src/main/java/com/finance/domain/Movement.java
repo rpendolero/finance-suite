@@ -25,6 +25,7 @@ public record Movement(
     REFUND,
     INTERNAL_TRANSFER,
     CARD_SETTLEMENT,
+    WALLET_SETTLEMENT,
     DUPLICATE
   }
 
