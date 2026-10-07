@@ -120,7 +120,7 @@ public class FinanceController {
   }
 
   public record Classification(
-      @NotBlank @Size(max = 64) String category,
+      @Size(max = 64) String category,
       @Size(max = 64) String subcategory,
       @NotNull Movement.Kind kind,
       boolean createRule,
