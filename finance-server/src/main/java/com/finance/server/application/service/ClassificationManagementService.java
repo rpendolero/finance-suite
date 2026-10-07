@@ -47,8 +47,15 @@ public final class ClassificationManagementService {
       boolean applyToSimilar) {
 
     String canonicalCategory = categories.normalizeCategory(category);
-    String canonicalSubcategory = categories.normalizeSubcategory(canonicalCategory, subcategory);
-    categories.validate(canonicalCategory, subcategory);
+    boolean unclassified = CategoryCatalogService.UNCLASSIFIED.equals(canonicalCategory);
+    String canonicalSubcategory =
+        unclassified ? null : categories.normalizeSubcategory(canonicalCategory, subcategory);
+    if (!unclassified) {
+      categories.validate(canonicalCategory, subcategory);
+    }
+    if (unclassified && (createRule || applyToSimilar)) {
+      throw new IllegalArgumentException("No se puede crear una regla para No categorizado");
+    }
 
     Movement current =
         ledger.movement(id)
@@ -65,8 +72,10 @@ public final class ClassificationManagementService {
                 canonicalCategory,
                 canonicalSubcategory,
                 kind,
-                Movement.ClassificationSource.MANUAL,
-                BigDecimal.ONE.setScale(4));
+                unclassified
+                    ? Movement.ClassificationSource.UNCLASSIFIED
+                    : Movement.ClassificationSource.MANUAL,
+                unclassified ? BigDecimal.ZERO.setScale(4) : BigDecimal.ONE.setScale(4));
 
     ledger.updateClassifications(List.of(updated));
 
