@@ -63,8 +63,37 @@ public class ApplicationConfig {
   }
 
   @Bean
-  MovementClassificationService classification() {
-    return new MovementClassificationService();
+  CategoryCatalogService categoryCatalog() {
+    return new CategoryCatalogService();
+  }
+
+  @Bean
+  MerchantNormalizationService merchantNormalization() {
+    return new MerchantNormalizationService();
+  }
+
+  @Bean
+  MovementKindDetectionService movementKindDetection() {
+    return new MovementKindDetectionService();
+  }
+
+  @Bean
+  MovementClassificationService classification(
+      MerchantNormalizationService merchants,
+      CategoryCatalogService categories,
+      MovementKindDetectionService kindDetection) {
+    return new MovementClassificationService(merchants, categories, kindDetection);
+  }
+
+  @Bean
+  ClassificationManagementService classificationManagement(
+      LedgerPort ledger,
+      SettingsPort settings,
+      MovementClassificationService classifier,
+      CategoryCatalogService categories,
+      MerchantNormalizationService merchants) {
+    return new ClassificationManagementService(
+        ledger, settings, classifier, categories, merchants);
   }
 
   @Bean
