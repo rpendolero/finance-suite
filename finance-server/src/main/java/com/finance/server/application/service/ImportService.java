@@ -19,18 +19,6 @@ public final class ImportService {
   private final UnitOfWorkPort unitOfWork;
 
   public ImportService(
-          SettingsPort settings,
-          LedgerPort ledger,
-          StatementParserPort parser) {
-    this(
-        settings,
-        ledger,
-        parser,
-        new MovementClassificationService(),
-        new DirectUnitOfWork());
-  }
-
-  public ImportService(
       SettingsPort settings,
       LedgerPort ledger,
       StatementParserPort parser,
