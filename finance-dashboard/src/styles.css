@@ -460,3 +460,16 @@ nav button{display:flex;align-items:center;gap:12px;padding:11px 12px;border-rad
 
 .review-period{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .review-period select,.review-period input{min-height:38px;border:1px solid #dbe2ea;border-radius:8px;background:#fff;padding:7px 9px;font:inherit;color:#1f2937}
+
+.app-modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.48);backdrop-filter:blur(2px)}
+.app-modal{width:min(520px,100%);background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.28);overflow:hidden}
+.app-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 14px;border-bottom:1px solid #edf0f4}
+.app-modal-head h3{margin:0;font-size:19px;color:#101828}
+.app-modal-head p{margin:4px 0 0;color:#667085;font-size:13px}
+.modal-close{border:0;background:transparent;color:#667085;font-size:26px;line-height:1;padding:0 4px;cursor:pointer}
+.app-modal-body{display:grid;gap:14px;padding:20px 22px}
+.app-modal-body label{display:grid;gap:6px;font-size:13px;font-weight:600;color:#344054}
+.app-modal-body input{width:100%;box-sizing:border-box;min-height:42px;border:1px solid #d0d5dd;border-radius:9px;padding:9px 11px;font:inherit;color:#101828;background:#fff}
+.app-modal-body input:focus{outline:2px solid rgba(37,99,235,.18);border-color:#2563eb}
+.app-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
+@media(max-width:600px){.app-modal-backdrop{padding:12px;align-items:flex-end}.app-modal{border-radius:16px 16px 10px 10px}}
