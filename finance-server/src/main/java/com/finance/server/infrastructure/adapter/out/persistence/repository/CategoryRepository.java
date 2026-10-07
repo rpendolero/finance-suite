@@ -12,4 +12,10 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> 
 
   @EntityGraph(attributePaths = "subcategories")
   Optional<CategoryEntity> findByCodeAndActiveTrue(String code);
+
+  @EntityGraph(attributePaths = "subcategories")
+  List<CategoryEntity> findAllByOrderByDisplayOrderAscIdAsc();
+
+  @EntityGraph(attributePaths = "subcategories")
+  Optional<CategoryEntity> findByCode(String code);
 }
