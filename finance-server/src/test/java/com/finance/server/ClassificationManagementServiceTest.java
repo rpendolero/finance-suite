@@ -55,6 +55,25 @@ class ClassificationManagementServiceTest {
   }
 
   @Test
+  void paypalSettlementCanBeMarkedAsNonComputable() {
+    Movement movement = unclassified("CARGO PAYPAL EUROPE");
+    when(ledger.movement("id")).thenReturn(Optional.of(movement));
+
+    var result =
+        service.classifyManually(
+            "id",
+            "TRANSFERENCIAS",
+            "LIQUIDACION_PAYPAL",
+            Movement.Kind.WALLET_SETTLEMENT,
+            false,
+            false);
+
+    assertThat(result.movement().kind()).isEqualTo(Movement.Kind.WALLET_SETTLEMENT);
+    assertThat(result.movement().subcategory()).isEqualTo("LIQUIDACION_PAYPAL");
+    assertThat(result.movement().included()).isFalse();
+  }
+
+  @Test
   void merchantRuleCanBeCreatedAndAppliedHistorically() {
     Movement movement = unclassified("MERCADONA 1234");
     when(ledger.movement("id")).thenReturn(Optional.of(movement));
