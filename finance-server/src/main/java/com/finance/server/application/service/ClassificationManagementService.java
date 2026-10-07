@@ -61,7 +61,7 @@ public final class ClassificationManagementService {
 
     Movement updated =
         current
-            .withNormalizedMerchant(normalizedMerchant)
+            .normalizedMerchantAs(normalizedMerchant)
             .withClassification(
                 canonicalCategory,
                 canonicalSubcategory,
