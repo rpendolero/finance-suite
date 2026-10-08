@@ -1,7 +1,13 @@
 package com.finance.server.infrastructure.adapter.out.persistence.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "external_bank_account", uniqueConstraints = @UniqueConstraint(name = "uk_external_bank_account", columnNames = {"connection_id","external_account_id"}))
@@ -13,4 +19,5 @@ public class ExternalBankAccountEntity {
   @Column(name = "product_id", length = 64) private String productId;
   @Column(nullable = false, length = 100) private String name;
   @Column(nullable = false, length = 3) private String currency;
+  @Column(name = "cash_account_type", length = 16) private String cashAccountType;
 }

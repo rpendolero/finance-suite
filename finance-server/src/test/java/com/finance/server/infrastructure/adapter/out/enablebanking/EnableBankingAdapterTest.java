@@ -49,11 +49,12 @@ class EnableBankingAdapterTest {
   @Test void sessionWithStringAccountIdsLoadsTypedAccountDetails() throws Exception {
     var api = client(request -> request.uri().getPath().startsWith("/sessions/")
         ? "{\"status\":\"AUTHORIZED\",\"accounts\":[\"first\",\"second\"],\"accounts_data\":[{\"uid\":\"first\"}]}"
-        : "{\"currency\":\"EUR\",\"account_id\":{\"iban\":\"ES00001234\"}}", 200);
+        : "{\"currency\":\"EUR\",\"cash_account_type\":\"CARD\",\"account_id\":{\"iban\":\"ES00001234\"}}", 200);
     var adapter = new EnableBankingAuthorizationAdapter("https://app.example/callback", api);
     var accounts = adapter.accounts("session");
     assertThat(accounts).hasSize(2);
     assertThat(accounts.get(0).id()).isEqualTo("first");
+    assertThat(accounts.get(0).cashAccountType()).isEqualTo("CARD");
     assertThat(accounts.get(0).name()).isEqualTo("Cuenta · 1234");
     assertThat(requests).hasSize(3);
     assertThat(requests.get(1).uri().getPath()).isEqualTo("/accounts/first/details");

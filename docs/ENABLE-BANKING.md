@@ -46,3 +46,9 @@ Los movimientos recorren las páginas `continuation_key`, incluso si una página
 vacía. Se respeta `credit_debit_indicator` y se unen las líneas de remittance_information.
 Las respuestas incompletas provocan un error explícito. Los errores HTTP registran
 estado y código del proveedor sin volcar cuerpos ni credenciales.
+
+### Cuentas de tarjeta
+
+El descubrimiento conserva `cash_account_type` y muestra CARD como «Tarjeta», CACC como «Cuenta corriente» y SVGS como «Cuenta de ahorro». Las tarjetas se vinculan a un producto existente de crédito o débito en la misma moneda; las cuentas corrientes y de ahorro, a un producto de cuenta. El servidor valida también esta compatibilidad al vincular y sincronizar.
+
+La migración V9 añade el tipo sin alterar los vínculos existentes. Pulsa «Descubrir cuentas» para actualizar los tipos de cuentas ya descubiertas. Enable Banking debe devolver la tarjeta en la sesión autorizada para que aparezca: esta integración no puede obtener tarjetas que el banco no exponga.

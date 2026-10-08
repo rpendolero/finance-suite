@@ -1,6 +1,13 @@
 import {useEffect, useState} from 'react';
 import {api, BankAccount, BankConnection, BankSyncResult, Product} from './api';
 
+const compatibleProduct = (account: BankAccount, product: Product) => {
+    if (product.currency !== account.currency) return false;
+    if (account.cashAccountType === 'CARD') return ['CREDIT_CARD', 'DEBIT_CARD'].includes(product.type);
+    if (['CACC', 'SVGS'].includes(account.cashAccountType || '')) return product.type === 'ACCOUNT';
+    return true;
+};
+const accountTypeLabel = (type?: string) => type === 'CARD' ? 'Tarjeta' : type === 'CACC' ? 'Cuenta corriente' : type === 'SVGS' ? 'Cuenta de ahorro' : type ? `Tipo: ${type}` : 'Tipo no informado';
 const active = (c: BankConnection) => c.status === 'ACTIVE' && !!c.validUntil && new Date(c.validUntil).getTime() > Date.now();
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-ES') : '—';
 
@@ -83,11 +90,12 @@ export default function BankingConnections({products}: {products: Product[]}) {
             <h3>Cuentas y productos</h3>
             {!accounts.length && <p>Pulsa «Descubrir cuentas» para obtener las cuentas autorizadas.</p>}
             {accounts.map(a => <div className="banking-account" key={a.id}>
-                <div><b>{a.name}</b><small>{a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
+                <div><b>{a.name}</b><small>{accountTypeLabel(a.cashAccountType)} · {a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
                 <label>Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks({...links, [a.externalAccountId]: e.target.value})}>
-                    <option value="">Selecciona producto</option>{availableProducts.filter(p => p.currency === a.currency).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    <option value="">Selecciona producto</option>{availableProducts.filter(p => compatibleProduct(a, p)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select></label>
-                <button disabled={busy || !links[a.externalAccountId] || links[a.externalAccountId] === a.productId} onClick={() => void link(a)}>Guardar vínculo</button>
+                {!availableProducts.some(p => compatibleProduct(a, p)) && <small>No hay productos compatibles. Registra primero el producto correspondiente.</small>}
+                <button disabled={busy || !links[a.externalAccountId] || links[a.externalAccountId] === a.productId || !availableProducts.some(p => p.id === links[a.externalAccountId] && compatibleProduct(a, p))} onClick={() => void link(a)}>Guardar vínculo</button>
             </div>)}
             <p>Solo se sincronizan las cuentas con un vínculo guardado. Puedes seguir importando ficheros.</p>
             <button disabled={busy || !accounts.some(a => a.productId)} onClick={() => void sync()}>{busy ? 'Procesando…' : 'Sincronizar movimientos'}</button>

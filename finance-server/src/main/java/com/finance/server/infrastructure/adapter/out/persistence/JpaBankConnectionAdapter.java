@@ -1,10 +1,14 @@
 package com.finance.server.infrastructure.adapter.out.persistence;
 
 import com.finance.server.application.port.BankConnectionPort;
-import com.finance.server.domain.banking.*;
-import com.finance.server.infrastructure.adapter.out.persistence.entity.*;
-import com.finance.server.infrastructure.adapter.out.persistence.repository.*;
-import java.util.*;
+import com.finance.server.domain.banking.BankConnection;
+import com.finance.server.domain.banking.ExternalBankAccount;
+import com.finance.server.infrastructure.adapter.out.persistence.entity.BankConnectionEntity;
+import com.finance.server.infrastructure.adapter.out.persistence.entity.ExternalBankAccountEntity;
+import com.finance.server.infrastructure.adapter.out.persistence.repository.BankConnectionRepository;
+import com.finance.server.infrastructure.adapter.out.persistence.repository.ExternalBankAccountRepository;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -36,12 +40,12 @@ public class JpaBankConnectionAdapter implements BankConnectionPort {
   public ExternalBankAccount saveAccount(ExternalBankAccount a) {
     var e = new ExternalBankAccountEntity();
     e.setId(a.id()); e.setConnectionId(a.connectionId()); e.setExternalAccountId(a.externalAccountId());
-    e.setProductId(a.productId()); e.setName(a.name()); e.setCurrency(a.currency());
+    e.setProductId(a.productId()); e.setName(a.name()); e.setCurrency(a.currency()); e.setCashAccountType(a.cashAccountType());
     accounts.saveAndFlush(e); return a;
   }
   @Override public List<ExternalBankAccount> accounts(String connectionId) {
     return accounts.findByConnectionIdOrderByNameAsc(connectionId).stream()
-        .map(e -> new ExternalBankAccount(e.getId(), e.getConnectionId(), e.getExternalAccountId(), e.getProductId(), e.getName(), e.getCurrency())).toList();
+        .map(e -> new ExternalBankAccount(e.getId(), e.getConnectionId(), e.getExternalAccountId(), e.getProductId(), e.getName(), e.getCurrency(), e.getCashAccountType())).toList();
   }
   private BankConnection domain(BankConnectionEntity e) {
     return new BankConnection(e.getId(), e.getProvider(), e.getBankName(), e.getCountry(), e.getExternalSessionId(), e.getAuthorizationState(), e.getValidUntil(), e.getStatus(), e.getLastSyncAt());

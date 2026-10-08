@@ -17,7 +17,7 @@ public final class EnableBankingDataMapper {
       String iban = details.getAccountId().getIban();
       if (iban != null && iban.length() >= 4) name = "Cuenta · " + iban.substring(iban.length() - 4);
     }
-    return new Account(id, name == null ? id : name, required(details.getCurrency(), "account currency"));
+    return new Account(id, name == null ? id : name, required(details.getCurrency(), "account currency"), details.getCashAccountType());
   }
 
   public Transaction transaction(TransactionDto value) {

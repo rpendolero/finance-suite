@@ -17,5 +17,6 @@ public class AccountDetailsDto {
   @JsonAlias({"product", "details"})
   private String name;
   private String currency;
+  private String cashAccountType;
   private AccountIdentificationDto accountId;
 }
