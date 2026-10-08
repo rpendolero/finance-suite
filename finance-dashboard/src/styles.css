@@ -482,3 +482,9 @@ nav button{display:flex;align-items:center;gap:12px;padding:11px 12px;border-rad
 .banking-page button:disabled {opacity:.5; cursor:default}
 .banking-account {display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid #e2e8f0}
 .banking-account small {display:block; margin-top:6px}
+
+.product-create-modal{max-height:calc(100dvh - 48px);display:flex;flex-direction:column}
+.product-create-modal .app-modal-body{overflow-y:auto;min-height:0}
+.product-create-modal .app-modal-head,.product-create-modal .app-modal-actions{flex-shrink:0}
+.product-create-modal select{width:100%;min-height:42px;border:1px solid #d0d5dd;border-radius:9px;padding:9px 11px;font:inherit;background:#fff;color:#101828}
+.product-create-modal p{margin:0;font-size:13px;color:#667085}

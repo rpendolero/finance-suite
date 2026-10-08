@@ -11,6 +11,11 @@ export type Product = {
     provider: string;
     maskedPan?: string
 };
+export type ProductInput = Product & {
+    balanceAt: string;
+    linkedAccountId?: string;
+    creditLimit?: number;
+};
 export type Movement = {
     id: string;
     productId: string;
@@ -144,6 +149,7 @@ export const api = {
     me: () => json<UserSession>('/api/auth/me'),
     logout: () => json<void>('/api/auth/logout', {method: 'POST'}),
     products: () => json<Product[]>('/api/products'),
+    saveProduct: (product: ProductInput) => sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
     adminCategories: () => json<AdminCategory[]>('/api/admin/categories'),
     createCategory: (item: CatalogItemInput) => sendJson<AdminCategory>('/api/admin/categories', 'POST', item),

@@ -1,3 +1,4 @@
+import ProductCreate from './ProductCreate';
 import BankingConnections from './BankingConnections';
 import {useEffect, useState} from 'react';
 import {
@@ -153,6 +154,11 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             active = false
         }
     }, [from, to]);
+    const onProductCreated = () => {
+        api.products().then(setProducts).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los productos'));
+        api.productStats(from, to).then(setProductStats).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los saldos'));
+        api.overview(from, to).then(setOverview).catch(e => setError(e instanceof Error ? e.message : 'No se pudo actualizar el resumen'));
+    };
     const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
         <aside>
@@ -188,7 +194,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
-            {view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products}/> : loading ?
+            {view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
@@ -244,7 +250,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
                                  productStats={productStats} products={products} movements={movements}
                                  recurring={recurring} calendar={calendar} insights={insights}
-                                 anomalies={anomalies} session={session} from={from} to={to}/> : null}</main>
+                                 anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated}/> : null}</main>
     </div>
 }
 
@@ -262,7 +268,8 @@ function SectionView({
                          anomalies,
                          session,
                          from,
-                         to
+                         to,
+                         onProductCreated
                      }: any) {
     if (view === 'trend') return <Page title="Evolución financiera">
         <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
@@ -279,6 +286,7 @@ function SectionView({
         </div>
     </Page>;
     if (view === 'products') return <Page title="Productos financieros">
+        {session?.roles?.includes('ADMIN') && <ProductCreateButton products={products} onCreated={onProductCreated}/>}
         <div className="card table">
             <div className="thead"><b>Producto</b><b>Entidad</b><b>Tipo</b><b>Saldo</b><b>Gasto período</b></div>
             {productStats.map((s: ProductStat) => <div className="trow" key={s.productId}>
@@ -755,4 +763,11 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
             <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
         </>}</div>
     </Page>
+}
+
+function ProductCreateButton({products, onCreated}: {products: Product[]; onCreated: () => void}) {
+    const [open, setOpen] = useState(false);
+    return <><button type="button" onClick={() => setOpen(true)}>Nuevo producto</button>
+        {open && <ProductCreate products={products} onCancel={() => setOpen(false)} onCreated={() => {setOpen(false); onCreated();}}/>}
+    </>;
 }

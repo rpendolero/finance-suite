@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import ProductCreate from './ProductCreate';
 import {api, BankAccount, BankConnection, BankSyncResult, Product} from './api';
 
 const compatibleProduct = (account: BankAccount, product: Product) => {
@@ -11,7 +12,8 @@ const accountTypeLabel = (type?: string) => type === 'CARD' ? 'Tarjeta' : type =
 const active = (c: BankConnection) => c.status === 'ACTIVE' && !!c.validUntil && new Date(c.validUntil).getTime() > Date.now();
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-ES') : '—';
 
-export default function BankingConnections({products}: {products: Product[]}) {
+export default function BankingConnections({products, onProductCreated}: {products: Product[]; onProductCreated: () => void}) {
+    const [creatingFor, setCreatingFor] = useState<BankAccount | null>(null);
     const [availableProducts, setAvailableProducts] = useState<Product[]>(products);
     const [banks, setBanks] = useState<string[]>([]), [bank, setBank] = useState('');
     const [connections, setConnections] = useState<BankConnection[]>([]), [selected, setSelected] = useState('');
@@ -66,6 +68,12 @@ export default function BankingConnections({products}: {products: Product[]}) {
         await refresh();
     });
     return <section className="banking-page">
+        {creatingFor && <ProductCreate products={availableProducts} initialName={creatingFor.name} initialProvider={connection?.bankName} cashAccountType={creatingFor.cashAccountType}
+            onCancel={() => setCreatingFor(null)} onCreated={product => {
+                setAvailableProducts(current => [...current, product]);
+                setLinks(current => ({...current, [creatingFor.externalAccountId]: product.id}));
+                setCreatingFor(null); onProductCreated();
+            }}/>}
         <h2>Bancos · Enable Banking</h2>
         <p>Conecta tu banco, vincula cada cuenta con un producto y sincroniza sus movimientos.</p>
         {new URLSearchParams(window.location.search).get('banking') === 'connected' && <p role="status">Autorización completada. Descubre las cuentas para vincularlas.</p>}
@@ -94,7 +102,8 @@ export default function BankingConnections({products}: {products: Product[]}) {
                 <label>Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks({...links, [a.externalAccountId]: e.target.value})}>
                     <option value="">Selecciona producto</option>{availableProducts.filter(p => compatibleProduct(a, p)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select></label>
-                {!availableProducts.some(p => compatibleProduct(a, p)) && <small>No hay productos compatibles. Registra primero el producto correspondiente.</small>}
+                {!availableProducts.some(p => compatibleProduct(a, p)) && <small>No hay productos compatibles. Crea un producto para vincularlo.</small>}
+                <button disabled={busy} onClick={() => setCreatingFor(a)}>Nuevo producto</button>
                 <button disabled={busy || !links[a.externalAccountId] || links[a.externalAccountId] === a.productId || !availableProducts.some(p => p.id === links[a.externalAccountId] && compatibleProduct(a, p))} onClick={() => void link(a)}>Guardar vínculo</button>
             </div>)}
             <p>Solo se sincronizan las cuentas con un vínculo guardado. Puedes seguir importando ficheros.</p>
