@@ -11,6 +11,13 @@ finance:
     profile-dir: ${BROWSER_PROFILE_DIR:./private/browser-profiles}
     download-dir: ${BROWSER_DOWNLOAD_DIR:./private/downloads}
 
+  enable-banking:
+    enabled: ${ENABLE_BANKING_ENABLED:false}
+    application-id: ${ENABLE_BANKING_APPLICATION_ID:}
+    private-key: ${ENABLE_BANKING_PRIVATE_KEY:}
+    redirect-url: ${ENABLE_BANKING_REDIRECT_URL:http://127.0.0.1:8082/enable-banking/callback}
+    country: ES
+
 logging:
   level:
     com.finance: ${FINANCE_LOG_LEVEL:INFO}

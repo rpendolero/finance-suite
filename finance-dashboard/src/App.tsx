@@ -12,10 +12,12 @@ import {
     TrendingDown,
     TrendingUp,
     TriangleAlert,
-    Wallet
+    Wallet,
+    Tags
 } from 'lucide-react';
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
+    AdminCategory,
     Anomaly,
     api,
     CalendarDay,
@@ -45,6 +47,18 @@ const CATEGORY_COLORS = [
     '#ea580c',
     '#4f46e5'
 ];
+const localDate = (d: Date) => {
+    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+const periodRange = (preset: string, now = new Date()) => {
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (preset === 'LAST_MONTH') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: localDate(new Date(now.getFullYear(), now.getMonth(), 0))};
+    if (preset === '3M') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 2, 1)), to: localDate(end)};
+    if (preset === '6M') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 5, 1)), to: localDate(end)};
+    if (preset === 'YEAR') return {from: localDate(new Date(now.getFullYear(), 0, 1)), to: localDate(end)};
+    return {from: localDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: localDate(end)};
+};
 const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
     month: 'short'
@@ -80,8 +94,9 @@ type View =
     | 'recurring'
     | 'calendar'
     | 'insights'
-    | 'review';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert]];
+    | 'review'
+    | 'categoryAdmin';
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -99,8 +114,18 @@ function Login({onLogin}:{onLogin:(session:any)=>void}){
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
-        to = now.toISOString().slice(0, 10);
+    const initialPeriod = periodRange('THIS_MONTH', now);
+    const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
+    const [from, setFrom] = useState(initialPeriod.from);
+    const [to, setTo] = useState(initialPeriod.to);
+    const selectPeriod = (preset: string) => {
+        setPeriodPreset(preset);
+        if (preset !== 'CUSTOM') {
+            const range = periodRange(preset, now);
+            setFrom(range.from);
+            setTo(range.to);
+        }
+    };
     useEffect(() => {
         let active = true;
         setLoading(true);
@@ -130,7 +155,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     return <div className="shell">
         <aside>
             <div className="brand"><b>▥</b><span>Finance Suite</span></div>
-            <nav>{menu.map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+            <nav>{menu.filter(([id]) => id !== 'categoryAdmin' || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
                 className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
@@ -140,17 +165,35 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             <header>
                 <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
                     importados</p></div>
-                <div className="header-actions"><div className="period">Este mes · {from} — {to}</div><button className="logout" onClick={onLogout}>{session.username} · Salir</button></div>
+                <div className="header-actions">
+                    <div className="period period-selector">
+                        <select aria-label="Período" value={periodPreset} onChange={e => selectPeriod(e.target.value)}>
+                            <option value="THIS_MONTH">Este mes</option>
+                            <option value="LAST_MONTH">Mes anterior</option>
+                            <option value="3M">Últimos 3 meses</option>
+                            <option value="6M">Últimos 6 meses</option>
+                            <option value="YEAR">Este año</option>
+                            <option value="CUSTOM">Personalizado</option>
+                        </select>
+                        {periodPreset === 'CUSTOM' && <>
+                            <input aria-label="Desde" type="date" value={from} max={to} onChange={e => setFrom(e.target.value)}/>
+                            <span>—</span>
+                            <input aria-label="Hasta" type="date" value={to} min={from} onChange={e => setTo(e.target.value)}/>
+                        </>}
+                        <small>{from} — {to}</small>
+                    </div>
+                    <button className="logout" onClick={onLogout}>{session.username} · Salir</button>
+                </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
             {loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
-                        title="Ingresos del mes" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Gastos del mes" value={eur(overview.expenses)}
+                        title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
+                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
-                                                 tone="red"/><Card title="Ahorro del mes" value={eur(overview.savings)}
+                                                 tone="red"/><Card title="Ahorro del período" value={eur(overview.savings)}
                                                                    sub={Number(overview.savingsRate).toFixed(1) + ' % tasa de ahorro'}
                                                                    icon={PiggyBank} tone="purple"/></section>
                     <section className="grid3">
@@ -199,7 +242,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
                                  productStats={productStats} products={products} movements={movements}
                                  recurring={recurring} calendar={calendar} insights={insights}
-                                 anomalies={anomalies}/> : null}</main>
+                                 anomalies={anomalies} session={session} from={from} to={to}/> : null}</main>
     </div>
 }
 
@@ -214,7 +257,10 @@ function SectionView({
                          recurring,
                          calendar,
                          insights,
-                         anomalies
+                         anomalies,
+                         session,
+                         from,
+                         to
                      }: any) {
     if (view === 'trend') return <Page title="Evolución financiera">
         <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
@@ -237,7 +283,7 @@ function SectionView({
                 <b>{s.name}</b><span>{s.provider}</span><span>{s.type}</span><span>{eur(s.balance)}</span><strong>{eur(s.expenses)}</strong>
             </div>)}</div>
     </Page>;
-    if (view === 'movements') return <MovementSearch products={products}/>;
+    if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')}/>;
     if (view === 'recurring') return <Page title="Gastos recurrentes">
         <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
             className="list-item" key={i}>
@@ -258,14 +304,17 @@ function SectionView({
         </div>) : <Empty>No hay insights para este período.</Empty>}</div>
     </Page>;
     if (view === 'review') return <ClassificationReview />;
+    if (view === 'categoryAdmin' && session?.roles?.includes('ADMIN')) return <CategoryAdministration />;
     return null
 }
 
 const TREATMENTS = [
+    {code: 'NON_COMPUTABLE', label: 'No computable - Otros', computable: false},
     {code: 'NORMAL', label: 'Gasto / ingreso normal', computable: true},
     {code: 'REFUND', label: 'Devolución', computable: true},
     {code: 'CARD_SETTLEMENT', label: 'No computable - Liquidación tarjeta', computable: false},
     {code: 'WALLET_SETTLEMENT', label: 'No computable - PayPal / monedero', computable: false},
+    {code: 'DUPLICATE', label: 'No computable - Movimiento duplicado', computable: false},
     {code: 'INTERNAL_TRANSFER', label: 'No computable - Transferencia interna', computable: false}
 ] as const;
 
@@ -277,21 +326,26 @@ type ClassificationChoice = {
 
 function treatmentDefaults(kind: string): ClassificationChoice {
     switch (kind) {
+        case 'NON_COMPUTABLE':
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'OTROS_NO_COMPUTABLES'};
+        case 'DUPLICATE':
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'MOVIMIENTO_DUPLICADO'};
         case 'CARD_SETTLEMENT':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_TARJETA'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_TARJETA'};
         case 'WALLET_SETTLEMENT':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_PAYPAL'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_PAYPAL'};
         case 'INTERNAL_TRANSFER':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'TRASPASO_INTERNO'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'TRASPASO_INTERNO'};
         default:
             return {kind};
     }
 }
 
 function ClassificationReview() {
-    const now = new Date(),
-        from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
-        to = now.toISOString().slice(0, 10);
+    const initial = periodRange('THIS_MONTH');
+    const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
+    const [from, setFrom] = useState(initial.from);
+    const [to, setTo] = useState(initial.to);
     const [rows, setRows] = useState<Movement[]>([]);
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
     const [choices, setChoices] = useState<Record<string, ClassificationChoice>>({});
@@ -313,7 +367,7 @@ function ClassificationReview() {
 
     useEffect(() => {
         load()
-    }, []);
+    }, [from, to]);
 
     const choose = (id: string, key: 'category' | 'subcategory', value: string) => {
         setChoices(current => ({
@@ -321,7 +375,8 @@ function ClassificationReview() {
             [id]: {
                 ...current[id],
                 [key]: value || undefined,
-                ...(key === 'category' ? {subcategory: undefined} : {})
+                ...(key === 'category' ? {subcategory: undefined, kind: value === 'NO_COMPUTABLE' ? undefined : (current[id]?.kind === 'REFUND' ? 'REFUND' : 'NORMAL')} : {}),
+                ...(key === 'subcategory' ? {kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE', OTROS_NO_COMPUTABLES: 'NON_COMPUTABLE'} as Record<string, string>)[value] || current[id]?.kind} : {})
             }
         }))
     };
@@ -377,7 +432,28 @@ function ClassificationReview() {
 
     return <Page title="Movimientos pendientes de categorizar">
         <div className="classification-toolbar">
-            <span>{rows.length} movimientos pendientes este mes</span>
+            <div className="review-period">
+                <select value={periodPreset} onChange={e => {
+                    const preset = e.target.value;
+                    setPeriodPreset(preset);
+                    if (preset !== 'CUSTOM') {
+                        const range = periodRange(preset);
+                        setFrom(range.from); setTo(range.to);
+                    }
+                }}>
+                    <option value="THIS_MONTH">Este mes</option>
+                    <option value="LAST_MONTH">Mes anterior</option>
+                    <option value="3M">Últimos 3 meses</option>
+                    <option value="6M">Últimos 6 meses</option>
+                    <option value="YEAR">Este año</option>
+                    <option value="CUSTOM">Personalizado</option>
+                </select>
+                {periodPreset === 'CUSTOM' && <>
+                    <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)}/>
+                    <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)}/>
+                </>}
+                <span>{rows.length} movimientos pendientes · {from} — {to}</span>
+            </div>
             <button onClick={reclassify} disabled={busy}>Recategorizar histórico</button>
         </div>
         {message && <div className="classification-message">{message}</div>}
@@ -408,6 +484,7 @@ function ClassificationReview() {
                             <select value={selected.category || ''}
                                     onChange={e => choose(m.id, 'category', e.target.value)}>
                                 <option value="">Selecciona categoría</option>
+                                
                                 {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
                             </select>
                         </div>
@@ -426,9 +503,142 @@ function ClassificationReview() {
                                     onClick={() => save(m, true)}>Aplicar al comercio</button>
                         </div>
                     </div>
-                }) : <Empty>No quedan movimientos pendientes este mes.</Empty>}
+                }) : <Empty>No quedan movimientos pendientes en el período seleccionado.</Empty>}
         </div>
     </Page>
+}
+
+
+function CategoryAdministration() {
+    const [categories, setCategories] = useState<AdminCategory[]>([]);
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
+    const [newCategory, setNewCategory] = useState({code: '', name: '', active: true, displayOrder: 150});
+    const [subcategoryModal, setSubcategoryModal] = useState<{category: AdminCategory; code: string; name: string; displayOrder: number} | null>(null);
+
+    const load = () => api.adminCategories().then(setCategories).catch(e => setError(e instanceof Error ? e.message : 'No se pudo cargar el catálogo'));
+    useEffect(() => { load() }, []);
+
+    const saveCategory = async (category: AdminCategory) => {
+        setError(''); setMessage('');
+        try {
+            await api.updateCategory(category.code, {code: category.code, name: category.name, active: category.active, displayOrder: category.displayOrder});
+            setMessage('Categoría actualizada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo actualizar'); }
+    };
+
+    const createCategory = async () => {
+        if (!newCategory.code.trim() || !newCategory.name.trim()) return;
+        setError(''); setMessage('');
+        try {
+            await api.createCategory(newCategory);
+            setNewCategory({code: '', name: '', active: true, displayOrder: 150});
+            setMessage('Categoría creada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear'); }
+    };
+
+    const patchCategory = (code: string, patch: Partial<AdminCategory>) =>
+        setCategories(current => current.map(c => c.code === code ? {...c, ...patch} : c));
+
+    const patchSubcategory = (categoryCode: string, subCode: string, patch: any) =>
+        setCategories(current => current.map(c => c.code !== categoryCode ? c : {...c, subcategories: c.subcategories.map(s => s.code === subCode ? {...s, ...patch} : s)}));
+
+    const saveSubcategory = async (category: AdminCategory, sub: any) => {
+        setError(''); setMessage('');
+        try {
+            await api.updateSubcategory(category.code, sub.code, {code: sub.code, name: sub.name, active: sub.active, displayOrder: sub.displayOrder});
+            setMessage('Subcategoría actualizada.'); load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo actualizar'); }
+    };
+
+    const openSubcategoryModal = (category: AdminCategory) => {
+        setError(''); setMessage('');
+        setSubcategoryModal({category, code: '', name: '', displayOrder: (category.subcategories.length + 1) * 10});
+    };
+
+    const createSubcategory = async () => {
+        if (!subcategoryModal) return;
+        const code = subcategoryModal.code.trim();
+        const name = subcategoryModal.name.trim();
+        if (!code || !name) {
+            setError('El código y el nombre de la subcategoría son obligatorios.');
+            return;
+        }
+        setError(''); setMessage('');
+        try {
+            await api.createSubcategory(subcategoryModal.category.code, {
+                code,
+                name,
+                active: true,
+                displayOrder: subcategoryModal.displayOrder
+            });
+            setSubcategoryModal(null);
+            setMessage('Subcategoría creada.');
+            load();
+        } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear la subcategoría'); }
+    };
+
+    return <Page title="Administración de categorías">
+        <div className="card category-create">
+            <input placeholder="CÓDIGO" value={newCategory.code} onChange={e => setNewCategory({...newCategory, code: e.target.value.toUpperCase().replaceAll(' ', '_')})}/>
+            <input placeholder="Nombre" value={newCategory.name} onChange={e => setNewCategory({...newCategory, name: e.target.value})}/>
+            <input type="number" min="0" value={newCategory.displayOrder} onChange={e => setNewCategory({...newCategory, displayOrder: Number(e.target.value)})}/>
+            <button onClick={createCategory}>Nueva categoría</button>
+        </div>
+        {message && <div className="classification-message">{message}</div>}
+        {error && <div className="api-error">{error}</div>}
+        {subcategoryModal && <div className="app-modal-backdrop" role="presentation" onMouseDown={e => {
+            if (e.target === e.currentTarget) setSubcategoryModal(null);
+        }}>
+            <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="subcategory-modal-title">
+                <div className="app-modal-head">
+                    <div><h3 id="subcategory-modal-title">Nueva subcategoría</h3><p>{subcategoryModal.category.name}</p></div>
+                    <button type="button" className="modal-close" aria-label="Cerrar" onClick={() => setSubcategoryModal(null)}>×</button>
+                </div>
+                <div className="app-modal-body">
+                    <label>Código
+                        <input autoFocus placeholder="Ej. PLAN_PENSIONES" value={subcategoryModal.code}
+                            onChange={e => {
+                                const code = e.target.value.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+/, '');
+                                setSubcategoryModal({...subcategoryModal, code});
+                            }}/>
+                    </label>
+                    <label>Nombre
+                        <input placeholder="Nombre visible" value={subcategoryModal.name}
+                            onChange={e => setSubcategoryModal({...subcategoryModal, name: e.target.value})}/>
+                    </label>
+                    <label>Orden
+                        <input type="number" min="0" value={subcategoryModal.displayOrder}
+                            onChange={e => setSubcategoryModal({...subcategoryModal, displayOrder: Number(e.target.value)})}/>
+                    </label>
+                </div>
+                <div className="app-modal-actions">
+                    <button type="button" className="secondary" onClick={() => setSubcategoryModal(null)}>Cancelar</button>
+                    <button type="button" disabled={!subcategoryModal.code.trim() || !subcategoryModal.name.trim()} onClick={createSubcategory}>Crear subcategoría</button>
+                </div>
+            </div>
+        </div>}
+        <div className="category-admin-list">{categories.map(category =>
+            <div className="card category-admin" key={category.code}>
+                <div className="category-admin-head">
+                    <code>{category.code}</code>
+                    <input value={category.name} onChange={e => patchCategory(category.code, {name: e.target.value})}/>
+                    <input className="order-input" type="number" min="0" value={category.displayOrder} onChange={e => patchCategory(category.code, {displayOrder: Number(e.target.value)})}/>
+                    <label><input type="checkbox" checked={category.active} onChange={e => patchCategory(category.code, {active: e.target.checked})}/> Activa</label>
+                    <button onClick={() => saveCategory(category)}>Guardar</button>
+                    <button className="secondary" onClick={() => openSubcategoryModal(category)}>+ Subcategoría</button>
+                </div>
+                <div className="subcategory-admin">
+                    {category.subcategories.map(sub => <div className="subcategory-admin-row" key={sub.code}>
+                        <code>{sub.code}</code>
+                        <input value={sub.name} onChange={e => patchSubcategory(category.code, sub.code, {name: e.target.value})}/>
+                        <input className="order-input" type="number" min="0" value={sub.displayOrder} onChange={e => patchSubcategory(category.code, sub.code, {displayOrder: Number(e.target.value)})}/>
+                        <label><input type="checkbox" checked={sub.active} onChange={e => patchSubcategory(category.code, sub.code, {active: e.target.checked})}/> Activa</label>
+                        <button onClick={() => saveSubcategory(category, sub)}>Guardar</button>
+                    </div>)}
+                </div>
+            </div>)}</div>
+    </Page>;
 }
 
 function Page({title, children}: { title: string; children: any }) {
@@ -444,90 +654,78 @@ function Rank({title, rows}: { title: string; rows: [string, number, number, num
     </div>) : <Empty>Sin datos.</Empty>}</div>
 }
 
-function MovementSearch({products}: { products: Product[] }) {
-    const now = new Date(), defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10),
-        defaultTo = now.toISOString().slice(0, 10);
-    const [filters, setFilters] = useState<any>({
-        from: defaultFrom,
-        to: defaultTo,
-        sortBy: 'DATE',
-        sortDirection: 'DESC',
-        offset: 0,
-        limit: 25
-    }), [page, setPage] = useState<any>({
-        items: [],
-        total: 0,
-        offset: 0,
-        limit: 25
-    }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+function MovementSearch({products, initialFrom, initialTo, canEdit}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean }) {
+    const [filters, setFilters] = useState<any>({from: initialFrom, to: initialTo, sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
+    const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
+    const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [editing, setEditing] = useState<string | null>(null);
+    const [choice, setChoice] = useState<ClassificationChoice>({});
+    const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+
     const load = (next = filters) => {
-        setBusy(true);
-        setErr('');
-        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false))
+        setBusy(true); setErr('');
+        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false));
     };
+    useEffect(() => { load(filters); api.categoriesCatalog().then(setCatalog).catch(() => undefined) }, []);
     useEffect(() => {
-        load(filters)
-    }, []);
+        const next = {...filters, from: initialFrom, to: initialTo, offset: 0};
+        setFilters(next); load(next);
+    }, [initialFrom, initialTo]);
+
     const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
-    const submit = (e: any) => {
-        e.preventDefault();
-        load(filters)
+    const submit = (e: any) => { e.preventDefault(); load(filters) };
+    const move = (offset: number) => { const next = {...filters, offset}; setFilters(next); load(next) };
+    const edit = (m: Movement) => {
+        setEditing(m.id);
+        setChoice({category: m.category || '', subcategory: m.subcategory || '', kind: m.kind || 'NORMAL'});
     };
-    const move = (offset: number) => {
-        const next = {...filters, offset};
-        setFilters(next);
-        load(next)
+    const saveClassification = async (m: Movement) => {
+        if (!choice.category) { setErr('Selecciona una categoría.'); return; }
+        setBusy(true); setErr('');
+        try {
+            await api.classifyMovement(m.id, {category: choice.category, subcategory: choice.subcategory, kind: choice.kind || m.kind || 'NORMAL', createRule: false, applyToSimilar: false});
+            setEditing(null);
+            load(filters);
+        } catch (e) {
+            setBusy(false);
+            setErr(e instanceof Error ? e.message : 'No se pudo actualizar la categoría');
+        }
     };
+    const selectedDefinition = catalog.find(c => c.code === choice.category);
+
     return <Page title="Movimientos">
-        <form className="filters card" onSubmit={submit}><label>Desde<input type="date" value={filters.from}
-                                                                            onChange={e => change('from', e.target.value)}/></label><label>Hasta<input
-            type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label><input
-            placeholder="Buscar concepto o comercio" value={filters.text || ''}
-            onChange={e => change('text', e.target.value)}/><select value={filters.productId || ''}
-                                                                    onChange={e => change('productId', e.target.value)}>
-            <option value="">Todos los productos</option>
-            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select><input
-            placeholder="Categoría" value={filters.category || ''}
-            onChange={e => change('category', e.target.value)}/><input type="number" step="0.01"
-                                                                       placeholder="Importe mín."
-                                                                       value={filters.minAmount ?? ''}
-                                                                       onChange={e => change('minAmount', e.target.value)}/><input
-            type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''}
-            onChange={e => change('maxAmount', e.target.value)}/><select value={filters.status || ''}
-                                                                         onChange={e => change('status', e.target.value)}>
-            <option value="">Todos los estados</option>
-            <option value="BOOKED">Contabilizado</option>
-            <option value="PENDING">Pendiente</option>
-        </select><select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}>
-            <option value="DATE">Ordenar por fecha</option>
-            <option value="AMOUNT">Ordenar por importe</option>
-            <option value="MERCHANT">Ordenar por comercio</option>
-            <option value="CATEGORY">Ordenar por categoría</option>
-        </select><select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}>
-            <option value="DESC">Descendente</option>
-            <option value="ASC">Ascendente</option>
-        </select>
+        <form className="filters card" onSubmit={submit}>
+            <label>Desde<input type="date" value={filters.from} onChange={e => change('from', e.target.value)}/></label>
+            <label>Hasta<input type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label>
+            <input placeholder="Buscar concepto o comercio" value={filters.text || ''} onChange={e => change('text', e.target.value)}/>
+            <select value={filters.productId || ''} onChange={e => change('productId', e.target.value)}><option value="">Todos los productos</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+            <input placeholder="Categoría" value={filters.category || ''} onChange={e => change('category', e.target.value)}/>
+            <input type="number" step="0.01" placeholder="Importe mín." value={filters.minAmount ?? ''} onChange={e => change('minAmount', e.target.value)}/>
+            <input type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''} onChange={e => change('maxAmount', e.target.value)}/>
+            <select value={filters.status || ''} onChange={e => change('status', e.target.value)}><option value="">Todos los estados</option><option value="BOOKED">Contabilizado</option><option value="PENDING">Pendiente</option></select>
+            <select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}><option value="DATE">Ordenar por fecha</option><option value="AMOUNT">Ordenar por importe</option><option value="MERCHANT">Ordenar por comercio</option><option value="CATEGORY">Ordenar por categoría</option></select>
+            <select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}><option value="DESC">Descendente</option><option value="ASC">Ascendente</option></select>
             <button type="submit"><Search size={16}/>Buscar</button>
-            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV
-            </button>
+            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV</button>
         </form>
         {err && <div className="api-error">{err}</div>}
-        <div className="card table">{busy ? <div className="loading">Buscando movimientos…</div> : <>
-            <div className="thead movement-grid"><b>Fecha</b><b>Concepto</b><b>Categoría</b><b>Importe</b></div>
-            {page.items.length ? page.items.map((m: Movement) => <div className="trow movement-grid" key={m.id}>
-                    <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b><span>{m.category || 'Sin categoría'}</span><strong
-                    className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong></div>) :
-                <Empty>No hay movimientos con esos filtros.</Empty>}
-            <div className="pagination"><span>{page.total} movimientos</span>
-                <div>
-                    <button disabled={page.offset <= 0}
-                            onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior
-                    </button>
-                    <button disabled={page.offset + page.limit >= page.total}
-                            onClick={() => move(page.offset + page.limit)}>Siguiente
-                    </button>
+        <div className="card table">{busy && !page.items.length ? <div className="loading">Buscando movimientos…</div> : <>
+            <div className="thead movement-grid editable-movement-grid"><b>Fecha</b><b>Concepto</b><b>Categoría</b><b>Importe</b>{canEdit && <b>Acción</b>}</div>
+            {page.items.length ? page.items.map((m: Movement) => <div key={m.id}>
+                <div className="trow movement-grid editable-movement-grid">
+                    <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b>
+                    <span>{m.category || 'Sin categoría'}{m.subcategory ? ' / ' + m.subcategory.replaceAll('_', ' ') : ''}</span>
+                    <strong className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong>
+                    {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
                 </div>
-            </div>
+                {canEdit && editing === m.id && <div className="movement-classification-editor">
+                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: e.target.value === 'NO_COMPUTABLE' ? 'NON_COMPUTABLE' : (choice.kind === 'REFUND' ? 'REFUND' : 'NORMAL')})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
+                    <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value, kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE', OTROS_NO_COMPUTABLES: 'NON_COMPUTABLE'} as Record<string, string>)[e.target.value] || choice.kind})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
+                    <label>Tratamiento<select value={choice.kind || 'NORMAL'} onChange={e => setChoice({...treatmentDefaults(e.target.value), ...(e.target.value === 'NORMAL' || e.target.value === 'REFUND' ? {category: choice.category === 'NO_COMPUTABLE' ? '' : choice.category, subcategory: choice.category === 'NO_COMPUTABLE' ? undefined : choice.subcategory} : {})})}>{TREATMENTS.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}</select></label>
+                    <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar</button>
+                </div>}
+            </div>) : <Empty>No hay movimientos con esos filtros.</Empty>}
+            <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
         </>}</div>
     </Page>
 }

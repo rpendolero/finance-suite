@@ -5,6 +5,9 @@ import com.finance.server.application.port.FinanceQueries;
 import com.finance.server.application.service.*;
 import com.finance.server.infrastructure.adapter.in.mcp.FinanceTools;
 import java.time.Clock;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finance.server.infrastructure.adapter.out.enablebanking.EnableBankingAuthorizationAdapter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.*;
@@ -63,8 +66,13 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CategoryCatalogService categoryCatalog() {
-    return new CategoryCatalogService();
+  CategoryCatalogService categoryCatalog(CategoryCatalogPort catalog) {
+    return new CategoryCatalogService(catalog);
+  }
+
+  @Bean
+  CategoryAdministrationService categoryAdministration(CategoryCatalogAdminPort catalog) {
+    return new CategoryAdministrationService(catalog);
   }
 
   @Bean
@@ -146,6 +154,32 @@ public class ApplicationConfig {
       CashFlowService cashFlow) {
     return new ExtendedAnalysisService(
         trends, merchants, budgets, reconciliation, increases, cashFlow);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  EnableBankingAuthorizationAdapter enableBankingAdapter(
+      EnableBankingProperties properties, ObjectMapper mapper) {
+    return new EnableBankingAuthorizationAdapter(properties, mapper);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  BankingAuthorizationService bankingAuthorizationService(
+      EnableBankingAuthorizationAdapter authorizationPort, BankConnectionPort connections, Clock clock) {
+    return new BankingAuthorizationService(authorizationPort, connections, clock);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  BankingSyncService bankingSyncService(
+      EnableBankingAuthorizationAdapter banking,
+      BankConnectionPort connections,
+      LedgerPort ledger,
+      SettingsPort settings,
+      MovementClassificationService classification,
+      Clock clock) {
+    return new BankingSyncService(banking, connections, ledger, settings, classification, clock);
   }
 
   @Bean

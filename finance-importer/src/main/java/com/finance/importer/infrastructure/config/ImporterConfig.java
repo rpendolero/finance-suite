@@ -8,9 +8,11 @@ import com.finance.importer.infrastructure.adapter.file.LocalFileCleanupAdapter;
 import com.finance.importer.infrastructure.adapter.in.cli.ImporterJobRunner;
 import com.finance.importer.infrastructure.adapter.out.csv.*;
 import com.finance.importer.infrastructure.adapter.out.http.HttpIngestionAdapter;
+import com.finance.importer.infrastructure.adapter.out.enablebanking.EnableBankingClient;
 import com.finance.importer.infrastructure.adapter.out.playwright.*;
 import java.util.List;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,7 +20,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties({
         ImporterProperties.class,
-        BrowserProperties.class
+        BrowserProperties.class,
+        EnableBankingProperties.class
 })
 public class ImporterConfig {
 
@@ -86,6 +89,12 @@ public class ImporterConfig {
             urlPolicy,
             storage,
             browserFactory);
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+  EnableBankingClient enableBankingClient(EnableBankingProperties properties, ObjectMapper mapper) {
+    return new EnableBankingClient(properties, mapper);
   }
 
   // -------------------------------------------------------------------------

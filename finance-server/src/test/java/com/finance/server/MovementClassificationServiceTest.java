@@ -12,7 +12,16 @@ import org.junit.jupiter.api.Test;
 
 class MovementClassificationServiceTest {
 
-  private final MovementClassificationService classifier = new MovementClassificationService();
+  private final MovementClassificationService classifier = new MovementClassificationService(
+          new com.finance.server.application.service.MerchantNormalizationService(),
+          new com.finance.server.application.service.CategoryCatalogService(new com.finance.server.application.port.CategoryCatalogPort() {
+            public java.util.List<Category> findAllActive() { return java.util.List.of(); }
+            public java.util.Optional<Category> findActiveByCode(String code) {
+              return java.util.Optional.of(new Category(code, code, java.util.List.of(
+                  new Subcategory("SUPERMERCADO", "Supermercado"),
+                  new Subcategory("OTROS_OCIO", "Otros ocio"))));
+            }
+          }), new com.finance.server.application.service.MovementKindDetectionService());
 
   @Test
   void merchantRuleNormalizesAndClassifiesNoisyBankText() {
@@ -71,7 +80,7 @@ class MovementClassificationServiceTest {
             List.of());
 
     assertThat(result.kind()).isEqualTo(Movement.Kind.CARD_SETTLEMENT);
-    assertThat(result.category()).isEqualTo("TRANSFERENCIAS");
+    assertThat(result.category()).isEqualTo("NO_COMPUTABLE");
     assertThat(result.subcategory()).isEqualTo("LIQUIDACION_TARJETA");
     assertThat(result.included()).isFalse();
   }
@@ -95,8 +104,8 @@ class MovementClassificationServiceTest {
     Movement result = classifier.classify(movement, List.of());
 
     assertThat(result.kind()).isEqualTo(Movement.Kind.WALLET_SETTLEMENT);
-    assertThat(result.category()).isEqualTo("TRANSFERENCIAS");
-    assertThat(result.subcategory()).isEqualTo("LIQUIDACION_MONEDERO");
+    assertThat(result.category()).isEqualTo("NO_COMPUTABLE");
+    assertThat(result.subcategory()).isEqualTo("LIQUIDACION_PAYPAL");
     assertThat(result.included()).isFalse();
   }
 

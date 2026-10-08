@@ -59,11 +59,12 @@ public class SecurityConfig {
     return http.addFilterBefore(
             new OriginFilter(trustedOrigins),
             org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)
-        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/auth/login"))
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/api/auth/login").permitAll()
+                a.requestMatchers("/api/auth/login", "/api/v1/banking/enable-banking/callback").permitAll()
+                    .requestMatchers("/api/v1/banking/enable-banking/authorizations", "/api/v1/banking/connections/**").hasRole("ADMIN")
                     .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
                     .requestMatchers("/api/importer/**")
                     .hasRole("IMPORTER")
