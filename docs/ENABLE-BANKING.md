@@ -68,3 +68,17 @@ Guarda únicamente saldo y fecha, preservando nombre, entidad, referencias y ví
 Si no hay saldo de un tipo compatible en la moneda del producto, conserva el anterior y lo cuenta como «Sin saldo compatible». Los fallos HTTP se muestran como error de sincronización. El resultado informa de saldos actualizados y omitidos, y refresca productos y resumen del dashboard. No requiere migración.
 
 Las cuentas con moneda XXX (sin especificar, como puede devolver PayPal) permiten vincularse a un producto EUR. El dashboard indica «Moneda no especificada por el banco». Una moneda explícita diferente sigue bloqueando el vínculo. Los saldos se filtran por la moneda del producto y los movimientos continúan sujetos a la validación EUR del dominio; no se realiza conversión de divisas.
+
+### Trazas de diagnóstico
+
+Los adaptadores usan Lombok @Slf4j. INFO resume descubrimiento y paginación; DEBUG muestra operación HTTP, estado, duración, cantidades de registros, moneda, tipo de saldo/cuenta y campo de fecha elegido. WARN identifica monedas no soportadas, campos ausentes y fallos de mapeo con página/fila. El correlationId del filtro HTTP permite agrupar las trazas de una sincronización. No se registran JWT, claves, cuerpos HTTP, IBAN, importes ni conceptos.
+
+Para activar el detalle en application.yml:
+
+```yaml
+logging:
+  level:
+    com.finance.server.infrastructure.adapter.out.enablebanking: DEBUG
+```
+
+Para el error de PayPal, busca `Enable Banking transaction currency unsupported by ledger: currency=...`. Las monedas y códigos recibidos se validan antes de incluirlos en el log.

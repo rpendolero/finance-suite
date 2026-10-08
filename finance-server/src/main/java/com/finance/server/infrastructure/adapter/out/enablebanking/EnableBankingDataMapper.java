@@ -13,7 +13,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public final class EnableBankingDataMapper {
   public Account account(String id, AccountDetailsDto details) {
     String name = first(details.getName());
@@ -21,6 +23,7 @@ public final class EnableBankingDataMapper {
       String iban = details.getAccountId().getIban();
       if (iban != null && iban.length() >= 4) name = "Cuenta · " + iban.substring(iban.length() - 4);
     }
+    log.debug("Enable Banking account mapped: currency={}, accountType={}", diagnostic(details.getCurrency()), diagnostic(details.getCashAccountType()));
     return new Account(id, name == null ? id : name, required(details.getCurrency(), "account currency"), details.getCashAccountType());
   }
 
@@ -32,6 +35,8 @@ public final class EnableBankingDataMapper {
     if ("CRDT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs();
     var at = value.getLastChangeDateTime() != null ? OffsetDateTime.parse(value.getLastChangeDateTime()).toInstant()
         : value.getReferenceDate() != null ? LocalDate.parse(value.getReferenceDate()).atStartOfDay().toInstant(ZoneOffset.UTC) : null;
+    log.debug("Enable Banking balance mapped: currency={}, balanceType={}, dated={}",
+        diagnostic(value.getBalanceAmount().getCurrency()), diagnostic(value.getBalanceType()), at != null);
     return new Balance(amount, required(value.getBalanceAmount().getCurrency(), "balance currency"), value.getBalanceType(), at);
   }
 
@@ -41,6 +46,14 @@ public final class EnableBankingDataMapper {
     BigDecimal amount = value.getTransactionAmount().getAmount();
     if ("DBIT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs().negate();
     if ("CRDT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs();
+    String currency = required(value.getTransactionAmount().getCurrency(), "transaction currency");
+    String dateSource = first(value.getBookingDate()) != null ? "booking_date"
+        : first(value.getValueDate()) != null ? "value_date"
+        : first(value.getTransactionDate()) != null ? "transaction_date" : "MISSING";
+    log.debug("Enable Banking transaction mapping: currency={}, dateSource={}, status={}", diagnostic(currency), dateSource, diagnostic(value.getStatus()));
+    if (!"EUR".equals(currency))
+      log.warn("Enable Banking transaction currency unsupported by ledger: currency={}, dateSource={}", diagnostic(currency), dateSource);
+    if ("MISSING".equals(dateSource)) log.warn("Enable Banking transaction has no booking, value or transaction date");
     String date = required(first(value.getBookingDate(), value.getValueDate(), value.getTransactionDate()), "transaction date");
     String description = join(value.getRemittanceInformation());
     if (description.isBlank()) description = first(value.getReference(), value.getAdditionalInformation());
@@ -50,9 +63,13 @@ public final class EnableBankingDataMapper {
         : first(value.getDebtorName(), debtor, value.getCreditorName(), creditor);
     return new Transaction(first(value.getTransactionId(), value.getEntryReference(), value.getId()),
         LocalDate.parse(date.substring(0, 10)), amount,
-        required(value.getTransactionAmount().getCurrency(), "transaction currency"),
+        currency,
         description == null ? "" : description, merchant,
         "PDNG".equalsIgnoreCase(value.getStatus()) || "PENDING".equalsIgnoreCase(value.getStatus()));
+  }
+
+  private String diagnostic(String value) {
+    return value == null ? "MISSING" : value.matches("[A-Z0-9_]{1,32}") ? value : "INVALID";
   }
 
   private String join(List<String> values) {
@@ -64,7 +81,10 @@ public final class EnableBankingDataMapper {
   }
 
   public String required(String value, String field) {
-    if (value == null || value.isBlank()) throw new IllegalStateException("Enable Banking response is missing " + field);
+    if (value == null || value.isBlank()) {
+      log.warn("Enable Banking required field missing: field={}", field);
+      throw new IllegalStateException("Enable Banking response is missing " + field);
+    }
     return value;
   }
 }

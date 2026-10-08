@@ -26,7 +26,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public final class EnableBankingAuthorizationAdapter implements BankingAuthorizationPort, BankingDataPort {
   private final String redirectUrl;
   private final EnableBankingApiClient client;
@@ -95,6 +97,7 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
   public List<Balance> balanceSnapshots(String accountId) {
     BalancesResponse response = balances(accountId);
     if (response.getBalances() == null) throw new IllegalStateException("Enable Banking balance list is missing");
+    log.debug("Enable Banking balances received: count={}", response.getBalances().size());
     return response.getBalances().stream().map(dataMapper::balance).toList();
   }
 
@@ -105,6 +108,7 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
     if (ids == null && response.getAccountsData() != null)
       ids = response.getAccountsData().stream().map(AccountDetailsDto::getUid).toList();
     if (ids == null) throw new IllegalStateException("Enable Banking session account list is missing");
+    log.info("Enable Banking account discovery received: count={}", ids.size());
     return ids.stream().distinct().map(id -> {
       dataMapper.required(id, "account id");
       return dataMapper.account(id, account(id));
@@ -117,14 +121,29 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
     List<Transaction> result = new ArrayList<>();
     Set<String> seenKeys = new HashSet<>();
     String next = null;
+    int pageNumber = 0;
+    log.debug("Enable Banking transaction retrieval started");
     do {
       TransactionsResponse page = client.get(path + (next == null ? "" : "?continuation_key=" + encode(next)), TransactionsResponse.class);
       if (page.getTransactions() == null) throw new IllegalStateException("Enable Banking transaction list is missing");
-      page.getTransactions().stream().map(dataMapper::transaction).forEach(result::add);
+      pageNumber++;
+      log.debug("Enable Banking transaction page received: page={}, count={}, hasContinuation={}",
+          pageNumber, page.getTransactions().size(), page.getContinuationKey() != null && !page.getContinuationKey().isBlank());
+      int row = 0;
+      for (var transaction : page.getTransactions()) {
+        row++;
+        try {
+          result.add(dataMapper.transaction(transaction));
+        } catch (RuntimeException e) {
+          log.warn("Enable Banking transaction mapping failed: page={}, row={}, errorType={}", pageNumber, row, e.getClass().getSimpleName());
+          throw e;
+        }
+      }
       next = page.getContinuationKey();
       if (next != null && next.isBlank()) next = null;
       if (next != null && !seenKeys.add(next)) throw new IllegalStateException("Repeated Enable Banking continuation key");
     } while (next != null);
+    log.info("Enable Banking transaction retrieval completed: pages={}, count={}", pageNumber, result.size());
     return List.copyOf(result);
   }
 

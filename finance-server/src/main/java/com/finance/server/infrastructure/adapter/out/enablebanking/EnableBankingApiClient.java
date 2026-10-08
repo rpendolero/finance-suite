@@ -45,11 +45,16 @@ public final class EnableBankingApiClient {
   }
 
   private <T> T send(HttpRequest request, Class<T> responseType) {
+    long started = System.nanoTime();
+    String operation = responseType.getSimpleName();
+    log.debug("Enable Banking request started: method={}, operation={}", request.method(), operation);
     try {
       HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+      log.debug("Enable Banking response received: method={}, operation={}, status={}, durationMs={}",
+          request.method(), operation, response.statusCode(), (System.nanoTime() - started) / 1_000_000);
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
         String code = errorCode(response.body());
-        log.warn("Enable Banking request rejected: method={}, status={}, code={}", request.method(), response.statusCode(), code);
+        log.warn("Enable Banking request rejected: method={}, operation={}, status={}, code={}", request.method(), operation, response.statusCode(), code);
         throw new IllegalStateException("Enable Banking request failed: HTTP " + response.statusCode() + ", code=" + code);
       }
       T value = mapper.readValue(response.body(), responseType);
@@ -57,8 +62,10 @@ public final class EnableBankingApiClient {
       return value;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+      log.warn("Enable Banking request interrupted: operation={}", operation);
       throw new IllegalStateException("Enable Banking request interrupted", e);
     } catch (IOException e) {
+      log.warn("Enable Banking response could not be read: operation={}, errorType={}", operation, e.getClass().getSimpleName());
       throw new IllegalStateException("Could not read Enable Banking response", e);
     }
   }
