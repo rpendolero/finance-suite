@@ -56,6 +56,8 @@ class EnableBankingAdapterTest {
     assertThat(accounts.get(0).id()).isEqualTo("first");
     assertThat(accounts.get(0).name()).isEqualTo("Cuenta · 1234");
     assertThat(requests).hasSize(3);
+    assertThat(requests.get(1).uri().getPath()).isEqualTo("/accounts/first/details");
+    assertThat(requests.get(2).uri().getPath()).isEqualTo("/accounts/second/details");
   }
 
   @Test void emptyAuthorizedAccountListIsValidButMissingListIsRejected() throws Exception {

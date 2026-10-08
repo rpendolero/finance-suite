@@ -84,7 +84,7 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
   }
 
   public AccountDetailsDto account(String accountId) {
-    return client.get("accounts/" + encode(accountId), AccountDetailsDto.class);
+    return client.get("accounts/" + encode(accountId) + "/details", AccountDetailsDto.class);
   }
 
   public BalancesResponse balances(String accountId) {
