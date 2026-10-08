@@ -201,6 +201,17 @@ public class JpaLedgerAdapter implements LedgerPort, MovementSearchPort {
 
   @Override
   @Transactional
+  public void deleteMovement(String id) {
+    MovementEntity movement = movementRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Movimiento inexistente: " + id));
+    lockProduct(movement.getProductId());
+    movementRepository.delete(movement);
+    movementRepository.flush();
+    log.info("Movement deleted: id={}, productId={}", id, movement.getProductId());
+  }
+
+  @Override
+  @Transactional
   public void deleteProduct(String id) {
     productRepository
         .findByIdForUpdate(id)

@@ -37,6 +37,19 @@ class JpaAdapterTest {
   }
 
   @Test
+  void deletingMovementPreservesProductAndOtherMovements() {
+    ledger.saveProduct(product("a", Product.Provider.ING));
+    var first = new Movement(UUID.randomUUID().toString(), "a", "bank-first", LocalDate.parse("2026-09-01"), new BigDecimal("-10.00"), "EUR", "Compra", "Shop", "FOOD", Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    var second = new Movement(UUID.randomUUID().toString(), "a", "bank-second", first.date(), first.amount(), "EUR", "Compra", "Shop", "FOOD", Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    ledger.insert(List.of(first, second));
+    ledger.deleteMovement(first.id());
+    assertThat(ledger.movement(first.id())).isEmpty();
+    assertThat(ledger.movement(second.id())).isPresent();
+    assertThat(ledger.product("a")).isPresent();
+    assertThatThrownBy(() -> ledger.deleteMovement(first.id())).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void persistsProvidersAndMoneders() {
     for (var provider : Product.Provider.values())
       ledger.saveProduct(product(provider.name(), provider));

@@ -152,6 +152,7 @@ export const api = {
     updateSubcategory: (category: string, code: string, item: CatalogItemInput) => sendJson<AdminSubcategory>(`/api/admin/categories/${encodeURIComponent(category)}/subcategories/${encodeURIComponent(code)}`, 'PUT', item),
     unclassified: (from: string, to: string, productId?: string, limit = 100) =>
         json<Movement[]>(`/api/classification/unclassified?${q(from, to, productId)}&limit=${limit}`),
+    deleteMovement: (id: string) => json<void>(`/api/movements/${encodeURIComponent(id)}`, {method: 'DELETE'}),
     classifyMovement: (
         id: string,
         classification: {

@@ -105,6 +105,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  MovementManagementService movementManagement(LedgerPort ledger) {
+    return new MovementManagementService(ledger);
+  }
+
+  @Bean
   ImportService importService(
       LedgerPort ledger,
       StatementParserPort parser,

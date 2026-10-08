@@ -660,6 +660,7 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
     const [filters, setFilters] = useState<any>({from: initialFrom, to: initialTo, sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
     const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [deleting, setDeleting] = useState<Movement | null>(null);
     const [editing, setEditing] = useState<string | null>(null);
     const [choice, setChoice] = useState<ClassificationChoice>({});
     const [busy, setBusy] = useState(false), [err, setErr] = useState('');
@@ -693,9 +694,33 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
             setErr(e instanceof Error ? e.message : 'No se pudo actualizar la categoría');
         }
     };
+    const deleteMovement = async () => {
+        if (!deleting) return;
+        setBusy(true); setErr('');
+        try {
+            await api.deleteMovement(deleting.id);
+            setDeleting(null); setEditing(null);
+            const next = {...filters, offset: page.items.length === 1 ? Math.max(0, page.offset - page.limit) : page.offset};
+            setFilters(next); load(next);
+        } catch (e) {
+            setBusy(false);
+            setErr(e instanceof Error ? e.message : 'No se pudo eliminar el movimiento');
+        }
+    };
     const selectedDefinition = catalog.find(c => c.code === choice.category);
 
     return <Page title="Movimientos">
+        {deleting && <div className="app-modal-backdrop">
+            <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="delete-movement-title">
+                <h3 id="delete-movement-title">Eliminar movimiento</h3>
+                <p>{dateLabel(deleting.date)} · {deleting.merchant || deleting.description} · {eur(deleting.amount)}</p>
+                <p>Se eliminará definitivamente. Una nueva importación o sincronización puede volver a incorporarlo.</p>
+                <div className="modal-actions">
+                    <button type="button" className="secondary" disabled={busy} onClick={() => setDeleting(null)}>Cancelar</button>
+                    <button type="button" disabled={busy} onClick={() => void deleteMovement()}>Eliminar definitivamente</button>
+                </div>
+            </div>
+        </div>}
         <form className="filters card" onSubmit={submit}>
             <label>Desde<input type="date" value={filters.from} onChange={e => change('from', e.target.value)}/></label>
             <label>Hasta<input type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label>
@@ -718,7 +743,7 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
                     <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b>
                     <span>{m.category || 'Sin categoría'}{m.subcategory ? ' / ' + m.subcategory.replaceAll('_', ' ') : ''}</span>
                     <strong className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong>
-                    {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
+                    {canEdit && <div><button type="button" disabled={busy} className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button><button type="button" disabled={busy} className="secondary" onClick={() => setDeleting(m)}>Eliminar</button></div>}
                 </div>
                 {canEdit && editing === m.id && <div className="movement-classification-editor">
                     <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: e.target.value === 'NO_COMPUTABLE' ? 'NON_COMPUTABLE' : (choice.kind === 'REFUND' ? 'REFUND' : 'NORMAL')})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
