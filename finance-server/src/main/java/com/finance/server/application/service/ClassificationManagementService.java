@@ -50,6 +50,8 @@ public final class ClassificationManagementService {
     String canonicalSubcategory = categories.normalizeSubcategory(canonicalCategory, subcategory);
     categories.validate(canonicalCategory, subcategory);
 
+    kind = categories.classificationKind(canonicalCategory, canonicalSubcategory, kind);
+
     Movement current =
         ledger.movement(id)
             .orElseThrow(() -> new IllegalArgumentException("Movimiento inexistente: " + id));
@@ -114,7 +116,7 @@ public final class ClassificationManagementService {
             rule.contains(),
             category,
             subcategory,
-            rule.kind(),
+            categories.classificationKind(category, subcategory, rule.kind()),
             rule.confidence());
     settings.saveRule(canonical);
     return canonical;

@@ -7,6 +7,8 @@ import java.util.stream.Collectors;
 /** Defines the canonical categories exposed to the dashboard and classification use cases. */
 public final class CategoryCatalogService {
 
+  public static final String NON_COMPUTABLE = "NO_COMPUTABLE";
+
   public static final String UNCLASSIFIED = "UNCLASSIFIED";
 
   public record CategoryDefinition(String code, String label, List<String> subcategories) {}
@@ -24,14 +26,9 @@ public final class CategoryCatalogService {
           category("COMPRAS", "Compras", "ONLINE", "ROPA", "HOGAR", "TECNOLOGIA", "OTRAS_COMPRAS"),
           category("SUSCRIPCIONES", "Suscripciones", "STREAMING", "SOFTWARE", "TELEFONIA", "OTRAS_SUSCRIPCIONES"),
           category("IMPUESTOS", "Impuestos", "HACIENDA", "TASAS", "MULTAS"),
-          category(
-              "TRANSFERENCIAS",
-              "Transferencias",
-              "TRASPASO_INTERNO",
-              "LIQUIDACION_TARJETA",
-              "LIQUIDACION_PAYPAL",
-              "LIQUIDACION_MONEDERO",
-              "TRANSFERENCIA_EXTERNA"),
+          category("TRANSFERENCIAS", "Transferencias", "TRANSFERENCIA_EXTERNA"),
+          category(NON_COMPUTABLE, "No computable", "LIQUIDACION_TARJETA",
+              "LIQUIDACION_PAYPAL", "TRASPASO_INTERNO", "MOVIMIENTO_DUPLICADO"),
           category("EFECTIVO", "Efectivo", "RETIRADA_CAJERO"),
           category("OTROS", "Otros", "OTROS"));
 
@@ -59,13 +56,39 @@ public final class CategoryCatalogService {
 
   public void validate(String category, String subcategory) {
     String canonical = normalizeCategory(category);
-    if (UNCLASSIFIED.equals(canonical)) {
+    if (UNCLASSIFIED.equals(canonical) && !UNCLASSIFIED.equals(normalizeCode(category))) {
       throw new IllegalArgumentException("Categoría no válida: " + category);
     }
     if (subcategory != null && !subcategory.isBlank() && normalizeSubcategory(canonical, subcategory) == null) {
       throw new IllegalArgumentException(
           "Subcategoría no válida para " + canonical + ": " + subcategory);
     }
+  }
+
+  public String nonComputableSubcategory(com.finance.domain.Movement.Kind kind) {
+    return switch (kind) {
+      case CARD_SETTLEMENT -> "LIQUIDACION_TARJETA";
+      case WALLET_SETTLEMENT -> "LIQUIDACION_PAYPAL";
+      case INTERNAL_TRANSFER -> "TRASPASO_INTERNO";
+      case DUPLICATE -> "MOVIMIENTO_DUPLICADO";
+      default -> null;
+    };
+  }
+
+  public com.finance.domain.Movement.Kind classificationKind(
+      String category, String subcategory, com.finance.domain.Movement.Kind requested) {
+    if (NON_COMPUTABLE.equals(category)) {
+      if (subcategory == null) throw new IllegalArgumentException("Selecciona una subcategoría de No computable");
+      return switch (subcategory) {
+        case "LIQUIDACION_TARJETA" -> com.finance.domain.Movement.Kind.CARD_SETTLEMENT;
+        case "LIQUIDACION_PAYPAL" -> com.finance.domain.Movement.Kind.WALLET_SETTLEMENT;
+        case "TRASPASO_INTERNO" -> com.finance.domain.Movement.Kind.INTERNAL_TRANSFER;
+        case "MOVIMIENTO_DUPLICADO" -> com.finance.domain.Movement.Kind.DUPLICATE;
+        default -> throw new IllegalArgumentException("Subcategoría no computable no válida");
+      };
+    }
+    return requested == com.finance.domain.Movement.Kind.REFUND
+        ? requested : com.finance.domain.Movement.Kind.NORMAL;
   }
 
   private boolean isCategory(String code) {

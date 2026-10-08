@@ -48,31 +48,11 @@ public final class MovementClassificationService {
       return applyRule(normalized, matchedRule.orElseThrow());
     }
 
-    if (normalized.kind() == Movement.Kind.INTERNAL_TRANSFER) {
+    String nonComputable = categories.nonComputableSubcategory(normalized.kind());
+    if (nonComputable != null) {
       return normalized.withClassification(
-          "TRANSFERENCIAS",
-          "TRASPASO_INTERNO",
-          Movement.Kind.INTERNAL_TRANSFER,
-          Movement.ClassificationSource.AUTOMATIC,
-          new BigDecimal("0.9900"));
-    }
-
-    if (normalized.kind() == Movement.Kind.CARD_SETTLEMENT) {
-      return normalized.withClassification(
-          "TRANSFERENCIAS",
-          "LIQUIDACION_TARJETA",
-          Movement.Kind.CARD_SETTLEMENT,
-          Movement.ClassificationSource.AUTOMATIC,
-          new BigDecimal("0.9900"));
-    }
-
-    if (normalized.kind() == Movement.Kind.WALLET_SETTLEMENT) {
-      return normalized.withClassification(
-          "TRANSFERENCIAS",
-          "LIQUIDACION_MONEDERO",
-          Movement.Kind.WALLET_SETTLEMENT,
-          Movement.ClassificationSource.AUTOMATIC,
-          new BigDecimal("0.9900"));
+          CategoryCatalogService.NON_COMPUTABLE, nonComputable, normalized.kind(),
+          Movement.ClassificationSource.AUTOMATIC, new BigDecimal("0.9900"));
     }
 
     var detected = kindDetection.detect(normalized);
@@ -111,8 +91,9 @@ public final class MovementClassificationService {
   }
 
   private Movement applyRule(Movement movement, ClassificationRule rule) {
-    String category = categories.normalizeCategory(rule.category());
-    String subcategory = categories.normalizeSubcategory(category, rule.subcategory());
+    String excluded = categories.nonComputableSubcategory(rule.kind());
+    String category = excluded == null ? categories.normalizeCategory(rule.category()) : CategoryCatalogService.NON_COMPUTABLE;
+    String subcategory = excluded == null ? categories.normalizeSubcategory(category, rule.subcategory()) : excluded;
     Movement.ClassificationSource source =
         rule.matchType() == ClassificationRule.MatchType.MERCHANT
             ? Movement.ClassificationSource.MERCHANT_RULE

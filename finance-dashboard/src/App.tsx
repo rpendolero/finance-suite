@@ -266,6 +266,7 @@ const TREATMENTS = [
     {code: 'REFUND', label: 'Devolución', computable: true},
     {code: 'CARD_SETTLEMENT', label: 'No computable - Liquidación tarjeta', computable: false},
     {code: 'WALLET_SETTLEMENT', label: 'No computable - PayPal / monedero', computable: false},
+    {code: 'DUPLICATE', label: 'No computable - Movimiento duplicado', computable: false},
     {code: 'INTERNAL_TRANSFER', label: 'No computable - Transferencia interna', computable: false}
 ] as const;
 
@@ -277,12 +278,14 @@ type ClassificationChoice = {
 
 function treatmentDefaults(kind: string): ClassificationChoice {
     switch (kind) {
+        case 'DUPLICATE':
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'MOVIMIENTO_DUPLICADO'};
         case 'CARD_SETTLEMENT':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_TARJETA'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_TARJETA'};
         case 'WALLET_SETTLEMENT':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_PAYPAL'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_PAYPAL'};
         case 'INTERNAL_TRANSFER':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'TRASPASO_INTERNO'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'TRASPASO_INTERNO'};
         default:
             return {kind};
     }
@@ -321,7 +324,8 @@ function ClassificationReview() {
             [id]: {
                 ...current[id],
                 [key]: value || undefined,
-                ...(key === 'category' ? {subcategory: undefined} : {})
+                ...(key === 'category' ? {subcategory: undefined, kind: value === 'NO_COMPUTABLE' ? undefined : (current[id]?.kind === 'REFUND' ? 'REFUND' : 'NORMAL')} : {}),
+                ...(key === 'subcategory' ? {kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE'} as Record<string, string>)[value] || current[id]?.kind} : {})
             }
         }))
     };
