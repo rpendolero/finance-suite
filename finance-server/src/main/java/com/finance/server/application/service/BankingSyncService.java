@@ -96,7 +96,7 @@ public final class BankingSyncService {
   }
 
   private void validateProduct(ExternalBankAccount account, Product product) {
-    if (!account.currency().equals(product.currency()))
+    if (!"XXX".equals(account.currency()) && !account.currency().equals(product.currency()))
       throw new IllegalArgumentException("La moneda de la cuenta y el producto debe coincidir");
     boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
     if ("CARD".equals(account.cashAccountType()) && !card)

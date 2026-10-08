@@ -66,3 +66,5 @@ Al crear desde una cuenta descubierta se propone su nombre y entidad, se limita 
 Guarda únicamente saldo y fecha, preservando nombre, entidad, referencias y vínculos. Usa last_change_date_time, o reference_date a medianoche UTC; sin ambas, utiliza la fecha de consulta. Conserva el signo comunicado por el banco (o el indicador explícito DBIT/CRDT). No deriva el saldo sumando movimientos.
 
 Si no hay saldo de un tipo compatible en la moneda del producto, conserva el anterior y lo cuenta como «Sin saldo compatible». Los fallos HTTP se muestran como error de sincronización. El resultado informa de saldos actualizados y omitidos, y refresca productos y resumen del dashboard. No requiere migración.
+
+Las cuentas con moneda XXX (sin especificar, como puede devolver PayPal) permiten vincularse a un producto EUR. El dashboard indica «Moneda no especificada por el banco». Una moneda explícita diferente sigue bloqueando el vínculo. Los saldos se filtran por la moneda del producto y los movimientos continúan sujetos a la validación EUR del dominio; no se realiza conversión de divisas.

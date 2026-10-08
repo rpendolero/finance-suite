@@ -3,7 +3,7 @@ import ProductCreate from './ProductCreate';
 import {api, BankAccount, BankConnection, BankSyncResult, Product} from './api';
 
 const compatibleProduct = (account: BankAccount, product: Product) => {
-    if (product.currency !== account.currency) return false;
+    if (account.currency !== 'XXX' && product.currency !== account.currency) return false;
     if (account.cashAccountType === 'CARD') return ['CREDIT_CARD', 'DEBIT_CARD'].includes(product.type);
     if (['CACC', 'SVGS'].includes(account.cashAccountType || '')) return product.type === 'ACCOUNT';
     return true;
@@ -100,7 +100,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
             <h3>Cuentas y productos</h3>
             {!accounts.length && <p>Pulsa «Descubrir cuentas» para obtener las cuentas autorizadas.</p>}
             {accounts.map(a => <div className="banking-account" key={a.id}>
-                <div><b>{a.name}</b><small>{accountTypeLabel(a.cashAccountType)} · {a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
+                <div><b>{a.name}</b><small>{accountTypeLabel(a.cashAccountType)} · {a.currency === 'XXX' ? 'Moneda no especificada por el banco' : a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
                 <label>Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks({...links, [a.externalAccountId]: e.target.value})}>
                     <option value="">Selecciona producto</option>{availableProducts.filter(p => compatibleProduct(a, p)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select></label>

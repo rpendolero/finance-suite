@@ -98,6 +98,18 @@ class BankingAccountTypeTest {
     }
   }
 
+  @Test void unspecifiedAccountCurrencyCanLinkToEuroWallet() {
+    prepare("OTHR", Product.ProductType.WALLET);
+    when(connections.accounts("connection")).thenReturn(List.of(new ExternalBankAccount("local", "connection", "external", null, "Wallet", "XXX", "OTHR")));
+    assertThat(service.link("connection", "external", "product").productId()).isEqualTo("product");
+  }
+
+  @Test void explicitForeignCurrencyStillCannotLinkToEuroProduct() {
+    prepare("OTHR", Product.ProductType.WALLET);
+    when(connections.accounts("connection")).thenReturn(List.of(new ExternalBankAccount("local", "connection", "external", null, "Wallet", "USD", "OTHR")));
+    assertThatThrownBy(() -> service.link("connection", "external", "product")).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("moneda");
+  }
+
   @Test void oldAccountsWithoutTypeRemainLinkable() {
     prepare(null, Product.ProductType.ACCOUNT);
     assertThat(service.link("connection", "external", "product").productId()).isEqualTo("product");
