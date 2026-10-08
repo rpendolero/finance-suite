@@ -1,6 +1,6 @@
 export type BankConnection = {id: string; bankName: string; country: string; status: string; validUntil?: string; lastSyncAt?: string};
 export type BankAccount = {id: string; externalAccountId: string; productId?: string; name: string; currency: string; cashAccountType?: string};
-export type BankSyncResult = {read: number; inserted: number; duplicates: number};
+export type BankSyncResult = {read: number; inserted: number; duplicates: number; balancesUpdated: number; balancesSkipped: number};
 export type UserSession = { username: string; roles: string[] };
 export type Product = {
     id: string;

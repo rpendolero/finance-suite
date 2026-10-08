@@ -14,6 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -35,6 +36,15 @@ class EnableBankingAdapterTest {
       return response;
     });
     return new EnableBankingApiClient(URI.create("https://api.example.test/"), http, mapper, () -> "test-token");
+  }
+
+  @Test void balancesAreMappedFromTypedResponseWithDateAndNegativeAmount() throws Exception {
+    var api = client(request -> "{\"balances\":[{\"balance_amount\":{\"currency\":\"EUR\",\"amount\":\"-42.50\"},\"balance_type\":\"ITBD\",\"reference_date\":\"2026-10-08\"}]}", 200);
+    var balances = new EnableBankingAuthorizationAdapter("/", api).balanceSnapshots("account");
+    assertThat(balances).hasSize(1);
+    assertThat(balances.get(0).amount()).isEqualByComparingTo("-42.50");
+    assertThat(balances.get(0).at()).isEqualTo(Instant.parse("2026-10-08T00:00:00Z"));
+    assertThat(requests.get(0).uri().getPath()).isEqualTo("/accounts/account/balances");
   }
 
   @Test void postKeepsContentTypeAndGetWorksWithoutPrototypeHeaders() throws Exception {

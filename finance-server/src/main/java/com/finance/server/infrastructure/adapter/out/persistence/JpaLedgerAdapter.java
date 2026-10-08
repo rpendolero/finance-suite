@@ -12,6 +12,8 @@ import com.finance.server.infrastructure.adapter.out.persistence.repository.Move
 import com.finance.server.infrastructure.adapter.out.persistence.repository.ProductRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -64,6 +66,20 @@ public class JpaLedgerAdapter implements LedgerPort, MovementSearchPort {
         product.id(),
         product.provider(),
         product.type());
+  }
+
+  @Override
+  @Transactional
+  public void updateBalance(String productId, BigDecimal amount, String currency, Instant at) {
+    ProductEntity product = productRepository.findByIdForUpdate(productId)
+        .orElseThrow(() -> new IllegalArgumentException(PRODUCT_NOT_FOUND + ": " + productId));
+    if (!product.getCurrency().equals(currency))
+      throw new IllegalArgumentException("La moneda del saldo no coincide con el producto");
+    if (amount == null || at == null) throw new IllegalArgumentException("Saldo incompleto");
+    product.setBalance(amount.setScale(2, RoundingMode.UNNECESSARY));
+    product.setBalanceAt(at);
+    productRepository.flush();
+    log.debug("Product balance updated: productId={}", productId);
   }
 
   @Override

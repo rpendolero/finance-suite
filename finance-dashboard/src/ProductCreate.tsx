@@ -39,7 +39,7 @@ export default function ProductCreate({products, initialName = '', initialProvid
                 <label>Moneda<input value="EUR" readOnly/></label>
                 <label>Saldo registrado<input required type="number" step="0.01" value={balance} onChange={e => setBalance(e.target.value)}/></label>
                 <label>Fecha del saldo<input required type="date" value={balanceAt} onChange={e => setBalanceAt(e.target.value)}/></label>
-                <p>El saldo se registra manualmente. Crear el producto no consulta el saldo al banco.</p>
+                <p>El saldo inicial se registra manualmente. Tras vincularlo, la sincronización consultará el saldo al banco.</p>
                 {card && <>
                     <label>Cuenta asociada (opcional)<select value={linkedAccountId} onChange={e => setLinkedAccountId(e.target.value)}><option value="">Sin cuenta asociada</option>{products.filter(p => p.type === 'ACCOUNT' && p.provider === provider).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
                     <label>Límite (opcional)<input type="number" min="0" step="0.01" value={creditLimit} onChange={e => setCreditLimit(e.target.value)}/></label>

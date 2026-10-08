@@ -19,6 +19,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyString;
 
 class BankingAccountTypeTest {
   private final Instant now = Instant.parse("2026-10-08T00:00:00Z");
@@ -27,6 +30,40 @@ class BankingAccountTypeTest {
   private final LedgerPort ledger = mock(LedgerPort.class);
   private final BankingSyncService service = new BankingSyncService(banking, connections, ledger,
       mock(SettingsPort.class), null, Clock.fixed(now, ZoneOffset.UTC));
+
+  @Test void synchronizationUpdatesAvailableBalanceEvenWithoutNewTransactions() {
+    prepareSync("CACC", Product.ProductType.ACCOUNT);
+    when(banking.balanceSnapshots("external")).thenReturn(List.of(
+        new BankingDataPort.Balance(new BigDecimal("500.00"), "EUR", "CLBD", now),
+        new BankingDataPort.Balance(new BigDecimal("420.00"), "EUR", "ITAV", now)));
+    var result = service.sync("connection");
+    verify(ledger).updateBalance("product", new BigDecimal("420.00"), "EUR", now);
+    assertThat(result.balancesUpdated()).isEqualTo(1);
+    assertThat(result.inserted()).isZero();
+  }
+
+  @Test void cardUsesBookedBalanceInsteadOfAvailableCredit() {
+    prepareSync("CARD", Product.ProductType.CREDIT_CARD);
+    when(banking.balanceSnapshots("external")).thenReturn(List.of(
+        new BankingDataPort.Balance(new BigDecimal("2000.00"), "EUR", "ITAV", now),
+        new BankingDataPort.Balance(new BigDecimal("-300.00"), "EUR", "ITBD", now)));
+    service.sync("connection");
+    verify(ledger).updateBalance("product", new BigDecimal("-300.00"), "EUR", now);
+  }
+
+  @Test void incompatibleBalanceDoesNotOverwriteExistingBalance() {
+    prepareSync("CACC", Product.ProductType.ACCOUNT);
+    when(banking.balanceSnapshots("external")).thenReturn(List.of(new BankingDataPort.Balance(BigDecimal.ZERO, "USD", "ITAV", now)));
+    var result = service.sync("connection");
+    verify(ledger, never()).updateBalance(anyString(), any(), anyString(), any());
+    assertThat(result.balancesSkipped()).isEqualTo(1);
+  }
+
+  private void prepareSync(String type, Product.ProductType productType) {
+    prepare(type, productType);
+    when(connections.find("connection")).thenReturn(Optional.of(new BankConnection("connection", "ENABLE_BANKING", "Bank", "ES", "session", null, now.plusSeconds(3600), BankConnection.Status.ACTIVE, null)));
+    when(banking.transactions("external")).thenReturn(List.of());
+  }
 
   @Test void rediscoveryRefreshesTypeWithoutLosingProductOrId() {
     when(connections.find("connection")).thenReturn(Optional.of(new BankConnection("connection", "ENABLE_BANKING", "Bank", "ES", "session", null, now.plusSeconds(3600), BankConnection.Status.ACTIVE, null)));

@@ -50,6 +50,20 @@ class JpaAdapterTest {
   }
 
   @Test
+  void bankBalanceUpdatePreservesProductAndRejectsWrongCurrency() {
+    ledger.saveProduct(product("a", Product.Provider.ING));
+    var at = Instant.parse("2026-10-08T10:00:00Z");
+    ledger.updateBalance("a", new BigDecimal("-42.50"), "EUR", at);
+    var saved = ledger.product("a").orElseThrow();
+    assertThat(saved.balance()).isEqualByComparingTo("-42.50");
+    assertThat(saved.balanceAt()).isEqualTo(at);
+    assertThat(saved.name()).isEqualTo("a");
+    assertThat(saved.provider()).isEqualTo(Product.Provider.ING);
+    assertThatThrownBy(() -> ledger.updateBalance("a", BigDecimal.ZERO, "USD", at)).isInstanceOf(IllegalArgumentException.class);
+    assertThat(ledger.product("a").orElseThrow().balance()).isEqualByComparingTo("-42.50");
+  }
+
+  @Test
   void persistsProvidersAndMoneders() {
     for (var provider : Product.Provider.values())
       ledger.saveProduct(product(provider.name(), provider));

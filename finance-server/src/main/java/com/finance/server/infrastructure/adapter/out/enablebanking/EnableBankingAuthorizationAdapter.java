@@ -92,6 +92,13 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
   }
 
   @Override
+  public List<Balance> balanceSnapshots(String accountId) {
+    BalancesResponse response = balances(accountId);
+    if (response.getBalances() == null) throw new IllegalStateException("Enable Banking balance list is missing");
+    return response.getBalances().stream().map(dataMapper::balance).toList();
+  }
+
+  @Override
   public List<Account> accounts(String sessionId) {
     SessionResponse response = session(sessionId);
     List<String> ids = response.getAccounts();

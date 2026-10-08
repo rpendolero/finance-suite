@@ -1,11 +1,15 @@
 package com.finance.server.infrastructure.adapter.out.enablebanking;
 
 import com.finance.server.application.port.BankingDataPort.Account;
+import com.finance.server.application.port.BankingDataPort.Balance;
+import com.finance.server.infrastructure.adapter.out.enablebanking.dto.BalanceDto;
 import com.finance.server.application.port.BankingDataPort.Transaction;
 import com.finance.server.infrastructure.adapter.out.enablebanking.dto.AccountDetailsDto;
 import com.finance.server.infrastructure.adapter.out.enablebanking.dto.TransactionDto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -18,6 +22,17 @@ public final class EnableBankingDataMapper {
       if (iban != null && iban.length() >= 4) name = "Cuenta · " + iban.substring(iban.length() - 4);
     }
     return new Account(id, name == null ? id : name, required(details.getCurrency(), "account currency"), details.getCashAccountType());
+  }
+
+  public Balance balance(BalanceDto value) {
+    if (value.getBalanceAmount() == null || value.getBalanceAmount().getAmount() == null)
+      throw new IllegalStateException("Enable Banking balance amount is missing");
+    BigDecimal amount = value.getBalanceAmount().getAmount();
+    if ("DBIT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs().negate();
+    if ("CRDT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs();
+    var at = value.getLastChangeDateTime() != null ? OffsetDateTime.parse(value.getLastChangeDateTime()).toInstant()
+        : value.getReferenceDate() != null ? LocalDate.parse(value.getReferenceDate()).atStartOfDay().toInstant(ZoneOffset.UTC) : null;
+    return new Balance(amount, required(value.getBalanceAmount().getCurrency(), "balance currency"), value.getBalanceType(), at);
   }
 
   public Transaction transaction(TransactionDto value) {

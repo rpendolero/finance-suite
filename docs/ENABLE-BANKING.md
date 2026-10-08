@@ -57,4 +57,12 @@ La migración V9 añade el tipo sin alterar los vínculos existentes. Pulsa «De
 
 Un administrador puede dar de alta productos desde «Productos → Nuevo producto» o desde «Bancos → Descubrir cuentas → Nuevo producto». El formulario utiliza el endpoint existente PUT /api/products/{id}, con identificador generado automáticamente, entidad (Kutxabank, ING o PayPal), nombre, tipo, EUR y saldo fechado. Las tarjetas admiten cuenta asociada del mismo banco, límite y últimos cuatro dígitos opcionales.
 
-Al crear desde una cuenta descubierta se propone su nombre y entidad, se limita el tipo según CARD/CACC/SVGS y se selecciona el producto nuevo. Pulsa «Guardar vínculo» y después «Sincronizar movimientos». El alta registra un saldo manual; no consulta ni actualiza el saldo mediante Enable Banking.
+Al crear desde una cuenta descubierta se propone su nombre y entidad, se limita el tipo según CARD/CACC/SVGS y se selecciona el producto nuevo. Pulsa «Guardar vínculo» y después «Sincronizar movimientos». El alta registra un saldo manual; al sincronizar el producto vinculado se consulta el saldo mediante Enable Banking.
+
+### Sincronizar saldos
+
+«Sincronizar saldo y movimientos» consulta GET /accounts/{id}/balances para cada producto vinculado. En cuentas y monederos prioriza ITAV, CLAV, ITBD y CLBD, en ese orden. En tarjetas utiliza ITBD o CLBD: el crédito disponible no se interpreta como saldo/deuda. Entre saldos del mismo tipo elige el de fecha más reciente.
+
+Guarda únicamente saldo y fecha, preservando nombre, entidad, referencias y vínculos. Usa last_change_date_time, o reference_date a medianoche UTC; sin ambas, utiliza la fecha de consulta. Conserva el signo comunicado por el banco (o el indicador explícito DBIT/CRDT). No deriva el saldo sumando movimientos.
+
+Si no hay saldo de un tipo compatible en la moneda del producto, conserva el anterior y lo cuenta como «Sin saldo compatible». Los fallos HTTP se muestran como error de sincronización. El resultado informa de saldos actualizados y omitidos, y refresca productos y resumen del dashboard. No requiere migración.

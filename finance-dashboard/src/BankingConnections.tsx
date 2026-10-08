@@ -66,6 +66,8 @@ export default function BankingConnections({products, onProductCreated}: {produc
         setResult(null);
         setResult(await api.syncBank(selected));
         await refresh();
+        setAvailableProducts(await api.products());
+        onProductCreated();
     });
     return <section className="banking-page">
         {creatingFor && <ProductCreate products={availableProducts} initialName={creatingFor.name} initialProvider={connection?.bankName} cashAccountType={creatingFor.cashAccountType}
@@ -108,7 +110,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
             </div>)}
             <p>Solo se sincronizan las cuentas con un vínculo guardado. Puedes seguir importando ficheros.</p>
             <button disabled={busy || !accounts.some(a => a.productId)} onClick={() => void sync()}>{busy ? 'Procesando…' : 'Sincronizar movimientos'}</button>
-            {result && <p role="status">Leídos: {result.read} · Insertados: {result.inserted} · Duplicados: {result.duplicates}</p>}
+            {result && <p role="status">Leídos: {result.read} · Insertados: {result.inserted} · Duplicados: {result.duplicates} · Saldos actualizados: {result.balancesUpdated} · Sin saldo compatible: {result.balancesSkipped}</p>}
         </div>}
     </section>;
 }
