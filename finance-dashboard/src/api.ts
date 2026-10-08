@@ -1,3 +1,6 @@
+export type BankConnection = {id: string; bankName: string; country: string; status: string; validUntil?: string; lastSyncAt?: string};
+export type BankAccount = {id: string; externalAccountId: string; productId?: string; name: string; currency: string};
+export type BankSyncResult = {read: number; inserted: number; duplicates: number};
 export type UserSession = { username: string; roles: string[] };
 export type Product = {
     id: string;
@@ -130,6 +133,13 @@ const sendJson = async <T>(url: string, method: 'POST' | 'PUT' | 'PATCH', body?:
 const q = (from: string, to: string, productId?: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`;
 
 export const api = {
+    banks: () => json<string[]>('/api/v1/banking/enable-banking/banks'),
+    bankConnections: () => json<BankConnection[]>('/api/v1/banking/connections'),
+    authorizeBank: (bankName: string) => sendJson<{connectionId: string; authorizationUrl: string}>('/api/v1/banking/enable-banking/authorizations', 'POST', {bankName}),
+    bankAccounts: (id: string) => json<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts`),
+    discoverBankAccounts: (id: string) => sendJson<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/discover`, 'POST'),
+    linkBankAccount: (id: string, externalAccountId: string, productId: string) => sendJson<BankAccount>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts/link`, 'POST', {externalAccountId, productId}),
+    syncBank: (id: string) => sendJson<BankSyncResult>(`/api/v1/banking/connections/${encodeURIComponent(id)}/sync`, 'POST'),
     login: (username: string, password: string) => json<UserSession>('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password})}),
     me: () => json<UserSession>('/api/auth/me'),
     logout: () => json<void>('/api/auth/logout', {method: 'POST'}),

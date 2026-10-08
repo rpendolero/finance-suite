@@ -12,6 +12,7 @@ public class EnableBankingProperties {
   private String applicationId;
   @ToString.Exclude private String privateKey;
   private String redirectUrl = "https://finances.myaihome.es/api/v1/banking/enable-banking/callback";
+  private String frontendUrl = "/";
   private String country = "ES";
   private int consentDays = 90;
 }

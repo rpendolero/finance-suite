@@ -1,3 +1,4 @@
+import BankingConnections from './BankingConnections';
 import {useEffect, useState} from 'react';
 import {
     CalendarDays,
@@ -95,8 +96,9 @@ type View =
     | 'calendar'
     | 'insights'
     | 'review'
-    | 'categoryAdmin';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags]];
+    | 'categoryAdmin'
+    | 'banking';
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -113,7 +115,7 @@ function Login({onLogin}:{onLogin:(session:any)=>void}){
 }
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
-    const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [from, setFrom] = useState(initialPeriod.from);
@@ -155,7 +157,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     return <div className="shell">
         <aside>
             <div className="brand"><b>▥</b><span>Finance Suite</span></div>
-            <nav>{menu.filter(([id]) => id !== 'categoryAdmin' || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+            <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
                 className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
@@ -186,7 +188,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
-            {loading ?
+            {view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card

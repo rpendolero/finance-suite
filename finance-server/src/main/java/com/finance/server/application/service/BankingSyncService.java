@@ -19,10 +19,23 @@ public final class BankingSyncService {
   private final MovementClassificationService classification;
   private final Clock clock;
 
+  public List<BankConnection> connections() { return connections.findAll(); }
+
+  public List<ExternalBankAccount> accounts(String connectionId) {
+    requireConnection(connectionId);
+    return connections.accounts(connectionId);
+  }
+
+  private BankConnection requireConnection(String id) {
+    var connection = connections.find(id).orElseThrow(() -> new IllegalArgumentException("Bank connection not found: " + id));
+    if (connection.status() != BankConnection.Status.ACTIVE || connection.externalSessionId() == null
+        || connection.validUntil() == null || !connection.validUntil().isAfter(clock.instant()))
+      throw new IllegalStateException("Bank connection requires authorization: " + id);
+    return connection;
+  }
+
   public SyncResult sync(String connectionId) {
-    var connection = connections.find(connectionId).orElseThrow(() -> new IllegalArgumentException("Bank connection not found: " + connectionId));
-    if (connection.status() != BankConnection.Status.ACTIVE || connection.externalSessionId() == null)
-      throw new IllegalStateException("Bank connection is not active: " + connectionId);
+    var connection = requireConnection(connectionId);
 
     int read = 0, inserted = 0;
     for (var link : connections.accounts(connectionId)) {
@@ -40,7 +53,7 @@ public final class BankingSyncService {
   }
 
   public List<ExternalBankAccount> discoverAccounts(String connectionId) {
-    var connection = connections.find(connectionId).orElseThrow(() -> new IllegalArgumentException("Bank connection not found: " + connectionId));
+    var connection = requireConnection(connectionId);
     var existing = connections.accounts(connectionId);
     return banking.accounts(connection.externalSessionId()).stream().map(a -> {
       var known = existing.stream().filter(x -> x.externalAccountId().equals(a.id())).findFirst();

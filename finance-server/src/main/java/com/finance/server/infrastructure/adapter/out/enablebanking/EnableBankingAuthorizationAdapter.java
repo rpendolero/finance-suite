@@ -31,6 +31,16 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
   }
 
   @Override
+  public java.util.List<String> banks(String country) {
+    java.util.List<String> names = new java.util.ArrayList<>();
+    for (JsonNode bank : aspsps(country).path("aspsps")) {
+      String name = firstText(bank, "name");
+      if (name != null) names.add(name);
+    }
+    return names.stream().distinct().sorted().toList();
+  }
+
+  @Override
   public Authorization start(String bankName, String country, String state, OffsetDateTime validUntil) {
     JsonNode response = post("auth", Map.of(
         "access", Map.of("valid_until", validUntil.toString()),

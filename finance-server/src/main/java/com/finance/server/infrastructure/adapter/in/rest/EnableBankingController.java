@@ -20,17 +20,29 @@ public class EnableBankingController {
   private final BankingAuthorizationService authorizations;
   private final EnableBankingProperties properties;
 
+  @GetMapping("/banks")
+  public java.util.List<String> banks() { return authorizations.banks(properties.getCountry()); }
+
   @PostMapping("/authorizations")
-  public ResponseEntity<AuthorizationResponse> authorize(@RequestBody AuthorizationRequest request) {
+  public ResponseEntity<AuthorizationResponse> authorize(@jakarta.validation.Valid @RequestBody AuthorizationRequest request) {
     var result = authorizations.start(request.getBankName(), properties.getCountry(), properties.getConsentDays());
     return ResponseEntity.created(URI.create(result.authorizationUrl()))
         .body(new AuthorizationResponse(result.connectionId(), result.authorizationUrl(), result.state()));
   }
 
   @GetMapping("/callback")
-  public ResponseEntity<SessionResponse> callback(@RequestParam @NotBlank String code, @RequestParam(required = false) String state) {
-    var connection = authorizations.complete(code, state);
-    return ResponseEntity.ok(new SessionResponse(connection.id(), connection.status().name()));
+  public ResponseEntity<Void> callback(@RequestParam(required = false) String code,
+      @RequestParam(required = false) String state, @RequestParam(required = false) String error) {
+    if (error != null) return returnToFrontend("cancelled");
+    if (code == null || code.isBlank()) throw new IllegalArgumentException("Authorization code is required");
+    authorizations.complete(code, state);
+    return returnToFrontend("connected");
+  }
+
+  private ResponseEntity<Void> returnToFrontend(String status) {
+    URI target = org.springframework.web.util.UriComponentsBuilder.fromUriString(properties.getFrontendUrl())
+        .replaceQueryParam("banking", status).build().toUri();
+    return ResponseEntity.status(303).location(target).build();
   }
 
   @Data
