@@ -24,7 +24,7 @@ public final class MovementKindDetectionService {
       return Optional.of(
           new Detection(
               Movement.Kind.INTERNAL_TRANSFER,
-              "TRANSFERENCIAS",
+              CategoryCatalogService.NON_COMPUTABLE,
               "TRASPASO_INTERNO",
               new BigDecimal("0.9800")));
     }
@@ -39,7 +39,7 @@ public final class MovementKindDetectionService {
       return Optional.of(
           new Detection(
               Movement.Kind.CARD_SETTLEMENT,
-              "TRANSFERENCIAS",
+              CategoryCatalogService.NON_COMPUTABLE,
               "LIQUIDACION_TARJETA",
               new BigDecimal("0.9800")));
     }

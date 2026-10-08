@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public final class CategoryCatalogService {
 
+  public static final String NON_COMPUTABLE = "NO_COMPUTABLE";
+
   public static final String UNCLASSIFIED = "UNCLASSIFIED";
 
   public record CategoryDefinition(String code, String label, List<String> subcategories) {}
@@ -46,7 +48,7 @@ public final class CategoryCatalogService {
 
   public void validate(String category, String subcategory) {
     String canonical = normalizeCategory(category);
-    if (UNCLASSIFIED.equals(canonical)) {
+    if (UNCLASSIFIED.equals(canonical) && !UNCLASSIFIED.equals(normalizeCode(category))) {
       throw new IllegalArgumentException("Categoría no válida: " + category);
     }
     if (subcategory != null && !subcategory.isBlank()
@@ -54,6 +56,34 @@ public final class CategoryCatalogService {
       throw new IllegalArgumentException(
           "Subcategoría no válida para " + canonical + ": " + subcategory);
     }
+  }
+
+  public String nonComputableSubcategory(com.finance.domain.Movement.Kind kind) {
+    return switch (kind) {
+      case CARD_SETTLEMENT -> "LIQUIDACION_TARJETA";
+      case WALLET_SETTLEMENT -> "LIQUIDACION_PAYPAL";
+      case INTERNAL_TRANSFER -> "TRASPASO_INTERNO";
+      case DUPLICATE -> "MOVIMIENTO_DUPLICADO";
+      case NON_COMPUTABLE -> "OTROS_NO_COMPUTABLES";
+      default -> null;
+    };
+  }
+
+  public com.finance.domain.Movement.Kind classificationKind(
+      String category, String subcategory, com.finance.domain.Movement.Kind requested) {
+    if (NON_COMPUTABLE.equals(category)) {
+      if (subcategory == null) throw new IllegalArgumentException("Selecciona una subcategoría de No computable");
+      return switch (subcategory) {
+        case "LIQUIDACION_TARJETA" -> com.finance.domain.Movement.Kind.CARD_SETTLEMENT;
+        case "LIQUIDACION_PAYPAL" -> com.finance.domain.Movement.Kind.WALLET_SETTLEMENT;
+        case "TRASPASO_INTERNO" -> com.finance.domain.Movement.Kind.INTERNAL_TRANSFER;
+        case "MOVIMIENTO_DUPLICADO" -> com.finance.domain.Movement.Kind.DUPLICATE;
+        case "OTROS_NO_COMPUTABLES" -> com.finance.domain.Movement.Kind.NON_COMPUTABLE;
+        default -> throw new IllegalArgumentException("Subcategoría no computable no válida");
+      };
+    }
+    return requested == com.finance.domain.Movement.Kind.REFUND
+        ? requested : com.finance.domain.Movement.Kind.NORMAL;
   }
 
   private static Map<String, String> aliases() {

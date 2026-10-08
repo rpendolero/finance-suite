@@ -309,10 +309,12 @@ function SectionView({
 }
 
 const TREATMENTS = [
+    {code: 'NON_COMPUTABLE', label: 'No computable - Otros', computable: false},
     {code: 'NORMAL', label: 'Gasto / ingreso normal', computable: true},
     {code: 'REFUND', label: 'Devolución', computable: true},
     {code: 'CARD_SETTLEMENT', label: 'No computable - Liquidación tarjeta', computable: false},
     {code: 'WALLET_SETTLEMENT', label: 'No computable - PayPal / monedero', computable: false},
+    {code: 'DUPLICATE', label: 'No computable - Movimiento duplicado', computable: false},
     {code: 'INTERNAL_TRANSFER', label: 'No computable - Transferencia interna', computable: false}
 ] as const;
 
@@ -324,12 +326,16 @@ type ClassificationChoice = {
 
 function treatmentDefaults(kind: string): ClassificationChoice {
     switch (kind) {
+        case 'NON_COMPUTABLE':
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'OTROS_NO_COMPUTABLES'};
+        case 'DUPLICATE':
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'MOVIMIENTO_DUPLICADO'};
         case 'CARD_SETTLEMENT':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_TARJETA'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_TARJETA'};
         case 'WALLET_SETTLEMENT':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'LIQUIDACION_PAYPAL'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_PAYPAL'};
         case 'INTERNAL_TRANSFER':
-            return {kind, category: 'TRANSFERENCIAS', subcategory: 'TRASPASO_INTERNO'};
+            return {kind, category: 'NO_COMPUTABLE', subcategory: 'TRASPASO_INTERNO'};
         default:
             return {kind};
     }
@@ -369,7 +375,8 @@ function ClassificationReview() {
             [id]: {
                 ...current[id],
                 [key]: value || undefined,
-                ...(key === 'category' ? {subcategory: undefined} : {})
+                ...(key === 'category' ? {subcategory: undefined, kind: value === 'NO_COMPUTABLE' ? undefined : (current[id]?.kind === 'REFUND' ? 'REFUND' : 'NORMAL')} : {}),
+                ...(key === 'subcategory' ? {kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE', OTROS_NO_COMPUTABLES: 'NON_COMPUTABLE'} as Record<string, string>)[value] || current[id]?.kind} : {})
             }
         }))
     };
@@ -712,9 +719,9 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
                     {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
                 </div>
                 {canEdit && editing === m.id && <div className="movement-classification-editor">
-                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: choice.kind})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
-                    <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
-                    <label>Computación<select value={choice.kind === 'NON_COMPUTABLE' ? 'NON_COMPUTABLE' : 'COMPUTABLE'} onChange={e => setChoice({...choice, kind: e.target.value === 'NON_COMPUTABLE' ? 'NON_COMPUTABLE' : 'NORMAL'})}><option value="COMPUTABLE">Computable</option><option value="NON_COMPUTABLE">No computable</option></select></label>
+                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: e.target.value === 'NO_COMPUTABLE' ? 'NON_COMPUTABLE' : (choice.kind === 'REFUND' ? 'REFUND' : 'NORMAL')})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
+                    <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value, kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE', OTROS_NO_COMPUTABLES: 'NON_COMPUTABLE'} as Record<string, string>)[e.target.value] || choice.kind})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
+                    <label>Tratamiento<select value={choice.kind || 'NORMAL'} onChange={e => setChoice({...treatmentDefaults(e.target.value), ...(e.target.value === 'NORMAL' || e.target.value === 'REFUND' ? {category: choice.category === 'NO_COMPUTABLE' ? '' : choice.category, subcategory: choice.category === 'NO_COMPUTABLE' ? undefined : choice.subcategory} : {})})}>{TREATMENTS.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}</select></label>
                     <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar</button>
                 </div>}
             </div>) : <Empty>No hay movimientos con esos filtros.</Empty>}

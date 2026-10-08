@@ -32,9 +32,9 @@ class ClassificationManagementServiceTest {
         case "ALIMENTACION" -> Optional.of(new CategoryCatalogPort.Category(
             "ALIMENTACION", "Alimentación",
             List.of(new CategoryCatalogPort.Subcategory("SUPERMERCADO", "Supermercado"))));
-        case "TRANSFERENCIAS" -> Optional.of(new CategoryCatalogPort.Category(
-            "TRANSFERENCIAS", "Transferencias",
-            List.of(new CategoryCatalogPort.Subcategory("LIQUIDACION_PAYPAL", "Liquidación PayPal"))));
+        case "NO_COMPUTABLE" -> Optional.of(new CategoryCatalogPort.Category(
+            "NO_COMPUTABLE", "No computable",
+            List.of(new CategoryCatalogPort.Subcategory("LIQUIDACION_PAYPAL", "Liquidación PayPal"), new CategoryCatalogPort.Subcategory("MOVIMIENTO_DUPLICADO", "Movimiento duplicado"))));
         default -> Optional.empty();
       };
     });
@@ -79,7 +79,7 @@ class ClassificationManagementServiceTest {
     var result =
         service.classifyManually(
             "id",
-            "TRANSFERENCIAS",
+            "NO_COMPUTABLE",
             "LIQUIDACION_PAYPAL",
             Movement.Kind.WALLET_SETTLEMENT,
             false,
@@ -120,6 +120,24 @@ class ClassificationManagementServiceTest {
     verify(settings).saveRule(any(ClassificationRule.class));
     assertThat(result.reclassified()).isEqualTo(1);
     verify(ledger, atLeast(2)).updateClassifications(anyList());
+  }
+
+  @Test
+  void subcategoryDeterminesExcludedKindEvenWhenClientSendsNormal() {
+    when(ledger.movement("id")).thenReturn(Optional.of(unclassified("Cargo")));
+    var result = service.classifyManually("id", "NO_COMPUTABLE", "MOVIMIENTO_DUPLICADO",
+        Movement.Kind.NORMAL, false, false);
+    assertThat(result.movement().kind()).isEqualTo(Movement.Kind.DUPLICATE);
+    assertThat(result.movement().included()).isFalse();
+  }
+
+  @Test
+  void normalCategoryRestoresComputability() {
+    when(ledger.movement("id")).thenReturn(Optional.of(unclassified("Compra")));
+    var result = service.classifyManually("id", "ALIMENTACION", "SUPERMERCADO",
+        Movement.Kind.CARD_SETTLEMENT, false, false);
+    assertThat(result.movement().kind()).isEqualTo(Movement.Kind.NORMAL);
+    assertThat(result.movement().included()).isTrue();
   }
 
   private Movement unclassified(String description) {
