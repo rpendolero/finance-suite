@@ -15,6 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -45,6 +46,23 @@ class EnableBankingAdapterTest {
     assertThat(balances.get(0).amount()).isEqualByComparingTo("-42.50");
     assertThat(balances.get(0).at()).isEqualTo(Instant.parse("2026-10-08T00:00:00Z"));
     assertThat(requests.get(0).uri().getPath()).isEqualTo("/accounts/account/balances");
+  }
+
+  @Test void transactionDateIsUsedWhenBookingAndValueDatesAreAbsent() throws Exception {
+    var api = client(request -> "{\"transactions\":[{\"transaction_id\":\"tx\",\"transaction_date\":\"2026-10-08\",\"transaction_amount\":{\"amount\":\"-10.00\",\"currency\":\"EUR\"}}]}", 200);
+    var transactions = new EnableBankingAuthorizationAdapter("/", api).transactions("account");
+    assertThat(transactions.get(0).bookingDate()).isEqualTo(LocalDate.parse("2026-10-08"));
+  }
+
+  @Test void bookingDateStillTakesPrecedenceOverOtherDates() throws Exception {
+    var api = client(request -> "{\"transactions\":[{\"transaction_id\":\"tx\",\"booking_date\":\"2026-10-08\",\"value_date\":\"2026-10-07\",\"transaction_date\":\"2026-10-06\",\"transaction_amount\":{\"amount\":\"-10.00\",\"currency\":\"EUR\"}}]}", 200);
+    assertThat(new EnableBankingAuthorizationAdapter("/", api).transactions("account").get(0).bookingDate()).isEqualTo(LocalDate.parse("2026-10-08"));
+  }
+
+  @Test void transactionWithNoDatesIsRejectedRatherThanAssignedTodaysDate() throws Exception {
+    var api = client(request -> "{\"transactions\":[{\"transaction_id\":\"tx\",\"transaction_amount\":{\"amount\":\"-10.00\",\"currency\":\"EUR\"}}]}", 200);
+    assertThatThrownBy(() -> new EnableBankingAuthorizationAdapter("/", api).transactions("account"))
+        .isInstanceOf(IllegalStateException.class).hasMessageContaining("transaction date");
   }
 
   @Test void postKeepsContentTypeAndGetWorksWithoutPrototypeHeaders() throws Exception {

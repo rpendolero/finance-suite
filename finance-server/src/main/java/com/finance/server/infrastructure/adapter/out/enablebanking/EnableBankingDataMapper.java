@@ -41,7 +41,7 @@ public final class EnableBankingDataMapper {
     BigDecimal amount = value.getTransactionAmount().getAmount();
     if ("DBIT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs().negate();
     if ("CRDT".equalsIgnoreCase(value.getCreditDebitIndicator())) amount = amount.abs();
-    String date = required(first(value.getBookingDate(), value.getValueDate()), "transaction date");
+    String date = required(first(value.getBookingDate(), value.getValueDate(), value.getTransactionDate()), "transaction date");
     String description = join(value.getRemittanceInformation());
     if (description.isBlank()) description = first(value.getReference(), value.getAdditionalInformation());
     String creditor = value.getCreditor() == null ? null : value.getCreditor().getName();

@@ -18,6 +18,7 @@ public class TransactionDto {
   private String id;
   private String bookingDate;
   private String valueDate;
+  private String transactionDate;
   private AmountDto transactionAmount;
   private String creditDebitIndicator;
   @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
