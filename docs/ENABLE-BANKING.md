@@ -29,3 +29,20 @@ El callback debe ser accesible y coincidir con la URL registrada en el proveedor
 Sin activar la integración, Bancos muestra un aviso al recibir 404. El listado de
 conexiones nunca devuelve el identificador de sesión del proveedor ni el estado de
 autorización. No se han probado cuentas bancarias reales en este entorno.
+
+## Adaptador tipado
+
+El adaptador usa DTO del proveedor con Lombok y Jackson en el paquete `enablebanking.dto`.
+`EnableBankingApiClient` centraliza HTTP y deserialización; `EnableBankingDataMapper`
+convierte los datos a los objetos del puerto de aplicación. No se utilizan JsonNode
+ni mapas para construir peticiones del API.
+
+La consulta de sesión lee identificadores de texto en `accounts` y consulta los detalles
+de cada cuenta para obtener nombre y moneda. Los IBAN usados como nombre se muestran
+solo con sus cuatro últimas posiciones. La respuesta de creación de sesión tiene un
+DTO distinto para no confundir su formato con el de consulta de sesión.
+
+Los movimientos recorren las páginas `continuation_key`, incluso si una página está
+vacía. Se respeta `credit_debit_indicator` y se unen las líneas de remittance_information.
+Las respuestas incompletas provocan un error explícito. Los errores HTTP registran
+estado y código del proveedor sin volcar cuerpos ni credenciales.
