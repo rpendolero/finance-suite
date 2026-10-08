@@ -10,10 +10,8 @@ import com.finance.server.domain.banking.BankConnection;
 import com.finance.server.domain.banking.ExternalBankAccount;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.util.List;
-import java.util.Comparator;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,30 +48,47 @@ public final class BankingSyncService {
       if (link.productId() == null || link.productId().isBlank()) continue;
       Product product = ledger.product(link.productId()).orElseThrow(() -> new IllegalArgumentException("Product not found: " + link.productId()));
       validateProduct(link, product);
-      boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
-      List<String> balanceTypes = card ? List.of("ITBD", "CLBD") : List.of("ITAV", "CLAV", "ITBD", "CLBD");
-      var balance = banking.balanceSnapshots(link.externalAccountId()).stream()
-          .filter(b -> product.currency().equals(b.currency()) && b.type() != null && balanceTypes.contains(b.type()))
-          .min(Comparator.comparingInt((BankingDataPort.Balance b) -> balanceTypes.indexOf(b.type()))
-              .thenComparing(BankingDataPort.Balance::at, Comparator.nullsLast(Comparator.reverseOrder())));
-      var txs = banking.transactions(link.externalAccountId());
-      var movements = txs.stream().map(tx -> toMovement(link.productId(), tx))
-          .map(m -> classification.classify(m, settings.rules())).toList();
+      var balance = selectBestBalance(link.externalAccountId(), product);
+      var movements = fetchAndClassifyMovements(link.externalAccountId(), link.productId());
       read += movements.size();
       inserted += ledger.insert(movements);
-      if (balance.isPresent()) {
-        var snapshot = balance.get();
-        ledger.updateBalance(product.id(), snapshot.amount(), snapshot.currency(), snapshot.at() == null ? clock.instant() : snapshot.at());
-        balancesUpdated++;
-      } else {
-        balancesSkipped++;
-        log.warn("No suitable bank balance returned: productId={}", product.id());
-      }
+      var balanceResult = updateProductBalance(product, balance);
+      balancesUpdated += balanceResult.updated();
+      balancesSkipped += balanceResult.skipped();
     }
     connections.save(new BankConnection(connection.id(), connection.provider(), connection.bankName(), connection.country(), connection.externalSessionId(), connection.authorizationState(), connection.validUntil(), connection.status(), clock.instant()));
     log.info("Enable Banking synchronization completed: connectionId={}, read={}, inserted={}, duplicates={}, balancesUpdated={}, balancesSkipped={}", connectionId, read, inserted, read - inserted, balancesUpdated, balancesSkipped);
     return new SyncResult(read, inserted, read - inserted, balancesUpdated, balancesSkipped);
   }
+
+  private java.util.Optional<BankingDataPort.Balance> selectBestBalance(String externalAccountId, Product product) {
+    boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
+    List<String> balanceTypes = card ? List.of("ITBD", "CLBD") : List.of("ITAV", "CLAV", "ITBD", "CLBD");
+    return banking.balanceSnapshots(externalAccountId).stream()
+        .filter(b -> product.currency().equals(b.currency()) && b.type() != null && balanceTypes.contains(b.type()))
+        .min(Comparator.comparingInt((BankingDataPort.Balance b) -> balanceTypes.indexOf(b.type()))
+            .thenComparing(BankingDataPort.Balance::at, Comparator.nullsLast(Comparator.reverseOrder())));
+  }
+
+  private List<Movement> fetchAndClassifyMovements(String externalAccountId, String productId) {
+    var txs = banking.transactions(externalAccountId);
+    return txs.stream()
+        .map(tx -> classification.classify(toMovement(productId, tx), settings.rules()))
+        .toList();
+  }
+
+  private BalanceUpdateResult updateProductBalance(Product product, Optional<BankingDataPort.Balance> balance) {
+    if (balance.isPresent()) {
+      var snapshot = balance.get();
+      ledger.updateBalance(product.id(), snapshot.amount(), snapshot.currency(), snapshot.at() == null ? clock.instant() : snapshot.at());
+      return new BalanceUpdateResult(1, 0);
+    } else {
+      log.warn("No suitable bank balance returned: productId={}", product.id());
+      return new BalanceUpdateResult(0, 1);
+    }
+  }
+
+  private record BalanceUpdateResult(int updated, int skipped) {}
 
   public List<ExternalBankAccount> discoverAccounts(String connectionId) {
     var connection = requireConnection(connectionId);
@@ -107,14 +122,22 @@ public final class BankingSyncService {
   }
 
   private Movement toMovement(String productId, BankingDataPort.Transaction tx) {
+    log.debug("Enable Banking transaction {} [{}] [{}] mapping started: productId={}", tx.id(), tx.bookingDate(), tx.description(), productId);
     String externalId = tx.id();
     if (externalId == null || externalId.isBlank()) {
       String canonical = productId + "|" + tx.bookingDate() + "|" + tx.amount() + "|" + tx.currency() + "|" + normalize(tx.description());
       externalId = "eb-" + UUID.nameUUIDFromBytes(canonical.getBytes(StandardCharsets.UTF_8));
     }
-    return new Movement(UUID.randomUUID().toString(), productId, externalId, tx.bookingDate(), tx.amount().setScale(2), tx.currency(),
-        tx.description() == null ? "" : tx.description(), tx.merchant(), "UNCLASSIFIED", Movement.Kind.NORMAL, tx.pending() ? Movement.Status.PENDING : Movement.Status.BOOKED);
+    try {
+      return new Movement(UUID.randomUUID().toString(), productId, externalId, tx.bookingDate(), tx.amount().setScale(2), tx.currency(),
+              tx.description() == null ? "" : tx.description(), tx.merchant(), "UNCLASSIFIED", Movement.Kind.NORMAL, tx.pending() ? Movement.Status.PENDING : Movement.Status.BOOKED);
+
+    } catch (Exception e) {
+      log.error("Enable Banking transaction {} [{}] [{}] mapping failed: errorType={}", tx.id(), tx.bookingDate(), tx.description(), e.getClass().getSimpleName(), e);
+    }
+    return null;
   }
+
   private String normalize(String value) { return value == null ? "" : value.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT); }
   public record SyncResult(int read, int inserted, int duplicates, int balancesUpdated, int balancesSkipped) {
     public SyncResult(int read, int inserted, int duplicates) { this(read, inserted, duplicates, 0, 0); }

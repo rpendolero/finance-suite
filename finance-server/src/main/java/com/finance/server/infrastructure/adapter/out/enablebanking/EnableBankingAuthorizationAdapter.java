@@ -13,6 +13,7 @@ import com.finance.server.infrastructure.adapter.out.enablebanking.dto.BanksResp
 import com.finance.server.infrastructure.adapter.out.enablebanking.dto.SessionRequest;
 import com.finance.server.infrastructure.adapter.out.enablebanking.dto.SessionAuthorizationResponse;
 import com.finance.server.infrastructure.adapter.out.enablebanking.dto.SessionResponse;
+import com.finance.server.infrastructure.adapter.out.enablebanking.dto.TransactionDto;
 import com.finance.server.infrastructure.adapter.out.enablebanking.dto.TransactionsResponse;
 import com.finance.server.infrastructure.config.EnableBankingProperties;
 import java.net.URI;
@@ -124,27 +125,43 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
     int pageNumber = 0;
     log.debug("Enable Banking transaction retrieval started");
     do {
-      TransactionsResponse page = client.get(path + (next == null ? "" : "?continuation_key=" + encode(next)), TransactionsResponse.class);
-      if (page.getTransactions() == null) throw new IllegalStateException("Enable Banking transaction list is missing");
+      TransactionsResponse page = fetchTransactionPage(path, next);
       pageNumber++;
       log.debug("Enable Banking transaction page received: page={}, count={}, hasContinuation={}",
           pageNumber, page.getTransactions().size(), page.getContinuationKey() != null && !page.getContinuationKey().isBlank());
-      int row = 0;
-      for (var transaction : page.getTransactions()) {
-        row++;
-        try {
-          result.add(dataMapper.transaction(transaction));
-        } catch (RuntimeException e) {
-          log.warn("Enable Banking transaction mapping failed: page={}, row={}, errorType={}", pageNumber, row, e.getClass().getSimpleName());
-          throw e;
-        }
-      }
-      next = page.getContinuationKey();
-      if (next != null && next.isBlank()) next = null;
-      if (next != null && !seenKeys.add(next)) throw new IllegalStateException("Repeated Enable Banking continuation key");
+      mapTransactions(page.getTransactions(), result, pageNumber);
+      next = normalizeContinuationKey(page.getContinuationKey());
+      validateContinuationKey(next, seenKeys);
     } while (next != null);
     log.info("Enable Banking transaction retrieval completed: pages={}, count={}", pageNumber, result.size());
     return List.copyOf(result);
+  }
+
+  private TransactionsResponse fetchTransactionPage(String path, String continuationKey) {
+    String url = path + (continuationKey == null ? "" : "?continuation_key=" + encode(continuationKey));
+    TransactionsResponse page = client.get(url, TransactionsResponse.class);
+    if (page.getTransactions() == null) throw new IllegalStateException("Enable Banking transaction list is missing");
+    return page;
+  }
+
+  private void mapTransactions(List<TransactionDto> transactions, List<Transaction> result, int pageNumber) {
+    for (var transaction : transactions) {
+      try {
+        result.add(dataMapper.transaction(transaction));
+      } catch (RuntimeException e) {
+        log.warn("Enable Banking transaction mapping failed: page={}, errorType={}", pageNumber, e.getClass().getSimpleName());
+        throw e;
+      }
+    }
+  }
+
+  private String normalizeContinuationKey(String key) {
+    if (key != null && key.isBlank()) return null;
+    return key;
+  }
+
+  private void validateContinuationKey(String key, Set<String> seenKeys) {
+    if (key != null && !seenKeys.add(key)) throw new IllegalStateException("Repeated Enable Banking continuation key");
   }
 
   private String encode(String value) {
