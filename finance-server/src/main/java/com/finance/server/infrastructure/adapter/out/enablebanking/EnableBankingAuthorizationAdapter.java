@@ -142,9 +142,20 @@ public final class EnableBankingAuthorizationAdapter implements BankingAuthoriza
     }
 
     private JsonNode send(HttpRequest prototype) {
-        HttpRequest request = HttpRequest.newBuilder(prototype.uri()).timeout(Duration.ofSeconds(30))
-                .header("Accept", "application/json").header("Authorization", "Bearer " + jwt.token())
-                .method(prototype.method(), prototype.bodyPublisher().orElse(HttpRequest.BodyPublishers.noBody())).build();
+        var builder = HttpRequest.newBuilder(prototype.uri())
+                .timeout(Duration.ofSeconds(30))
+                .header("Accept", "application/json")
+                .header("Authorization", "Bearer " + jwt.token());
+
+        prototype.headers().map().forEach((name, values) ->
+                values.forEach(value -> builder.header(name, value)));
+
+        HttpRequest request = builder
+                .method(
+                        prototype.method(),
+                        prototype.bodyPublisher()
+                                .orElse(HttpRequest.BodyPublishers.noBody()))
+                .build();
         try {
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
