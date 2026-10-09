@@ -1,3 +1,4 @@
+import {version as appVersion} from '../package.json';
 import ClassificationMovementRow from './ClassificationMovementRow';
 import ProductCreate from './ProductCreate';
 import FinancialFlowView from './FinancialFlowView';
@@ -172,7 +173,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
-                className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
+                className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v{appVersion}</small>
             </div>
         </aside>
         <main>

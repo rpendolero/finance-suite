@@ -1,4 +1,4 @@
-# Finance Suite 0.4.6
+# Finance Suite 0.5.1
 
 Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
@@ -6,7 +6,7 @@ Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
 
-# Finance Suite 0.4.0 — importación local y análisis remoto
+## Importación local y análisis remoto
 
 Dos aplicaciones Java 21 independientes, con arquitectura hexagonal:
 
@@ -54,8 +54,8 @@ mvn clean install
 
 Genera dos ejecutables independientes:
 
-- `finance-server/target/finance-server-0.4.0.jar`
-- `finance-importer/target/finance-importer-0.4.0.jar`
+- `finance-server/target/finance-server-0.5.1.jar`
+- `finance-importer/target/finance-importer-0.5.1.jar`
 
 La biblioteca de dominio queda dentro de cada JAR; no es necesario desplegar otro proceso. Los binarios generados no se incluyen en el ZIP. Docker puede compilar y ejecutar el servidor sin instalar JDK en esa máquina.
 
@@ -175,7 +175,7 @@ Adaptador XLS real y recorrido Chrome de cuenta NÓMINA. Consulta
 La descarga requiere validación en el equipo del usuario. Ahora incluye el XLS
 y el recorrido separado de tarjeta de crédito ING; no incluye tarjeta de débito.
 
-## Organización del código 0.4.0
+## Organización del código
 
 Los servicios están en `application.service`, los contratos en `application.port`
 y los adaptadores/configuración en `infrastructure`. Los nombres Java y Maven

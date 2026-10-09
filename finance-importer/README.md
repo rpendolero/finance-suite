@@ -1,4 +1,4 @@
-# Finance Importer 0.4.3
+# Finance Importer 0.5.1
 
 Aplicación local de consola. No abre puertos, no conecta a MySQL y no contiene lógica MCP.
 
@@ -22,7 +22,7 @@ XLS a `../.private` y configura `FINANCE_SERVER_URL` y
 `FINANCE_IMPORTER_PASSWORD`. Debe existir el producto `ing-main` en el servidor.
 
 ```bash
-java -jar target/finance-importer-0.4.3.jar \
+java -jar target/finance-importer-0.5.1.jar \
   --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-excel
 ```
@@ -30,7 +30,7 @@ java -jar target/finance-importer-0.4.3.jar \
 Para descargar con Chrome y perfil bancario local separado:
 
 ```bash
-java -jar target/finance-importer-0.4.3.jar \
+java -jar target/finance-importer-0.5.1.jar \
   --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-browser
 ```
@@ -65,7 +65,7 @@ el lote para evitar interpretaciones no verificadas. No incluye tarjeta de débi
 Para importar el fichero, coloca una copia en `../.private`:
 
 ```bash
-java -jar target/finance-importer-0.4.3.jar \
+java -jar target/finance-importer-0.5.1.jar \
   --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-credit-excel
 ```
@@ -73,7 +73,7 @@ java -jar target/finance-importer-0.4.3.jar \
 Para descargarlo mediante el recorrido grabado:
 
 ```bash
-java -jar target/finance-importer-0.4.3.jar \
+java -jar target/finance-importer-0.5.1.jar \
   --spring.config.additional-location=file:./config/ing.yml \
   --finance.importer.job=ing-credit-browser
 ```
