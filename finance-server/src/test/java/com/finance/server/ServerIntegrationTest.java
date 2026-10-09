@@ -32,29 +32,30 @@ class ServerIntegrationTest {
 
   @Test
   void requiresAuthentication() throws Exception {
-    mvc.perform(get("/api/products")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/products")).andExpect(status().isForbidden());
   }
 
   @Test
   void readerCanReadButCannotWrite() throws Exception {
     when(ledger.products()).thenReturn(List.of());
-    mvc.perform(get("/api/products").with(httpBasic("reader", "reader-secret-for-test-12345")))
+    mvc.perform(get("/api/products").with(user("reader").roles("READER")))
         .andExpect(status().isOk())
         .andExpect(content().json("[]"));
-    mvc.perform(delete("/api/products/a").with(httpBasic("reader", "reader-secret-for-test-12345")))
+    mvc.perform(delete("/api/products/a").with(user("reader").roles("READER")))
         .andExpect(status().isForbidden());
   }
 
   @Test
   void importerCannotQueryOrDelete() throws Exception {
-    mvc.perform(get("/api/products").with(httpBasic("importer", "importer-secret-for-test-54321")))
+    mvc.perform(get("/api/products").with(user("importer").roles("IMPORTER")))
         .andExpect(status().isForbidden());
     mvc.perform(
-            delete("/api/products/a").with(httpBasic("importer", "importer-secret-for-test-54321")))
+            delete("/api/products/a").with(user("importer").roles("IMPORTER")))
         .andExpect(status().isForbidden());
     mvc.perform(
             post("/mcp")
-                .with(httpBasic("importer", "importer-secret-for-test-54321"))
+                .with(csrf())
+                .with(user("importer").roles("IMPORTER"))
                 .contentType("application/json")
                 .content("{}"))
         .andExpect(status().isForbidden());
@@ -64,7 +65,7 @@ class ServerIntegrationTest {
   void readerCannotIngest() throws Exception {
     mvc.perform(
             post("/api/importer/products/a/batches")
-                .with(httpBasic("reader", "reader-secret-for-test-12345")))
+                .with(user("reader").roles("READER")))
         .andExpect(status().isForbidden());
   }
 
@@ -73,7 +74,7 @@ class ServerIntegrationTest {
     mvc.perform(
             get("/api/products")
                 .header("Origin", "https://other.example")
-                .with(httpBasic("reader", "reader-secret-for-test-12345")))
+                .with(user("reader").roles("READER")))
         .andExpect(status().isForbidden());
   }
 
@@ -81,7 +82,8 @@ class ServerIntegrationTest {
   void mcpInitializesUsingReaderAuthentication() throws Exception {
     mvc.perform(
             post("/mcp")
-                .with(httpBasic("reader", "reader-secret-for-test-12345"))
+                .with(csrf())
+                .with(user("reader").roles("READER"))
                 .contentType("application/json")
                 .header("Accept", "application/json, text/event-stream")
                 .content(
