@@ -14,6 +14,10 @@ Vite publica en http://localhost:5173 y redirige /api a http://localhost:8081.
 
 Si la API no está disponible, el dashboard muestra el error de conexión.
 
+## Seleccionar período
+
+El selector superior conserva «Este mes», «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado». También permite elegir de enero a diciembre. Al seleccionar un mes aparece el selector «Año», inicialmente con el año actual; el intervalo incluye el mes completo y respeta los años bisiestos. El año elegido para los meses se conserva al cambiar de opción, sin alterar los períodos relativos. Las fechas utilizadas se muestran junto al selector.
+
 ## Ingresos y gastos
 
 El apartado «Ingresos y gastos» permite alternar entre ambas vistas y utiliza el período elegido en la cabecera. Cada vista muestra el total y las categorías. Al pulsar una categoría se despliegan sus movimientos, paginados de 25 en 25; una segunda pulsación oculta el detalle. Solo se abre una categoría a la vez. Al cambiar de período o de vista se cierra el detalle.
@@ -40,4 +44,4 @@ npm run build
 npm test
 ```
 
-Comprueba el renderizado del editor para ADMIN y READER, los tratamientos válidos, el alcance de las peticiones de clasificación y la cabecera CSRF.
+Comprueba el selector de períodos, los meses completos y bisiestos, el renderizado del editor para ADMIN y READER, los tratamientos válidos, el alcance de las peticiones de clasificación, la importación y la cabecera CSRF.

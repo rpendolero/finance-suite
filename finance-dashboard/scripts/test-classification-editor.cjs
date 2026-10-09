@@ -14,12 +14,58 @@ const test = async (name, run) => { await run(); passed++; console.log(`OK ${nam
         fs.symlinkSync(path.resolve('node_modules'), path.join(temporary, 'node_modules'), 'dir');
         await build({logLevel: 'silent', build: {
             outDir: temporary, emptyOutDir: false,
-            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts')},
+            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts'), periods: path.resolve('src/periods.ts'), periodSelector: path.resolve('src/PeriodSelector.tsx')},
                 formats: ['cjs'], fileName: (_format, name) => `${name}.cjs`},
             rollupOptions: {external: ['react', 'react/jsx-runtime']}
         }});
         const Row = require(path.join(temporary, 'editor.cjs')).default;
         const {api} = require(path.join(temporary, 'api.cjs'));
+        const {periodRange} = require(path.join(temporary, 'periods.cjs'));
+        const selectorModule = require(path.join(temporary, 'periodSelector.cjs'));
+        const PeriodSelector = selectorModule.default || selectorModule;
+        const renderPeriod = (overrides = {}) => renderToStaticMarkup(React.createElement(PeriodSelector, {
+            preset: 'THIS_MONTH', year: 2026, currentYear: 2026, from: '2026-10-01', to: '2026-10-10',
+            onPresetChange: () => {}, onYearChange: () => {}, onFromChange: () => {}, onToChange: () => {}, ...overrides
+        }));
+        await test('top selector retains all relative periods and adds the twelve named months', () => {
+            const html = renderPeriod();
+            for (const label of ['Este mes', 'Mes anterior', 'Últimos 3 meses', 'Últimos 6 meses', 'Este año', 'Personalizado',
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'])
+                assert.ok(html.includes(label), label);
+            assert.equal((html.match(/value="MONTH_/g) || []).length, 12);
+            assert.doesNotMatch(html, /aria-label="Año"/);
+        });
+        await test('named month exposes the selected year; custom period keeps both date inputs', () => {
+            const html = renderPeriod({preset: 'MONTH_02', year: 2024, from: '2024-02-01', to: '2024-02-29'});
+            assert.match(html, /aria-label="Año"/);
+            assert.match(html, /value="2024" selected=""/);
+            assert.match(html, /2024-02-01 — 2024-02-29/);
+            const custom = renderPeriod({preset: 'CUSTOM'});
+            assert.match(custom, /aria-label="Desde"/);
+            assert.match(custom, /aria-label="Hasta"/);
+            assert.doesNotMatch(custom, /aria-label="Año"/);
+        });
+        await test('calendar months cover their complete dates including leap February', () => {
+            const now = new Date(2026, 9, 10);
+            const lastDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            lastDays.forEach((day, index) => {
+                const month = String(index + 1).padStart(2, '0');
+                assert.deepEqual(periodRange(`MONTH_${month}`, now), {from: `2026-${month}-01`, to: `2026-${month}-${day}`});
+            });
+            assert.deepEqual(periodRange('MONTH_02', now, 2024), {from: '2024-02-01', to: '2024-02-29'});
+            assert.deepEqual(periodRange('MONTH_12', now, 2025), {from: '2025-12-01', to: '2025-12-31'});
+        });
+        await test('relative periods retain their dates independently of the chosen month year', () => {
+            const now = new Date(2026, 0, 10);
+            const expected = {
+                THIS_MONTH: {from: '2026-01-01', to: '2026-01-10'},
+                LAST_MONTH: {from: '2025-12-01', to: '2025-12-31'},
+                '3M': {from: '2025-11-01', to: '2026-01-10'},
+                '6M': {from: '2025-08-01', to: '2026-01-10'},
+                YEAR: {from: '2026-01-01', to: '2026-01-10'}
+            };
+            for (const [preset, range] of Object.entries(expected)) assert.deepEqual(periodRange(preset, now, 2024), range);
+        });
         const movement = {id: 'one', productId: 'account', date: '2026-10-09', amount: -20,
             description: 'Compra', merchant: 'Mercadona 1234', normalizedMerchant: 'MERCADONA',
             category: 'ALIMENTACION', subcategory: 'SUPERMERCADO', kind: 'NORMAL'};
