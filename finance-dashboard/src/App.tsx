@@ -1,4 +1,5 @@
 import ProductCreate from './ProductCreate';
+import FinancialFlowView from './FinancialFlowView';
 import BankingConnections from './BankingConnections';
 import {useEffect, useState} from 'react';
 import {
@@ -26,7 +27,6 @@ import {
     CategoryStat,
     CategoryDefinition,
     Insight,
-    MerchantStat,
     Movement,
     Overview,
     Product,
@@ -99,7 +99,7 @@ type View =
     | 'review'
     | 'categoryAdmin'
     | 'banking';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark]];
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -116,7 +116,7 @@ function Login({onLogin}:{onLogin:(session:any)=>void}){
 }
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
-    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [from, setFrom] = useState(initialPeriod.from);
@@ -133,7 +133,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         let active = true;
         setLoading(true);
         setError('');
-        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.merchants(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, mer, ps, cal, rec, ano]) => {
+        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
             if (!active) return;
             setOverview(o);
             setTrend(t);
@@ -142,7 +142,6 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             setMovements(m);
             setInsights(i);
             setForecast(f);
-            setMerchants(mer);
             setProductStats(ps);
             setCalendar(cal);
             setRecurring(rec);
@@ -194,7 +193,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
-            {view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : loading ?
+            {view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
+                <FinancialFlowView from={from} to={to} products={products}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
@@ -247,8 +247,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                         </div>) : <Empty>No hay productos registrados.</Empty>}</div>
                     </section>
                 </> : !loading && overview ?
-                    <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
-                                 productStats={productStats} products={products} movements={movements}
+                    <SectionView view={view} trend={trend}
+                                 productStats={productStats} products={products}
                                  recurring={recurring} calendar={calendar} insights={insights}
                                  anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated}/> : null}</main>
     </div>
@@ -257,11 +257,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
 function SectionView({
                          view,
                          trend,
-                         categories,
-                         merchants,
                          productStats,
                          products,
-                         movements,
                          recurring,
                          calendar,
                          insights,
@@ -277,12 +274,6 @@ function SectionView({
             formatter={(v) => eur(Number(v))}/><Bar dataKey="income" name="Ingresos" fill="#42c997"/><Bar
             dataKey="expenses" name="Gastos" fill="#ff7474"/><Bar dataKey="savings" name="Ahorro"
                                                                   fill="#6c7cff"/></BarChart></ResponsiveContainer>
-        </div>
-    </Page>;
-    if (view === 'expenses') return <Page title="Análisis de gastos">
-        <div className="two-cols"><Rank title="Categorías"
-                                        rows={categories.map((x: CategoryStat) => [x.category, x.amount, x.operations, x.share])}/><Rank
-            title="Comercios" rows={merchants.map((x: MerchantStat) => [x.merchant, x.amount, x.operations, x.share])}/>
         </div>
     </Page>;
     if (view === 'products') return <Page title="Productos financieros">
@@ -655,13 +646,6 @@ function Page({title, children}: { title: string; children: any }) {
     return <section className="page">
         <div className="section-head"><h2>{title}</h2></div>
         {children}</section>
-}
-
-function Rank({title, rows}: { title: string; rows: [string, number, number, number][] }) {
-    return <div className="card"><Title t={title}/>{rows.length ? rows.map(([name, amount, ops, share]) => <div
-        className="rank" key={name}>
-        <span><b>{name}</b><small>{ops} operaciones · {Number(share).toFixed(1)} %</small></span><strong>{eur(amount)}</strong>
-    </div>) : <Empty>Sin datos.</Empty>}</div>
 }
 
 function MovementSearch({products, initialFrom, initialTo, canEdit}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean }) {

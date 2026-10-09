@@ -10,7 +10,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,6 +47,38 @@ public class DashboardAnalysisService {
     public record DashboardOverview(BigDecimal totalBalance, BigDecimal income, BigDecimal expenses, BigDecimal savings,
                                     BigDecimal savingsRate, BigDecimal averageDailyExpense,
                                     List<CategoryStat> categories, List<MerchantStat> merchants) {
+    }
+
+    public enum FlowDirection { EXPENSE, INCOME }
+
+    public record FlowMovement(String id, String productId, LocalDate date, BigDecimal amount,
+                               String description, String merchant, String category, String subcategory,
+                               Movement.Kind kind) {
+        static FlowMovement from(Movement movement) {
+            return new FlowMovement(movement.id(), movement.productId(), movement.date(), movement.amount(),
+                    movement.description(), movement.merchant(), movement.category(), movement.subcategory(), movement.kind());
+        }
+    }
+
+    public record FinancialFlow(FlowDirection direction, BigDecimal total, long operations,
+                                List<CategoryStat> categories, List<MerchantStat> counterparties,
+                                List<FlowMovement> movements, int offset, int limit) {}
+
+    public FinancialFlow flow(Period period, String productId, FlowDirection direction, int offset, int limit) {
+        if (offset < 0 || limit < 1 || limit > 100)
+            throw new IllegalArgumentException("Paginación inválida: offset >= 0 y limit entre 1 y 100");
+        var included = included(period, productId);
+        var movements = direction == FlowDirection.INCOME ? incomeMovements(included) : expenseMovements(included);
+        Function<List<Movement>, BigDecimal> sum = direction == FlowDirection.INCOME ? this::income : this::expenses;
+        var total = sum.apply(movements);
+        var categories = stats(movements, m -> blank(m.category(), "Sin categoría"), total, sum).stream()
+                .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
+        var counterparties = stats(movements, m -> blank(m.merchant(), blank(m.description(), "Desconocido")), total, sum).stream()
+                .map(s -> new MerchantStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
+        var page = movements.stream()
+                .sorted(Comparator.comparing(Movement::date).reversed().thenComparing(Movement::id))
+                .skip(offset).limit(limit).map(FlowMovement::from).toList();
+        return new FinancialFlow(direction, money(total), movements.size(), categories, counterparties, page, offset, limit);
     }
 
     public DashboardOverview overview(Period period, String productId) {
@@ -128,7 +164,11 @@ public class DashboardAnalysisService {
     }
 
     private BigDecimal income(List<Movement> ms) {
-        return ms.stream().filter(m -> m.amount().signum() > 0 && m.kind() != Movement.Kind.REFUND).map(Movement::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return incomeMovements(ms).stream().map(Movement::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private List<Movement> incomeMovements(List<Movement> ms) {
+        return ms.stream().filter(m -> m.amount().signum() > 0 && m.kind() != Movement.Kind.REFUND).toList();
     }
 
     private BigDecimal expenses(List<Movement> ms) {
@@ -139,8 +179,13 @@ public class DashboardAnalysisService {
     }
 
     private List<Stat> stats(List<Movement> ms, Function<Movement, String> key, BigDecimal total) {
+        return stats(ms, key, total, this::expenses);
+    }
+
+    private List<Stat> stats(List<Movement> ms, Function<Movement, String> key, BigDecimal total,
+                             Function<List<Movement>, BigDecimal> sum) {
         return ms.stream().collect(Collectors.groupingBy(key)).entrySet().stream().map(e -> {
-            var amount = expenses(e.getValue());
+            var amount = sum.apply(e.getValue());
             long n = e.getValue().size();
             return new Stat(e.getKey(), money(amount), n, amount.divide(BigDecimal.valueOf(n), 2, RoundingMode.HALF_UP), total.signum() == 0 ? ZERO : amount.multiply(BigDecimal.valueOf(100)).divide(total, 2, RoundingMode.HALF_UP));
         }).sorted(Comparator.comparing(Stat::amount).reversed()).toList();

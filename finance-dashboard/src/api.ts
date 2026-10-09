@@ -57,6 +57,17 @@ export type Overview = {
 export type TrendPoint = { date: string; income: number; expenses: number; savings: number };
 export type CategoryStat = { category: string; amount: number; operations: number; average: number; share: number };
 export type MerchantStat = { merchant: string; amount: number; operations: number; average: number; share: number };
+export type FlowDirection = 'EXPENSE' | 'INCOME';
+export type FinancialFlow = {
+    direction: FlowDirection;
+    total: number;
+    operations: number;
+    categories: CategoryStat[];
+    counterparties: MerchantStat[];
+    movements: Movement[];
+    offset: number;
+    limit: number;
+};
 export type ProductStat = {
     productId: string;
     name: string;
@@ -185,6 +196,8 @@ export const api = {
         return json<MovementPage>(`/api/movements/search?${p}`)
     },
     overview: (from: string, to: string, productId?: string) => json<Overview>(`/api/dashboard/overview?${q(from, to, productId)}`),
+    financialFlow: (from: string, to: string, direction: FlowDirection, offset = 0, limit = 25) =>
+        json<FinancialFlow>(`/api/dashboard/flows?${q(from, to)}&direction=${direction}&offset=${offset}&limit=${limit}`),
     trend: (from: string, to: string, productId?: string, groupBy = 'DAY') => json<TrendPoint[]>(`/api/dashboard/trend?${q(from, to, productId)}&groupBy=${groupBy}`),
     categories: (from: string, to: string, productId?: string) => json<CategoryStat[]>(`/api/dashboard/categories?${q(from, to, productId)}`),
     merchants: (from: string, to: string, productId?: string, limit = 10) => json<MerchantStat[]>(`/api/dashboard/merchants?${q(from, to, productId)}&limit=${limit}`),
