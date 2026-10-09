@@ -22,9 +22,10 @@ public class DashboardController {
   @GetMapping("/flows")
   public FinancialFlow flow(@RequestParam String from, @RequestParam String to,
       @RequestParam(required = false) String productId,
+      @RequestParam(required = false) String category,
       @RequestParam(defaultValue = "EXPENSE") String direction,
       @RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "25") int limit) {
-    return dashboard.flow(period(from, to), productId, FlowDirection.valueOf(direction), offset, limit);
+    return dashboard.flow(period(from, to), productId, FlowDirection.valueOf(direction), category, offset, limit);
   }
 
   @GetMapping("/overview")

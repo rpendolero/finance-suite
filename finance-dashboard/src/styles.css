@@ -17,7 +17,19 @@
 .flow-table th:last-child,.flow-table td:last-child{text-align:right;white-space:nowrap}
 .flow-page-actions{display:flex;gap:8px}
 .flow-page-actions button:disabled{opacity:.45;cursor:default}
-@media(max-width:700px){.financial-flow .two-cols{grid-template-columns:1fr}.flow-switch button{flex:1}}
+.flow-category{border-bottom:1px solid #edf1f6}
+.flow-category h3{margin:0;font-size:14px}
+.flow-category-toggle{display:flex;align-items:center;gap:16px;width:100%;padding:16px 8px;border:0;background:transparent;color:#13213d;text-align:left;cursor:pointer;font:inherit}
+.flow-category-toggle:hover,.flow-category-toggle[aria-expanded="true"]{background:#f7f9fc}
+.flow-category-toggle:focus-visible{outline:3px solid #93c5fd;outline-offset:-3px}
+.flow-category-toggle span{flex:1;min-width:0}
+.flow-category-toggle b{overflow-wrap:anywhere}
+.flow-category-toggle small{display:block;color:#65758c;margin-top:4px;font-size:12px;font-weight:400}
+.flow-category-toggle strong{white-space:nowrap}
+.flow-category-toggle svg{flex-shrink:0;transition:transform .15s}
+.flow-category-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.flow-category-detail{padding:8px 0 16px}
+@media(max-width:700px){.flow-switch button{flex:1}.flow-category-toggle{gap:8px}}
 
 body {
     margin: 0;

@@ -196,8 +196,8 @@ export const api = {
         return json<MovementPage>(`/api/movements/search?${p}`)
     },
     overview: (from: string, to: string, productId?: string) => json<Overview>(`/api/dashboard/overview?${q(from, to, productId)}`),
-    financialFlow: (from: string, to: string, direction: FlowDirection, offset = 0, limit = 25) =>
-        json<FinancialFlow>(`/api/dashboard/flows?${q(from, to)}&direction=${direction}&offset=${offset}&limit=${limit}`),
+    financialFlow: (from: string, to: string, direction: FlowDirection, offset = 0, limit = 25, category?: string) =>
+        json<FinancialFlow>(`/api/dashboard/flows?${q(from, to)}&direction=${direction}&offset=${offset}&limit=${limit}${category !== undefined ? `&category=${encodeURIComponent(category)}` : ''}`),
     trend: (from: string, to: string, productId?: string, groupBy = 'DAY') => json<TrendPoint[]>(`/api/dashboard/trend?${q(from, to, productId)}&groupBy=${groupBy}`),
     categories: (from: string, to: string, productId?: string) => json<CategoryStat[]>(`/api/dashboard/categories?${q(from, to, productId)}`),
     merchants: (from: string, to: string, productId?: string, limit = 10) => json<MerchantStat[]>(`/api/dashboard/merchants?${q(from, to, productId)}&limit=${limit}`),

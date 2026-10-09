@@ -65,10 +65,16 @@ public class DashboardAnalysisService {
                                 List<FlowMovement> movements, int offset, int limit) {}
 
     public FinancialFlow flow(Period period, String productId, FlowDirection direction, int offset, int limit) {
+        return flow(period, productId, direction, null, offset, limit);
+    }
+
+    public FinancialFlow flow(Period period, String productId, FlowDirection direction, String category, int offset, int limit) {
         if (offset < 0 || limit < 1 || limit > 100)
             throw new IllegalArgumentException("Paginación inválida: offset >= 0 y limit entre 1 y 100");
         var included = included(period, productId);
         var movements = direction == FlowDirection.INCOME ? incomeMovements(included) : expenseMovements(included);
+        if (category != null)
+            movements = movements.stream().filter(m -> category.equals(blank(m.category(), "Sin categoría"))).toList();
         Function<List<Movement>, BigDecimal> sum = direction == FlowDirection.INCOME ? this::income : this::expenses;
         var total = sum.apply(movements);
         var categories = stats(movements, m -> blank(m.category(), "Sin categoría"), total, sum).stream()

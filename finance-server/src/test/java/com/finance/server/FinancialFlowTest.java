@@ -81,6 +81,42 @@ class FinancialFlowTest {
   }
 
   @Test
+  void categoryFilterAppliesBeforePaginationAndTotalsExcludeOtherCategories() {
+    when(ledger.movements(period, null)).thenReturn(List.of(
+        movement("a", "-100", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("b", "20", "ALIMENTACION", Movement.Kind.REFUND, Movement.Status.BOOKED),
+        movement("c", "-500", "TRANSPORTE", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("d", "50", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("e", "-10", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.PENDING)));
+
+    var expense = service.flow(period, null, FlowDirection.EXPENSE, "ALIMENTACION", 1, 1);
+    assertThat(expense.total()).isEqualByComparingTo("80");
+    assertThat(expense.operations()).isEqualTo(2);
+    assertThat(expense.movements()).extracting(DashboardAnalysisService.FlowMovement::id).containsExactly("b");
+    assertThat(expense.categories()).extracting(DashboardAnalysisService.CategoryStat::category).containsExactly("ALIMENTACION");
+    var income = service.flow(period, null, FlowDirection.INCOME, "ALIMENTACION", 0, 25);
+    assertThat(income.total()).isEqualByComparingTo("50");
+    assertThat(income.movements()).extracting(DashboardAnalysisService.FlowMovement::id).containsExactly("d");
+    assertThat(service.flow(period, null, FlowDirection.EXPENSE, "UNKNOWN", 0, 25).movements()).isEmpty();
+  }
+
+  @Test
+  void restCategoryFilterReturnsOnlySelectedCategory() throws Exception {
+    when(ledger.movements(period, null)).thenReturn(List.of(
+        movement("a", "-10", "Regalos y ocio", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("b", "-20", "Regalos y ocio", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("c", "-500", "TRANSPORTE", Movement.Kind.NORMAL, Movement.Status.BOOKED)));
+    var mvc = MockMvcBuilders.standaloneSetup(new DashboardController(service)).build();
+    mvc.perform(get("/api/dashboard/flows").param("from", "2026-10-01").param("to", "2026-10-31")
+            .param("category", "Regalos y ocio").param("offset", "1").param("limit", "1"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(30))
+        .andExpect(jsonPath("$.operations").value(2))
+        .andExpect(jsonPath("$.movements.length()").value(1))
+        .andExpect(jsonPath("$.movements[0].id").value("b"))
+        .andExpect(jsonPath("$.movements[0].category").value("Regalos y ocio"));
+  }
+
+  @Test
   void emptyPeriodHasZeroTotalAndInvalidPaginationIsRejected() {
     when(ledger.movements(period, null)).thenReturn(List.of());
     var result = service.flow(period, null, FlowDirection.INCOME, 0, 25);
