@@ -15,11 +15,12 @@
 
   <groupId>com.finance</groupId>
   <artifactId>finance-suite</artifactId>
-  <version>0.4.6</version>
+  <version>0.5.2</version>
   <packaging>pom</packaging>
 
   <modules>
     <module>finance-domain</module>
+    <module>finance-statements</module>
     <module>finance-server</module>
     <module>finance-importer</module>
   </modules>
@@ -44,6 +45,11 @@
         <version>${project.version}</version>
       </dependency>
 
+      <dependency>
+        <groupId>com.finance</groupId>
+        <artifactId>finance-statements</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

@@ -1,13 +1,13 @@
-package com.finance.importer.infrastructure.adapter.out.csv;
+package com.finance.statements;
 
-import com.finance.importer.application.port.StatementPreparationPort;
-import java.io.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import org.apache.commons.csv.*;
+import org.apache.commons.csv.CSVFormat;
 
-public class CanonicalCsvValidator implements StatementPreparationPort {
+public class CanonicalCsvValidator {
   public void validate(Path path) {
     try {
       if (!Files.isRegularFile(path) || Files.size(path) > 10 * 1024 * 1024)

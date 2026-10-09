@@ -1,3 +1,9 @@
+import {version as appVersion} from '../package.json';
+import ClassificationMovementRow from './ClassificationMovementRow';
+import ProductCreate from './ProductCreate';
+import FinancialFlowView from './FinancialFlowView';
+import BankingConnections from './BankingConnections';
+import StatementImport from './StatementImport';
 import {useEffect, useState} from 'react';
 import {
     CalendarDays,
@@ -13,7 +19,8 @@ import {
     TrendingUp,
     TriangleAlert,
     Wallet,
-    Tags
+    Tags,
+    Upload
 } from 'lucide-react';
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
@@ -23,8 +30,8 @@ import {
     CalendarDay,
     CategoryStat,
     CategoryDefinition,
+    ClassificationResult,
     Insight,
-    MerchantStat,
     Movement,
     Overview,
     Product,
@@ -95,8 +102,10 @@ type View =
     | 'calendar'
     | 'insights'
     | 'review'
-    | 'categoryAdmin';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags]];
+    | 'categoryAdmin'
+    | 'banking'
+    | 'imports';
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -113,11 +122,13 @@ function Login({onLogin}:{onLogin:(session:any)=>void}){
 }
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
-    const [now] = useState(new Date()), [view, setView] = useState<View>('overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [merchants, setMerchants] = useState<MerchantStat[]>([]), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [from, setFrom] = useState(initialPeriod.from);
     const [to, setTo] = useState(initialPeriod.to);
+    const [classificationRevision, setClassificationRevision] = useState(0);
+    const onClassified = () => setClassificationRevision(current => current + 1);
     const selectPeriod = (preset: string) => {
         setPeriodPreset(preset);
         if (preset !== 'CUSTOM') {
@@ -130,7 +141,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         let active = true;
         setLoading(true);
         setError('');
-        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.merchants(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, mer, ps, cal, rec, ano]) => {
+        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
             if (!active) return;
             setOverview(o);
             setTrend(t);
@@ -139,7 +150,6 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             setMovements(m);
             setInsights(i);
             setForecast(f);
-            setMerchants(mer);
             setProductStats(ps);
             setCalendar(cal);
             setRecurring(rec);
@@ -150,15 +160,20 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         return () => {
             active = false
         }
-    }, [from, to]);
+    }, [from, to, classificationRevision]);
+    const onProductCreated = () => {
+        api.products().then(setProducts).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los productos'));
+        api.productStats(from, to).then(setProductStats).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los saldos'));
+        api.overview(from, to).then(setOverview).catch(e => setError(e instanceof Error ? e.message : 'No se pudo actualizar el resumen'));
+    };
     const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
         <aside>
             <div className="brand"><b>▥</b><span>Finance Suite</span></div>
-            <nav>{menu.filter(([id]) => id !== 'categoryAdmin' || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+            <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
-                className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
+                className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v{appVersion}</small>
             </div>
         </aside>
         <main>
@@ -186,7 +201,9 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
-            {loading ?
+            {view === 'imports' && session.roles?.includes('ADMIN') ? <StatementImport products={products} onImported={onClassified} onProductCreated={onProductCreated}/> : view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
+                <FinancialFlowView from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
+                <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
@@ -239,28 +256,27 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                         </div>) : <Empty>No hay productos registrados.</Empty>}</div>
                     </section>
                 </> : !loading && overview ?
-                    <SectionView view={view} trend={trend} categories={categories} merchants={merchants}
-                                 productStats={productStats} products={products} movements={movements}
+                    <SectionView view={view} trend={trend}
+                                 productStats={productStats} products={products}
                                  recurring={recurring} calendar={calendar} insights={insights}
-                                 anomalies={anomalies} session={session} from={from} to={to}/> : null}</main>
+                                 anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated} onClassified={onClassified}/> : null}</main>
     </div>
 }
 
 function SectionView({
                          view,
                          trend,
-                         categories,
-                         merchants,
                          productStats,
                          products,
-                         movements,
                          recurring,
                          calendar,
                          insights,
                          anomalies,
                          session,
                          from,
-                         to
+                         to,
+                         onProductCreated,
+                         onClassified
                      }: any) {
     if (view === 'trend') return <Page title="Evolución financiera">
         <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
@@ -270,20 +286,15 @@ function SectionView({
                                                                   fill="#6c7cff"/></BarChart></ResponsiveContainer>
         </div>
     </Page>;
-    if (view === 'expenses') return <Page title="Análisis de gastos">
-        <div className="two-cols"><Rank title="Categorías"
-                                        rows={categories.map((x: CategoryStat) => [x.category, x.amount, x.operations, x.share])}/><Rank
-            title="Comercios" rows={merchants.map((x: MerchantStat) => [x.merchant, x.amount, x.operations, x.share])}/>
-        </div>
-    </Page>;
     if (view === 'products') return <Page title="Productos financieros">
+        {session?.roles?.includes('ADMIN') && <ProductCreateButton products={products} onCreated={onProductCreated}/>}
         <div className="card table">
             <div className="thead"><b>Producto</b><b>Entidad</b><b>Tipo</b><b>Saldo</b><b>Gasto período</b></div>
             {productStats.map((s: ProductStat) => <div className="trow" key={s.productId}>
                 <b>{s.name}</b><span>{s.provider}</span><span>{s.type}</span><span>{eur(s.balance)}</span><strong>{eur(s.expenses)}</strong>
             </div>)}</div>
     </Page>;
-    if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')}/>;
+    if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')} onClassified={onClassified}/>;
     if (view === 'recurring') return <Page title="Gastos recurrentes">
         <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
             className="list-item" key={i}>
@@ -303,54 +314,21 @@ function SectionView({
             key={i.code}><b>{i.title}</b><p>{i.detail}</p><strong>{i.value != null ? eur(Number(i.value)) : ''}</strong>
         </div>) : <Empty>No hay insights para este período.</Empty>}</div>
     </Page>;
-    if (view === 'review') return <ClassificationReview />;
+    if (view === 'review') return <ClassificationReview canEdit={session?.roles?.includes('ADMIN')} onClassified={onClassified}/>;
     if (view === 'categoryAdmin' && session?.roles?.includes('ADMIN')) return <CategoryAdministration />;
     return null
 }
 
-const TREATMENTS = [
-    {code: 'NON_COMPUTABLE', label: 'No computable - Otros', computable: false},
-    {code: 'NORMAL', label: 'Gasto / ingreso normal', computable: true},
-    {code: 'REFUND', label: 'Devolución', computable: true},
-    {code: 'CARD_SETTLEMENT', label: 'No computable - Liquidación tarjeta', computable: false},
-    {code: 'WALLET_SETTLEMENT', label: 'No computable - PayPal / monedero', computable: false},
-    {code: 'DUPLICATE', label: 'No computable - Movimiento duplicado', computable: false},
-    {code: 'INTERNAL_TRANSFER', label: 'No computable - Transferencia interna', computable: false}
-] as const;
-
-type ClassificationChoice = {
-    category?: string;
-    subcategory?: string;
-    kind?: string;
-};
-
-function treatmentDefaults(kind: string): ClassificationChoice {
-    switch (kind) {
-        case 'NON_COMPUTABLE':
-            return {kind, category: 'NO_COMPUTABLE', subcategory: 'OTROS_NO_COMPUTABLES'};
-        case 'DUPLICATE':
-            return {kind, category: 'NO_COMPUTABLE', subcategory: 'MOVIMIENTO_DUPLICADO'};
-        case 'CARD_SETTLEMENT':
-            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_TARJETA'};
-        case 'WALLET_SETTLEMENT':
-            return {kind, category: 'NO_COMPUTABLE', subcategory: 'LIQUIDACION_PAYPAL'};
-        case 'INTERNAL_TRANSFER':
-            return {kind, category: 'NO_COMPUTABLE', subcategory: 'TRASPASO_INTERNO'};
-        default:
-            return {kind};
-    }
-}
-
-function ClassificationReview() {
+function ClassificationReview({canEdit, onClassified}: {canEdit: boolean; onClassified: () => void}) {
     const initial = periodRange('THIS_MONTH');
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [from, setFrom] = useState(initial.from);
     const [to, setTo] = useState(initial.to);
     const [rows, setRows] = useState<Movement[]>([]);
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
-    const [choices, setChoices] = useState<Record<string, ClassificationChoice>>({});
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
+    const [savingClassification, setSavingClassification] = useState(false);
     const [error, setError] = useState('');
 
     const load = () => {
@@ -369,51 +347,12 @@ function ClassificationReview() {
         load()
     }, [from, to]);
 
-    const choose = (id: string, key: 'category' | 'subcategory', value: string) => {
-        setChoices(current => ({
-            ...current,
-            [id]: {
-                ...current[id],
-                [key]: value || undefined,
-                ...(key === 'category' ? {subcategory: undefined, kind: value === 'NO_COMPUTABLE' ? undefined : (current[id]?.kind === 'REFUND' ? 'REFUND' : 'NORMAL')} : {}),
-                ...(key === 'subcategory' ? {kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE', OTROS_NO_COMPUTABLES: 'NON_COMPUTABLE'} as Record<string, string>)[value] || current[id]?.kind} : {})
-            }
-        }))
-    };
-
-    const chooseTreatment = (id: string, kind: string) => {
-        setChoices(current => ({
-            ...current,
-            [id]: treatmentDefaults(kind)
-        }))
-    };
-
-    const save = async (movement: Movement, createRule: boolean) => {
-        const selected = choices[movement.id] || treatmentDefaults(movement.kind || 'NORMAL');
-        if (!selected.category) {
-            setError('Selecciona una categoría antes de guardar.');
-            return;
-        }
-        setBusy(true);
-        setError('');
-        setMessage('');
-        try {
-            await api.classifyMovement(movement.id, {
-                category: selected.category,
-                subcategory: selected.subcategory,
-                kind: selected.kind || movement.kind || 'NORMAL',
-                createRule,
-                applyToSimilar: createRule
-            });
-            const treatment = TREATMENTS.find(t => t.code === (selected.kind || movement.kind || 'NORMAL'));
-            setMessage(createRule
-                ? `Clasificación guardada y aplicada a movimientos equivalentes. Tratamiento: ${treatment?.label || 'Normal'}.`
-                : `Clasificación manual guardada. Tratamiento: ${treatment?.label || 'Normal'}.`);
-            load();
-        } catch (e) {
-            setBusy(false);
-            setError(e instanceof Error ? e.message : 'No se pudo guardar la clasificación')
-        }
+    const onSaved = (result: ClassificationResult, appliedToMerchant: boolean) => {
+        setMessage(appliedToMerchant
+            ? `Clasificación guardada. Regla del comercio aplicada a ${result.reclassified} movimientos de este comercio en el histórico.`
+            : 'Clasificación manual guardada.');
+        onClassified();
+        load();
     };
 
     const reclassify = async () => {
@@ -423,6 +362,7 @@ function ClassificationReview() {
         try {
             const result = await api.reclassify();
             setMessage(`Recategorización completada: ${result.updated} de ${result.scanned} movimientos actualizados; ${result.unclassified} pendientes.`);
+            onClassified();
             load();
         } catch (e) {
             setBusy(false);
@@ -454,56 +394,14 @@ function ClassificationReview() {
                 </>}
                 <span>{rows.length} movimientos pendientes · {from} — {to}</span>
             </div>
-            <button onClick={reclassify} disabled={busy}>Recategorizar histórico</button>
+            {canEdit && <button onClick={reclassify} disabled={busy || savingClassification}>Recategorizar histórico</button>}
         </div>
         {message && <div className="classification-message">{message}</div>}
         {error && <div className="api-error">{error}</div>}
         <div className="card classification-list">
             {busy && !rows.length ? <div className="loading">Cargando clasificación…</div> :
-                rows.length ? rows.map(m => {
-                    const selected = choices[m.id] || treatmentDefaults(m.kind || 'NORMAL');
-                    const definition = catalog.find(c => c.code === selected.category);
-                    const treatment = TREATMENTS.find(t => t.code === (selected.kind || m.kind || 'NORMAL'));
-                    return <div className="classification-row" key={m.id}>
-                        <div className="classification-movement">
-                            <b>{m.normalizedMerchant || m.merchant || m.description}</b>
-                            <small>{dateLabel(m.date)} · {eur(m.amount)}</small>
-                            <span>{m.description}</span>
-                        </div>
-                        <div className="classification-field">
-                            <label>Tratamiento</label>
-                            <select value={selected.kind || m.kind || 'NORMAL'}
-                                    onChange={e => chooseTreatment(m.id, e.target.value)}>
-                                {TREATMENTS.map(t => <option value={t.code} key={t.code}>{t.label}</option>)}
-                            </select>
-                            {treatment && !treatment.computable &&
-                                <small className="non-computable">No se incluirá en gastos, ingresos ni ahorro.</small>}
-                        </div>
-                        <div className="classification-field">
-                            <label>Categoría</label>
-                            <select value={selected.category || ''}
-                                    onChange={e => choose(m.id, 'category', e.target.value)}>
-                                <option value="">Selecciona categoría</option>
-                                
-                                {catalog.map(c => <option value={c.code} key={c.code}>{c.label}</option>)}
-                            </select>
-                        </div>
-                        <div className="classification-field">
-                            <label>Subcategoría</label>
-                            <select value={selected.subcategory || ''} disabled={!definition}
-                                    onChange={e => choose(m.id, 'subcategory', e.target.value)}>
-                                <option value="">Sin subcategoría</option>
-                                {(definition?.subcategories || []).map(s =>
-                                    <option value={s} key={s}>{s.replaceAll('_', ' ')}</option>)}
-                            </select>
-                        </div>
-                        <div className="classification-actions">
-                            <button disabled={!selected.category || busy} onClick={() => save(m, false)}>Solo este</button>
-                            <button className="secondary" disabled={!selected.category || busy}
-                                    onClick={() => save(m, true)}>Aplicar al comercio</button>
-                        </div>
-                    </div>
-                }) : <Empty>No quedan movimientos pendientes en el período seleccionado.</Empty>}
+                rows.length ? rows.map(m => <ClassificationMovementRow key={m.id} movement={m}
+                    catalog={catalog} canEdit={canEdit} busy={busy || savingClassification} onSaved={onSaved} onSaving={setSavingClassification}/>) : <Empty>No quedan movimientos pendientes en el período seleccionado.</Empty>}
         </div>
     </Page>
 }
@@ -647,20 +545,14 @@ function Page({title, children}: { title: string; children: any }) {
         {children}</section>
 }
 
-function Rank({title, rows}: { title: string; rows: [string, number, number, number][] }) {
-    return <div className="card"><Title t={title}/>{rows.length ? rows.map(([name, amount, ops, share]) => <div
-        className="rank" key={name}>
-        <span><b>{name}</b><small>{ops} operaciones · {Number(share).toFixed(1)} %</small></span><strong>{eur(amount)}</strong>
-    </div>) : <Empty>Sin datos.</Empty>}</div>
-}
-
-function MovementSearch({products, initialFrom, initialTo, canEdit}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean }) {
+function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean; onClassified: () => void }) {
     const [filters, setFilters] = useState<any>({from: initialFrom, to: initialTo, sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
     const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
-    const [editing, setEditing] = useState<string | null>(null);
-    const [choice, setChoice] = useState<ClassificationChoice>({});
+    const [deleting, setDeleting] = useState<Movement | null>(null);
     const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+    const [message, setMessage] = useState('');
+    const [savingClassification, setSavingClassification] = useState(false);
 
     const load = (next = filters) => {
         setBusy(true); setErr('');
@@ -675,25 +567,41 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
     const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
     const submit = (e: any) => { e.preventDefault(); load(filters) };
     const move = (offset: number) => { const next = {...filters, offset}; setFilters(next); load(next) };
-    const edit = (m: Movement) => {
-        setEditing(m.id);
-        setChoice({category: m.category || '', subcategory: m.subcategory || '', kind: m.kind || 'NORMAL'});
+    const onSaved = (result: ClassificationResult, appliedToMerchant: boolean) => {
+        setMessage(appliedToMerchant
+            ? `Clasificación guardada. Regla del comercio aplicada a ${result.reclassified} movimientos de este comercio en el histórico.`
+            : 'Clasificación manual guardada.');
+        onClassified();
+        const next = {...filters, offset: 0};
+        setFilters(next); load(next);
     };
-    const saveClassification = async (m: Movement) => {
-        if (!choice.category) { setErr('Selecciona una categoría.'); return; }
+    const deleteMovement = async () => {
+        if (!deleting) return;
         setBusy(true); setErr('');
         try {
-            await api.classifyMovement(m.id, {category: choice.category, subcategory: choice.subcategory, kind: choice.kind || m.kind || 'NORMAL', createRule: false, applyToSimilar: false});
-            setEditing(null);
-            load(filters);
+            await api.deleteMovement(deleting.id);
+            setDeleting(null);
+            onClassified();
+            const next = {...filters, offset: page.items.length === 1 ? Math.max(0, page.offset - page.limit) : page.offset};
+            setFilters(next); load(next);
         } catch (e) {
             setBusy(false);
-            setErr(e instanceof Error ? e.message : 'No se pudo actualizar la categoría');
+            setErr(e instanceof Error ? e.message : 'No se pudo eliminar el movimiento');
         }
     };
-    const selectedDefinition = catalog.find(c => c.code === choice.category);
 
     return <Page title="Movimientos">
+        {deleting && <div className="app-modal-backdrop">
+            <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="delete-movement-title">
+                <h3 id="delete-movement-title">Eliminar movimiento</h3>
+                <p>{dateLabel(deleting.date)} · {deleting.merchant || deleting.description} · {eur(deleting.amount)}</p>
+                <p>Se eliminará definitivamente. Una nueva importación o sincronización puede volver a incorporarlo.</p>
+                <div className="modal-actions">
+                    <button type="button" className="secondary" disabled={busy} onClick={() => setDeleting(null)}>Cancelar</button>
+                    <button type="button" disabled={busy} onClick={() => void deleteMovement()}>Eliminar definitivamente</button>
+                </div>
+            </div>
+        </div>}
         <form className="filters card" onSubmit={submit}>
             <label>Desde<input type="date" value={filters.from} onChange={e => change('from', e.target.value)}/></label>
             <label>Hasta<input type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label>
@@ -708,24 +616,21 @@ function MovementSearch({products, initialFrom, initialTo, canEdit}: { products:
             <button type="submit"><Search size={16}/>Buscar</button>
             <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV</button>
         </form>
+        {message && <div className="classification-message" role="status">{message}</div>}
         {err && <div className="api-error">{err}</div>}
-        <div className="card table">{busy && !page.items.length ? <div className="loading">Buscando movimientos…</div> : <>
-            <div className="thead movement-grid editable-movement-grid"><b>Fecha</b><b>Concepto</b><b>Categoría</b><b>Importe</b>{canEdit && <b>Acción</b>}</div>
-            {page.items.length ? page.items.map((m: Movement) => <div key={m.id}>
-                <div className="trow movement-grid editable-movement-grid">
-                    <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b>
-                    <span>{m.category || 'Sin categoría'}{m.subcategory ? ' / ' + m.subcategory.replaceAll('_', ' ') : ''}</span>
-                    <strong className={m.amount >= 0 ? 'pos' : 'neg'}>{eur(m.amount)}</strong>
-                    {canEdit && <button type="button" className="secondary movement-edit" onClick={() => editing === m.id ? setEditing(null) : edit(m)}>{editing === m.id ? 'Cancelar' : 'Cambiar'}</button>}
-                </div>
-                {canEdit && editing === m.id && <div className="movement-classification-editor">
-                    <label>Categoría<select value={choice.category || ''} onChange={e => setChoice({category: e.target.value, subcategory: '', kind: e.target.value === 'NO_COMPUTABLE' ? 'NON_COMPUTABLE' : (choice.kind === 'REFUND' ? 'REFUND' : 'NORMAL')})}><option value="">Selecciona categoría</option>{catalog.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>
-                    <label>Subcategoría<select disabled={!choice.category} value={choice.subcategory || ''} onChange={e => setChoice({...choice, subcategory: e.target.value, kind: ({LIQUIDACION_TARJETA: 'CARD_SETTLEMENT', LIQUIDACION_PAYPAL: 'WALLET_SETTLEMENT', TRASPASO_INTERNO: 'INTERNAL_TRANSFER', MOVIMIENTO_DUPLICADO: 'DUPLICATE', OTROS_NO_COMPUTABLES: 'NON_COMPUTABLE'} as Record<string, string>)[e.target.value] || choice.kind})}><option value="">Sin subcategoría</option>{(selectedDefinition?.subcategories || []).map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></label>
-                    <label>Tratamiento<select value={choice.kind || 'NORMAL'} onChange={e => setChoice({...treatmentDefaults(e.target.value), ...(e.target.value === 'NORMAL' || e.target.value === 'REFUND' ? {category: choice.category === 'NO_COMPUTABLE' ? '' : choice.category, subcategory: choice.category === 'NO_COMPUTABLE' ? undefined : choice.subcategory} : {})})}>{TREATMENTS.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}</select></label>
-                    <button type="button" disabled={!choice.category || busy} onClick={() => saveClassification(m)}>Guardar</button>
-                </div>}
-            </div>) : <Empty>No hay movimientos con esos filtros.</Empty>}
+        <div className="card classification-list">{busy && !page.items.length ? <div className="loading">Buscando movimientos…</div> : <>
+            {page.items.length ? page.items.map((movement: Movement) => <ClassificationMovementRow key={movement.id}
+                movement={movement} catalog={catalog} canEdit={canEdit} busy={busy || savingClassification} onSaving={setSavingClassification}
+                productName={products.find(product => product.id === movement.productId)?.name}
+                onSaved={onSaved} onDelete={canEdit ? () => setDeleting(movement) : undefined}/>) : <Empty>No hay movimientos con esos filtros.</Empty>}
             <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
         </>}</div>
     </Page>
+}
+
+function ProductCreateButton({products, onCreated}: {products: Product[]; onCreated: () => void}) {
+    const [open, setOpen] = useState(false);
+    return <><button type="button" onClick={() => setOpen(true)}>Nuevo producto</button>
+        {open && <ProductCreate products={products} onCancel={() => setOpen(false)} onCreated={() => {setOpen(false); onCreated();}}/>}
+    </>;
 }

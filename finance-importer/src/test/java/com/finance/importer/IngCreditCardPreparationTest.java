@@ -3,7 +3,7 @@ package com.finance.importer;
 import static org.assertj.core.api.Assertions.*;
 
 import com.finance.domain.Product;
-import com.finance.importer.infrastructure.adapter.out.csv.NativeXlsStatementPreparationAdapter;
+import com.finance.statements.NativeXlsStatementPreparationAdapter;
 import java.nio.file.*;
 import java.time.LocalDate;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;

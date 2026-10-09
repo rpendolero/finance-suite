@@ -14,6 +14,8 @@ public final class BankingAuthorizationService {
   private final BankConnectionPort connections;
   private final Clock clock;
 
+  public java.util.List<String> banks(String country) { return authorizationPort.banks(country); }
+
   public AuthorizationStart start(String bankName, String country, int consentDays) {
     String state = UUID.randomUUID().toString();
     String id = UUID.randomUUID().toString();

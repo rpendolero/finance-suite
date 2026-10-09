@@ -19,8 +19,16 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run Maven tests
-        run: mvn -B test
+      - name: Preload Testcontainers images from public mirrors
+        run: |
+          docker pull public.ecr.aws/docker/library/mysql:8.4
+          docker tag public.ecr.aws/docker/library/mysql:8.4 mysql:8.4
+          docker pull ghcr.io/testcontainers/ryuk:0.12.0
+          docker tag ghcr.io/testcontainers/ryuk:0.12.0 testcontainers/ryuk:0.12.0
+          docker pull public.ecr.aws/docker/library/alpine:3.17
+          docker tag public.ecr.aws/docker/library/alpine:3.17 alpine:3.17
+      - name: Build and test Maven modules
+        run: mvn -B verify
 
   dashboard:
     runs-on: ubuntu-latest
@@ -34,5 +42,7 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install
+      - name: Test dashboard
+        run: npm test
       - name: Build dashboard
         run: npm run build

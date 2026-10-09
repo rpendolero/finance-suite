@@ -30,6 +30,7 @@ public final class MovementClassificationService {
                 Comparator.comparingInt(ClassificationRule::priority)
                     .thenComparing(ClassificationRule::id))
             .filter(rule -> rule.matches(normalized))
+            .filter(rule -> rule.kind() != Movement.Kind.REFUND || normalized.amount().signum() > 0)
             .filter(
                 rule ->
                     !CategoryCatalogService.UNCLASSIFIED.equals(
@@ -94,7 +95,7 @@ public final class MovementClassificationService {
     return movement.withClassification(
         category,
         subcategory,
-        rule.kind(),
+        rule.kind() == Movement.Kind.NORMAL && movement.kind() == Movement.Kind.REFUND ? Movement.Kind.REFUND : rule.kind(),
         source,
         rule.confidence());
   }

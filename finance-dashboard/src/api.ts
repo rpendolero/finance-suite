@@ -1,3 +1,8 @@
+export type StatementFormat = {id: string; label: string; extension: string};
+export type ImportResult = {read: number; inserted: number; duplicates: number};
+export type BankConnection = {id: string; bankName: string; country: string; status: string; validUntil?: string; lastSyncAt?: string};
+export type BankAccount = {id: string; externalAccountId: string; productId?: string; name: string; currency: string; cashAccountType?: string};
+export type BankSyncResult = {read: number; inserted: number; duplicates: number; balancesUpdated: number; balancesSkipped: number};
 export type UserSession = { username: string; roles: string[] };
 export type Product = {
     id: string;
@@ -7,6 +12,11 @@ export type Product = {
     balance: number;
     provider: string;
     maskedPan?: string
+};
+export type ProductInput = Product & {
+    balanceAt: string;
+    linkedAccountId?: string;
+    creditLimit?: number;
 };
 export type Movement = {
     id: string;
@@ -36,6 +46,7 @@ export type ReclassificationResult = {
     updated: number;
     unclassified: number
 };
+export type ClassificationResult = {movement: Movement; reclassified: number};
 export type Overview = {
     totalBalance: number;
     income: number;
@@ -49,6 +60,17 @@ export type Overview = {
 export type TrendPoint = { date: string; income: number; expenses: number; savings: number };
 export type CategoryStat = { category: string; amount: number; operations: number; average: number; share: number };
 export type MerchantStat = { merchant: string; amount: number; operations: number; average: number; share: number };
+export type FlowDirection = 'EXPENSE' | 'INCOME';
+export type FinancialFlow = {
+    direction: FlowDirection;
+    total: number;
+    operations: number;
+    categories: CategoryStat[];
+    counterparties: MerchantStat[];
+    movements: Movement[];
+    offset: number;
+    limit: number;
+};
 export type ProductStat = {
     productId: string;
     name: string;
@@ -114,7 +136,10 @@ const json = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
     const method = (init.method || 'GET').toUpperCase();
     const headers = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? withCsrf(init.headers) : init.headers;
     const r = await fetch(url, {...init, headers, credentials: 'include'});
-    if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+    if (!r.ok) {
+        const problem = await r.json().catch(() => null);
+        throw new Error(typeof problem?.detail === 'string' ? problem.detail : `API ${r.status}: ${r.statusText}`);
+    }
     return r.status === 204 ? undefined as T : r.json()
 };
 const sendJson = async <T>(url: string, method: 'POST' | 'PUT' | 'PATCH', body?: unknown): Promise<T> => {
@@ -124,16 +149,34 @@ const sendJson = async <T>(url: string, method: 'POST' | 'PUT' | 'PATCH', body?:
         headers: withCsrf(body === undefined ? {} : {'Content-Type': 'application/json'}),
         body: body === undefined ? undefined : JSON.stringify(body)
     });
-    if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+    if (!r.ok) {
+        const problem = await r.json().catch(() => null);
+        throw new Error(typeof problem?.detail === 'string' ? problem.detail : `API ${r.status}: ${r.statusText}`);
+    }
     return r.status === 204 ? undefined as T : r.json()
 };
 const q = (from: string, to: string, productId?: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`;
 
 export const api = {
+    banks: () => json<string[]>('/api/v1/banking/enable-banking/banks'),
+    bankConnections: () => json<BankConnection[]>('/api/v1/banking/connections'),
+    authorizeBank: (bankName: string) => sendJson<{connectionId: string; authorizationUrl: string}>('/api/v1/banking/enable-banking/authorizations', 'POST', {bankName}),
+    bankAccounts: (id: string) => json<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts`),
+    discoverBankAccounts: (id: string) => sendJson<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/discover`, 'POST'),
+    linkBankAccount: (id: string, externalAccountId: string, productId: string) => sendJson<BankAccount>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts/link`, 'POST', {externalAccountId, productId}),
+    syncBank: (id: string) => sendJson<BankSyncResult>(`/api/v1/banking/connections/${encodeURIComponent(id)}/sync`, 'POST'),
     login: (username: string, password: string) => json<UserSession>('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password})}),
     me: () => json<UserSession>('/api/auth/me'),
     logout: () => json<void>('/api/auth/logout', {method: 'POST'}),
+    importFormats: (productId: string) => json<StatementFormat[]>(`/api/products/${encodeURIComponent(productId)}/import-formats`),
+    importStatement: (productId: string, format: string, file: File) => {
+        const body = new FormData();
+        body.append('file', file);
+        body.append('format', format);
+        return json<ImportResult>(`/api/products/${encodeURIComponent(productId)}/imports`, {method: 'POST', body});
+    },
     products: () => json<Product[]>('/api/products'),
+    saveProduct: (product: ProductInput) => sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
     adminCategories: () => json<AdminCategory[]>('/api/admin/categories'),
     createCategory: (item: CatalogItemInput) => sendJson<AdminCategory>('/api/admin/categories', 'POST', item),
@@ -142,6 +185,7 @@ export const api = {
     updateSubcategory: (category: string, code: string, item: CatalogItemInput) => sendJson<AdminSubcategory>(`/api/admin/categories/${encodeURIComponent(category)}/subcategories/${encodeURIComponent(code)}`, 'PUT', item),
     unclassified: (from: string, to: string, productId?: string, limit = 100) =>
         json<Movement[]>(`/api/classification/unclassified?${q(from, to, productId)}&limit=${limit}`),
+    deleteMovement: (id: string) => json<void>(`/api/movements/${encodeURIComponent(id)}`, {method: 'DELETE'}),
     classifyMovement: (
         id: string,
         classification: {
@@ -150,7 +194,7 @@ export const api = {
             kind: string;
             createRule: boolean;
             applyToSimilar: boolean
-        }) => sendJson<unknown>(`/api/movements/${encodeURIComponent(id)}/classification`, 'PATCH', classification),
+        }) => sendJson<ClassificationResult>(`/api/movements/${encodeURIComponent(id)}/classification`, 'PATCH', classification),
     reclassify: () => sendJson<ReclassificationResult>('/api/classification/reclassify', 'POST'),
     movements: (from: string, to: string, productId?: string, limit = 10) => json<Movement[]>(`/api/movements?${q(from, to, productId)}&limit=${limit}`),
     exportMovements: (f: MovementFilters) => {
@@ -168,6 +212,8 @@ export const api = {
         return json<MovementPage>(`/api/movements/search?${p}`)
     },
     overview: (from: string, to: string, productId?: string) => json<Overview>(`/api/dashboard/overview?${q(from, to, productId)}`),
+    financialFlow: (from: string, to: string, direction: FlowDirection, offset = 0, limit = 25, category?: string) =>
+        json<FinancialFlow>(`/api/dashboard/flows?${q(from, to)}&direction=${direction}&offset=${offset}&limit=${limit}${category !== undefined ? `&category=${encodeURIComponent(category)}` : ''}`),
     trend: (from: string, to: string, productId?: string, groupBy = 'DAY') => json<TrendPoint[]>(`/api/dashboard/trend?${q(from, to, productId)}&groupBy=${groupBy}`),
     categories: (from: string, to: string, productId?: string) => json<CategoryStat[]>(`/api/dashboard/categories?${q(from, to, productId)}`),
     merchants: (from: string, to: string, productId?: string, limit = 10) => json<MerchantStat[]>(`/api/dashboard/merchants?${q(from, to, productId)}&limit=${limit}`),

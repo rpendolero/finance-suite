@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.finance.domain.Product;
-import com.finance.importer.infrastructure.adapter.out.csv.NativeXlsStatementPreparationAdapter;
+import com.finance.statements.NativeXlsStatementPreparationAdapter;
 import java.nio.file.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.junit.jupiter.api.Test;

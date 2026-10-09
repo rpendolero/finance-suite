@@ -9,12 +9,16 @@
   <parent>
     <groupId>com.finance</groupId>
     <artifactId>finance-suite</artifactId>
-    <version>0.4.6</version>
+    <version>0.5.2</version>
   </parent>
 
   <artifactId>finance-importer</artifactId>
 
   <dependencies>
+    <dependency>
+      <groupId>com.finance</groupId>
+      <artifactId>finance-statements</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.poi</groupId>

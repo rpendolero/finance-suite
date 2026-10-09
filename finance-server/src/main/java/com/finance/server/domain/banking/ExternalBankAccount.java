@@ -6,4 +6,10 @@ public record ExternalBankAccount(
     String externalAccountId,
     String productId,
     String name,
-    String currency) {}
+    String currency,
+    String cashAccountType) {
+  public ExternalBankAccount(String id, String connectionId, String externalAccountId,
+      String productId, String name, String currency) {
+    this(id, connectionId, externalAccountId, productId, name, currency, null);
+  }
+}

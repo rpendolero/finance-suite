@@ -1,15 +1,17 @@
+import {readFileSync} from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+const {version} = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const secret = process.env.FINANCE_READER_PASSWORD;
 if (!secret || secret.length < 20) throw new Error('FINANCE_READER_PASSWORD is required');
 const url = new URL(process.env.FINANCE_MCP_URL ?? 'http://127.0.0.1:8081/mcp');
 if (url.protocol !== 'https:' && !['127.0.0.1','localhost','[::1]'].includes(url.hostname)) throw new Error('Remote MCP requires HTTPS');
-const client = new Client({name:'finance-local-bridge',version:'0.4.0'});
+const client = new Client({name:'finance-local-bridge',version});
 await client.connect(new StreamableHTTPClientTransport(url,{requestInit:{headers:{Authorization:`Basic ${Buffer.from(`reader:${secret}`).toString('base64')}`}}}));
-const server = new Server({name:'personal-finance',version:'0.4.0'},{capabilities:{tools:{}}});
+const server = new Server({name:'personal-finance',version},{capabilities:{tools:{}}});
 server.setRequestHandler(ListToolsRequestSchema, async () => {
  const {tools} = await client.listTools();
  return {tools:tools.filter(t=>t.name.startsWith('bank_')).map(t=>({...t,annotations:{...t.annotations,readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}}))};

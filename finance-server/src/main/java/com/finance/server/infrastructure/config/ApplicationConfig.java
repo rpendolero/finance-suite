@@ -105,6 +105,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  MovementManagementService movementManagement(LedgerPort ledger) {
+    return new MovementManagementService(ledger);
+  }
+
+  @Bean
   ImportService importService(
       LedgerPort ledger,
       StatementParserPort parser,
@@ -185,8 +190,9 @@ public class ApplicationConfig {
   @Bean
   ToolCallbackProvider tools(
       FinanceTools tools,
+      com.finance.server.infrastructure.adapter.in.mcp.ClassificationTools classification,
       com.finance.server.infrastructure.adapter.in.mcp.ExtendedTools extended,
       com.finance.server.infrastructure.adapter.in.mcp.FinancialReportTools report) {
-    return MethodToolCallbackProvider.builder().toolObjects(tools, extended, report).build();
+    return MethodToolCallbackProvider.builder().toolObjects(tools, extended, report, classification).build();
   }
 }

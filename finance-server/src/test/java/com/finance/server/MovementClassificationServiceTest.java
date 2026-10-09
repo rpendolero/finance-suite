@@ -24,6 +24,19 @@ class MovementClassificationServiceTest {
           }), new com.finance.server.application.service.MovementKindDetectionService());
 
   @Test
+  void normalMerchantRulePreservesRefundTreatmentAndRefundRuleDoesNotMatchCharges() {
+    var refund = new Movement("refund", "account", "refund", LocalDate.of(2026, 10, 1), new BigDecimal("10"), "EUR",
+        "Devolución", "MERCADONA", "UNCLASSIFIED", Movement.Kind.REFUND, Movement.Status.BOOKED);
+    var normalRule = new ClassificationRule("merchant_normal", 10, ClassificationRule.MatchType.MERCHANT,
+        "MERCADONA", "ALIMENTACION", "SUPERMERCADO", Movement.Kind.NORMAL, new BigDecimal("0.99"));
+    assertThat(classifier.classify(refund, List.of(normalRule)).kind()).isEqualTo(Movement.Kind.REFUND);
+    var refundRule = new ClassificationRule("merchant_refund", 10, ClassificationRule.MatchType.MERCHANT,
+        "MERCADONA", "ALIMENTACION", "SUPERMERCADO", Movement.Kind.REFUND, new BigDecimal("0.99"));
+    assertThat(classifier.classify(movement("Compra Mercadona", "MERCADONA", "UNCLASSIFIED"), List.of(refundRule)).kind())
+        .isEqualTo(Movement.Kind.NORMAL);
+  }
+
+  @Test
   void merchantRuleNormalizesAndClassifiesNoisyBankText() {
     Movement movement =
         movement("COMPRA EN MERCADONA 1234 MADRID ES", null, "UNCLASSIFIED");

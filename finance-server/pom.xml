@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.finance</groupId>
     <artifactId>finance-suite</artifactId>
-    <version>0.4.6</version>
+    <version>0.5.2</version>
   </parent>
   <artifactId>finance-server</artifactId>
   <name>finance-server</name>
@@ -29,6 +29,10 @@
     </dependencies>
   </dependencyManagement>
   <dependencies>
+    <dependency>
+      <groupId>com.finance</groupId>
+      <artifactId>finance-statements</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.finance</groupId>
       <artifactId>finance-domain</artifactId>
