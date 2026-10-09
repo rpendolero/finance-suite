@@ -1,4 +1,4 @@
-# Finance Dashboard 0.5.2
+# Finance Dashboard 0.5.3
 
 Dashboard React/TypeScript de Finance Suite. Consume exclusivamente la API REST del finance-server.
 

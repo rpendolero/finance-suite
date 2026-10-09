@@ -8,7 +8,7 @@ Para importar el XLS ya descargado:
 
 ```bash
 export FINANCE_IMPORTER_PASSWORD='credencial-del-importador-de-al-menos-20-caracteres'
-java -jar target/finance-importer-0.5.2.jar \
+java -jar target/finance-importer-0.5.3.jar \
   --spring.config.additional-location=file:./config/kutxabank.yml \
   --finance.importer.job=kutxabank-excel
 ```
