@@ -22,8 +22,22 @@ La dirección depende del signo del importe, no del nombre de la categoría. Los
 
 La API debe incluir `GET /api/dashboard/flows?from=YYYY-MM-DD&to=YYYY-MM-DD&direction=INCOME|EXPENSE&offset=0&limit=25`. El parámetro opcional `category` filtra los movimientos y sus totales antes de paginarlos. Actualiza API y frontend juntos; no necesita cambios de base de datos.
 
+## Clasificar movimientos
+
+«Revisar», «Movimientos» y el detalle de cada categoría comparten el mismo editor de tratamiento, categoría y subcategoría. Con rol ADMIN, «Solo este» modifica el movimiento elegido. «Aplicar al comercio» modifica el histórico del mismo comercio normalizado, incluidos los movimientos clasificados manualmente y de otros períodos o productos, y guarda una regla para futuras importaciones. Otros comercios no se recategorizan con esta acción. Las devoluciones existentes conservan su tratamiento al aplicar una categoría normal al comercio.
+
+Después de guardar se actualizan los movimientos, las categorías y el resumen del dashboard. Si un movimiento pasa a otra categoría o deja de ser computable, desaparece del desplegable anterior. «Movimientos» mantiene la opción de eliminar. El rol READER puede consultar los datos sin acciones de escritura.
+
 ## Build
 
 ```bash
 npm run build
 ```
+
+## Comprobaciones del editor
+
+```bash
+npm test
+```
+
+Comprueba el renderizado del editor para ADMIN y READER, los tratamientos válidos, el alcance de las peticiones de clasificación y la cabecera CSRF.

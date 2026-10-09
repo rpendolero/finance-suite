@@ -1,6 +1,7 @@
 package com.finance.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
@@ -119,7 +120,48 @@ class ClassificationManagementServiceTest {
 
     verify(settings).saveRule(any(ClassificationRule.class));
     assertThat(result.reclassified()).isEqualTo(1);
-    verify(ledger, atLeast(2)).updateClassifications(anyList());
+    verify(ledger).updateClassifications(anyList());
+  }
+
+  @Test
+  void applyingToMerchantChangesOnlyMatchingHistoryIncludingManualRowsAndKeepsRefunds() {
+    var selected = unclassified("MERCADONA 1234");
+    var manual = new Movement("manual", "other-account", "manual", LocalDate.of(2026, 9, 1),
+        new BigDecimal("-40"), "EUR", "Compra Mercadona", "MERCADONA", "UNCLASSIFIED", Movement.Kind.NORMAL, Movement.Status.BOOKED)
+        .withClassification("UNCLASSIFIED", null, Movement.Kind.NORMAL, Movement.ClassificationSource.MANUAL, BigDecimal.ONE);
+    var refund = new Movement("refund", "account", "refund", LocalDate.of(2026, 8, 1),
+        new BigDecimal("10"), "EUR", "Devolución Mercadona", "MERCADONA", "UNCLASSIFIED", Movement.Kind.REFUND, Movement.Status.BOOKED);
+    var unrelated = new Movement("other", "account", "other", LocalDate.of(2026, 10, 1),
+        new BigDecimal("-200"), "EUR", "Compra Lidl", "LIDL", "UNCLASSIFIED", Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    when(ledger.movement("id")).thenReturn(Optional.of(selected));
+    when(ledger.allMovements()).thenReturn(List.of(selected, manual, refund, unrelated));
+    var result = service.classifyManually("id", "ALIMENTACION", "SUPERMERCADO", Movement.Kind.NORMAL, true, true);
+    assertThat(result.reclassified()).isEqualTo(3);
+    @SuppressWarnings("unchecked") ArgumentCaptor<List<Movement>> captor = ArgumentCaptor.forClass(List.class);
+    verify(ledger).updateClassifications(captor.capture());
+    assertThat(captor.getValue()).extracting(Movement::id).containsExactly("id", "manual", "refund");
+    assertThat(captor.getValue()).allSatisfy(value -> {
+      assertThat(value.category()).isEqualTo("ALIMENTACION");
+      assertThat(value.classificationSource()).isEqualTo(Movement.ClassificationSource.MANUAL);
+    });
+    assertThat(captor.getValue().get(2).kind()).isEqualTo(Movement.Kind.REFUND);
+    assertThat(captor.getValue().get(2).amount()).isEqualByComparingTo("10");
+    verify(settings).saveRule(any(ClassificationRule.class));
+    verify(settings, never()).rules();
+  }
+
+  @Test
+  void merchantValidationHappensBeforeAnyWrites() {
+    var selected = new Movement("id", "account", "id", LocalDate.of(2026, 10, 1),
+        new BigDecimal("10"), "EUR", "Mercadona", "MERCADONA", "UNCLASSIFIED", Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    when(ledger.movement("id")).thenReturn(Optional.of(selected));
+    var debit = new Movement("debit", "account", "debit", LocalDate.of(2026, 9, 1),
+        new BigDecimal("-20"), "EUR", "Mercadona", "MERCADONA", "UNCLASSIFIED", Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    when(ledger.allMovements()).thenReturn(List.of(selected, debit));
+    assertThatThrownBy(() -> service.classifyManually("id", "ALIMENTACION", "SUPERMERCADO", Movement.Kind.REFUND, true, true))
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(ledger, never()).updateClassifications(anyList());
+    verify(settings, never()).saveRule(any(ClassificationRule.class));
   }
 
   @Test

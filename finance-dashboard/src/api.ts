@@ -44,6 +44,7 @@ export type ReclassificationResult = {
     updated: number;
     unclassified: number
 };
+export type ClassificationResult = {movement: Movement; reclassified: number};
 export type Overview = {
     totalBalance: number;
     income: number;
@@ -133,7 +134,10 @@ const json = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
     const method = (init.method || 'GET').toUpperCase();
     const headers = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? withCsrf(init.headers) : init.headers;
     const r = await fetch(url, {...init, headers, credentials: 'include'});
-    if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+    if (!r.ok) {
+        const problem = await r.json().catch(() => null);
+        throw new Error(typeof problem?.detail === 'string' ? problem.detail : `API ${r.status}: ${r.statusText}`);
+    }
     return r.status === 204 ? undefined as T : r.json()
 };
 const sendJson = async <T>(url: string, method: 'POST' | 'PUT' | 'PATCH', body?: unknown): Promise<T> => {
@@ -143,7 +147,10 @@ const sendJson = async <T>(url: string, method: 'POST' | 'PUT' | 'PATCH', body?:
         headers: withCsrf(body === undefined ? {} : {'Content-Type': 'application/json'}),
         body: body === undefined ? undefined : JSON.stringify(body)
     });
-    if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
+    if (!r.ok) {
+        const problem = await r.json().catch(() => null);
+        throw new Error(typeof problem?.detail === 'string' ? problem.detail : `API ${r.status}: ${r.statusText}`);
+    }
     return r.status === 204 ? undefined as T : r.json()
 };
 const q = (from: string, to: string, productId?: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${productId ? `&productId=${encodeURIComponent(productId)}` : ''}`;
@@ -178,7 +185,7 @@ export const api = {
             kind: string;
             createRule: boolean;
             applyToSimilar: boolean
-        }) => sendJson<unknown>(`/api/movements/${encodeURIComponent(id)}/classification`, 'PATCH', classification),
+        }) => sendJson<ClassificationResult>(`/api/movements/${encodeURIComponent(id)}/classification`, 'PATCH', classification),
     reclassify: () => sendJson<ReclassificationResult>('/api/classification/reclassify', 'POST'),
     movements: (from: string, to: string, productId?: string, limit = 10) => json<Movement[]>(`/api/movements?${q(from, to, productId)}&limit=${limit}`),
     exportMovements: (f: MovementFilters) => {

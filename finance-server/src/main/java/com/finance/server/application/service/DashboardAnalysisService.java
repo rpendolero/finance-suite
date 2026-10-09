@@ -52,11 +52,11 @@ public class DashboardAnalysisService {
     public enum FlowDirection { EXPENSE, INCOME }
 
     public record FlowMovement(String id, String productId, LocalDate date, BigDecimal amount,
-                               String description, String merchant, String category, String subcategory,
+                               String description, String merchant, String normalizedMerchant, String category, String subcategory,
                                Movement.Kind kind) {
         static FlowMovement from(Movement movement) {
             return new FlowMovement(movement.id(), movement.productId(), movement.date(), movement.amount(),
-                    movement.description(), movement.merchant(), movement.category(), movement.subcategory(), movement.kind());
+                    movement.description(), movement.merchant(), movement.normalizedMerchant(), movement.category(), movement.subcategory(), movement.kind());
         }
     }
 

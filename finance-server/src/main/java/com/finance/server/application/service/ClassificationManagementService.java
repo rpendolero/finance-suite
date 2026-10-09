@@ -6,6 +6,7 @@ import com.finance.domain.Period;
 import com.finance.server.application.port.LedgerPort;
 import com.finance.server.application.port.SettingsPort;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -63,10 +64,7 @@ public final class ClassificationManagementService {
         ledger.movement(id)
             .orElseThrow(() -> new IllegalArgumentException("Movimiento inexistente: " + id));
 
-    String normalizedMerchant =
-        current.normalizedMerchant() == null
-            ? merchants.normalize(current.merchant(), current.description())
-            : current.normalizedMerchant();
+    String normalizedMerchant = normalizedMerchant(current);
 
     Movement updated =
         Movement.normalizedCopy(current, normalizedMerchant)
@@ -79,16 +77,13 @@ public final class ClassificationManagementService {
                     : Movement.ClassificationSource.MANUAL,
                 unclassified ? BigDecimal.ZERO.setScale(4) : BigDecimal.ONE.setScale(4));
 
-    ledger.updateClassifications(List.of(updated));
-
-    int reclassified = 0;
+    ClassificationRule merchantRule = null;
     if (createRule) {
       if (normalizedMerchant == null || normalizedMerchant.isBlank()) {
         throw new IllegalArgumentException(
             "No se puede crear una regla sin un comercio normalizado");
       }
-      settings.saveRule(
-          new ClassificationRule(
+      merchantRule = new ClassificationRule(
               manualRuleId(normalizedMerchant),
               10,
               ClassificationRule.MatchType.MERCHANT,
@@ -96,10 +91,27 @@ public final class ClassificationManagementService {
               canonicalCategory,
               canonicalSubcategory,
               kind,
-              new BigDecimal("0.9900")));
-
-      if (applyToSimilar) reclassified = reclassifyAll().updated();
+              new BigDecimal("0.9900"));
     }
+
+    var changes = new ArrayList<Movement>();
+    changes.add(updated);
+    if (createRule && applyToSimilar) {
+      for (Movement candidate : ledger.allMovements()) {
+        if (id.equals(candidate.id()) || !normalizedMerchant.equals(normalizedMerchant(candidate))) continue;
+        if (kind == Movement.Kind.REFUND && candidate.amount().signum() <= 0)
+          throw new IllegalArgumentException("No se puede aplicar Devolución a cargos del comercio. Usa Solo este.");
+        Movement.Kind candidateKind = kind == Movement.Kind.NORMAL && candidate.kind() == Movement.Kind.REFUND
+            ? Movement.Kind.REFUND : kind;
+        Movement classified = Movement.normalizedCopy(candidate, normalizedMerchant).withClassification(
+            canonicalCategory, canonicalSubcategory, candidateKind, Movement.ClassificationSource.MANUAL, BigDecimal.ONE.setScale(4));
+        if (!classified.equals(candidate)) changes.add(classified);
+      }
+    }
+    // Validate all matching movements before persisting; never reclassify unrelated merchants here.
+    ledger.updateClassifications(changes);
+    if (merchantRule != null) settings.saveRule(merchantRule);
+    int reclassified = createRule && applyToSimilar ? changes.size() : 0;
 
     log.info(
         "Movement manually classified: id={}, category={}, subcategory={}, ruleCreated={}, reclassified={}",
@@ -159,6 +171,11 @@ public final class ClassificationManagementService {
   private boolean isUnclassified(Movement movement) {
     return movement.classificationSource() == Movement.ClassificationSource.UNCLASSIFIED
         || CategoryCatalogService.UNCLASSIFIED.equalsIgnoreCase(movement.category());
+  }
+
+  private String normalizedMerchant(Movement movement) {
+    return movement.normalizedMerchant() == null || movement.normalizedMerchant().isBlank()
+        ? merchants.normalize(movement.merchant(), movement.description()) : movement.normalizedMerchant();
   }
 
   private String manualRuleId(String normalizedMerchant) {
