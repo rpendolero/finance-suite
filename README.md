@@ -1,4 +1,4 @@
-# Finance Suite 0.5.1
+# Finance Suite 0.5.2
 
 Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
@@ -54,8 +54,8 @@ mvn clean install
 
 Genera dos ejecutables independientes:
 
-- `finance-server/target/finance-server-0.5.1.jar`
-- `finance-importer/target/finance-importer-0.5.1.jar`
+- `finance-server/target/finance-server-0.5.2.jar`
+- `finance-importer/target/finance-importer-0.5.2.jar`
 
 La biblioteca de dominio queda dentro de cada JAR; no es necesario desplegar otro proceso. Los binarios generados no se incluyen en el ZIP. Docker puede compilar y ejecutar el servidor sin instalar JDK en esa máquina.
 
