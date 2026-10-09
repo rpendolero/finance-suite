@@ -4,6 +4,9 @@ import ProductCreate from './ProductCreate';
 import FinancialFlowView from './FinancialFlowView';
 import BankingConnections from './BankingConnections';
 import StatementImport from './StatementImport';
+import PeriodSelector from './PeriodSelector';
+import FinancialCalendar from './FinancialCalendar';
+import {periodRange} from './periods';
 import {useEffect, useState} from 'react';
 import {
     CalendarDays,
@@ -54,18 +57,6 @@ const CATEGORY_COLORS = [
     '#ea580c',
     '#4f46e5'
 ];
-const localDate = (d: Date) => {
-    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-};
-const periodRange = (preset: string, now = new Date()) => {
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (preset === 'LAST_MONTH') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: localDate(new Date(now.getFullYear(), now.getMonth(), 0))};
-    if (preset === '3M') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 2, 1)), to: localDate(end)};
-    if (preset === '6M') return {from: localDate(new Date(now.getFullYear(), now.getMonth() - 5, 1)), to: localDate(end)};
-    if (preset === 'YEAR') return {from: localDate(new Date(now.getFullYear(), 0, 1)), to: localDate(end)};
-    return {from: localDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: localDate(end)};
-};
 const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
     month: 'short'
@@ -125,14 +116,16 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
+    const [periodYear, setPeriodYear] = useState(now.getFullYear());
     const [from, setFrom] = useState(initialPeriod.from);
     const [to, setTo] = useState(initialPeriod.to);
     const [classificationRevision, setClassificationRevision] = useState(0);
     const onClassified = () => setClassificationRevision(current => current + 1);
-    const selectPeriod = (preset: string) => {
+    const selectPeriod = (preset: string, year = periodYear) => {
         setPeriodPreset(preset);
+        setPeriodYear(year);
         if (preset !== 'CUSTOM') {
-            const range = periodRange(preset, now);
+            const range = periodRange(preset, now, year);
             setFrom(range.from);
             setTo(range.to);
         }
@@ -181,22 +174,9 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
                     importados</p></div>
                 <div className="header-actions">
-                    <div className="period period-selector">
-                        <select aria-label="Período" value={periodPreset} onChange={e => selectPeriod(e.target.value)}>
-                            <option value="THIS_MONTH">Este mes</option>
-                            <option value="LAST_MONTH">Mes anterior</option>
-                            <option value="3M">Últimos 3 meses</option>
-                            <option value="6M">Últimos 6 meses</option>
-                            <option value="YEAR">Este año</option>
-                            <option value="CUSTOM">Personalizado</option>
-                        </select>
-                        {periodPreset === 'CUSTOM' && <>
-                            <input aria-label="Desde" type="date" value={from} max={to} onChange={e => setFrom(e.target.value)}/>
-                            <span>—</span>
-                            <input aria-label="Hasta" type="date" value={to} min={from} onChange={e => setTo(e.target.value)}/>
-                        </>}
-                        <small>{from} — {to}</small>
-                    </div>
+                    <PeriodSelector preset={periodPreset} year={periodYear} currentYear={now.getFullYear()} from={from} to={to}
+                                    onPresetChange={selectPeriod} onYearChange={year => selectPeriod(periodPreset, year)}
+                                    onFromChange={setFrom} onToChange={setTo}/>
                     <button className="logout" onClick={onLogout}>{session.username} · Salir</button>
                 </div>
             </header>
@@ -302,11 +282,7 @@ function SectionView({
         </div>) : <Empty>No se han detectado movimientos recurrentes.</Empty>}</div>
     </Page>;
     if (view === 'calendar') return <Page title="Calendario financiero">
-        <div className="calendar-grid">{calendar.map((d: CalendarDay) => <div
-            className={'day ' + (d.expenses > 0 ? 'has-expense' : '')} key={d.date}>
-            <b>{new Date(d.date + 'T00:00:00').getDate()}</b><small>{d.operations} op.</small><span
-            className="neg">{d.expenses ? '-' + eur(d.expenses) : ''}</span><span
-            className="pos">{d.income ? '+' + eur(d.income) : ''}</span></div>)}</div>
+        <FinancialCalendar days={calendar}/>
     </Page>;
     if (view === 'insights') return <Page title="Insights financieros">
         <div className="insight-grid">{insights.length ? insights.map((i: Insight) => <div

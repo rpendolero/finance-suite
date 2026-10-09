@@ -1,4 +1,4 @@
-# Finance Dashboard 0.5.2
+# Finance Dashboard 0.5.3
 
 Dashboard React/TypeScript de Finance Suite. Consume exclusivamente la API REST del finance-server.
 
@@ -13,6 +13,14 @@ npm run dev
 Vite publica en http://localhost:5173 y redirige /api a http://localhost:8081.
 
 Si la API no está disponible, el dashboard muestra el error de conexión.
+
+## Seleccionar período
+
+El selector superior conserva «Este mes», «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado». También permite elegir de enero a diciembre. Al seleccionar un mes aparece el selector «Año», inicialmente con el año actual; el intervalo incluye el mes completo y respeta los años bisiestos. El año elegido para los meses se conserva al cambiar de opción, sin alterar los períodos relativos. Las fechas utilizadas se muestran junto al selector.
+
+## Calendario
+
+El calendario muestra las columnas Lunes, Martes, Miércoles, Jueves, Viernes, Sábado y Domingo. Cada fecha ocupa la columna de su día de la semana, con huecos antes del primer día del período. Conserva el día y el mes, el número de operaciones y los importes de ingresos y gastos. Los períodos que abarcan varios meses mantienen la secuencia de semanas. En pantallas pequeñas permite desplazamiento horizontal para conservar las siete columnas.
 
 ## Ingresos y gastos
 
@@ -40,4 +48,4 @@ npm run build
 npm test
 ```
 
-Comprueba el renderizado del editor para ADMIN y READER, los tratamientos válidos, el alcance de las peticiones de clasificación y la cabecera CSRF.
+Comprueba el selector de períodos, los meses completos y bisiestos, el renderizado del editor para ADMIN y READER, los tratamientos válidos, el alcance de las peticiones de clasificación, la importación y la cabecera CSRF.

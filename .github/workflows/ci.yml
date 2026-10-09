@@ -19,14 +19,34 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Preload Testcontainers images from public mirrors
+      - name: Preload Testcontainers images with registry fallbacks
         run: |
-          docker pull public.ecr.aws/docker/library/mysql:8.4
-          docker tag public.ecr.aws/docker/library/mysql:8.4 mysql:8.4
-          docker pull ghcr.io/testcontainers/ryuk:0.12.0
-          docker tag ghcr.io/testcontainers/ryuk:0.12.0 testcontainers/ryuk:0.12.0
-          docker pull public.ecr.aws/docker/library/alpine:3.17
-          docker tag public.ecr.aws/docker/library/alpine:3.17 alpine:3.17
+          sudo python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('/etc/docker/daemon.json')
+          config = json.loads(path.read_text()) if path.exists() else {}
+          config['registry-mirrors'] = list(dict.fromkeys(['https://mirror.gcr.io', *config.get('registry-mirrors', [])]))
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(config))
+          PY
+          sudo systemctl restart docker
+          pull_image() {
+            local target="$1"
+            shift
+            for source in "$@"; do
+              if docker pull "$source"; then
+                if [ "$source" != "$target" ]; then
+                  docker tag "$source" "$target"
+                fi
+                return 0
+              fi
+            done
+            return 1
+          }
+          pull_image mysql:8.4 mysql:8.4 public.ecr.aws/docker/library/mysql:8.4
+          pull_image testcontainers/ryuk:0.12.0 ghcr.io/testcontainers/ryuk:0.12.0 testcontainers/ryuk:0.12.0
+          pull_image alpine:3.17 alpine:3.17 public.ecr.aws/docker/library/alpine:3.17
       - name: Build and test Maven modules
         run: mvn -B verify
 
