@@ -283,7 +283,7 @@ function SectionView({
     if (view === 'calendar') return <Page title="Calendario financiero">
         <div className="calendar-grid">{calendar.map((d: CalendarDay) => <div
             className={'day ' + (d.expenses > 0 ? 'has-expense' : '')} key={d.date}>
-            <b>{new Date(d.date + 'T00:00:00').getDate()}</b><small>{d.operations} op.</small><span
+            <b><time dateTime={d.date}>{dateLabel(d.date)}</time></b><small>{d.operations} op.</small><span
             className="neg">{d.expenses ? '-' + eur(d.expenses) : ''}</span><span
             className="pos">{d.income ? '+' + eur(d.income) : ''}</span></div>)}</div>
     </Page>;
