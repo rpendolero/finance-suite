@@ -2,6 +2,7 @@ import ClassificationMovementRow from './ClassificationMovementRow';
 import ProductCreate from './ProductCreate';
 import FinancialFlowView from './FinancialFlowView';
 import BankingConnections from './BankingConnections';
+import StatementImport from './StatementImport';
 import {useEffect, useState} from 'react';
 import {
     CalendarDays,
@@ -17,7 +18,8 @@ import {
     TrendingUp,
     TriangleAlert,
     Wallet,
-    Tags
+    Tags,
+    Upload
 } from 'lucide-react';
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
@@ -100,8 +102,9 @@ type View =
     | 'insights'
     | 'review'
     | 'categoryAdmin'
-    | 'banking';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark]];
+    | 'banking'
+    | 'imports';
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -166,7 +169,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     return <div className="shell">
         <aside>
             <div className="brand"><b>▥</b><span>Finance Suite</span></div>
-            <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+            <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
                 className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v0.5.0</small>
@@ -197,7 +200,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
-            {view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
+            {view === 'imports' && session.roles?.includes('ADMIN') ? <StatementImport products={products} onImported={onClassified} onProductCreated={onProductCreated}/> : view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
                 <FinancialFlowView from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
                 <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>

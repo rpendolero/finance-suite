@@ -1,11 +1,19 @@
-package com.finance.importer.infrastructure.adapter.out.csv;
+package com.finance.statements;
 
 import com.finance.domain.Product;
-import com.finance.importer.application.port.StatementPreparationPort;
+import lombok.extern.slf4j.Slf4j;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -15,13 +23,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Owns workbook lifecycle and delegates format differences to strategies.
  */
-@lombok.extern.slf4j.Slf4j
-public final class NativeXlsStatementPreparationAdapter implements StatementPreparationPort {
+@Slf4j
+public final class NativeXlsStatementPreparationAdapter {
     private final List<NativeStatementFormat> formats;
     private final CanonicalCsvValidator canonical;
 
@@ -50,12 +62,24 @@ public final class NativeXlsStatementPreparationAdapter implements StatementPrep
             validate(input);
             return input;
         }
+        return prepareNative(input, provider, null);
+    }
+
+    public Path prepare(Path input, StatementFormat format) {
+        if (format == StatementFormat.CSV) {
+            validate(input);
+            return input;
+        }
+        return prepareNative(input, format.provider(), format);
+    }
+
+    private Path prepareNative(Path input, Product.Provider provider, StatementFormat expected) {
         validateNativeInput(input, provider);
         Path output = null;
         try (var stream = Files.newInputStream(input);
              var workbook = new HSSFWorkbook(stream)) {
             log.info("Native workbook conversion started: provider={}", provider);
-            var format = selectFormat(workbook, provider);
+            var format = selectFormat(workbook, provider, expected);
             var sheet = workbook.getSheet(format.sheetName());
             var formatter = new DataFormatter(Locale.forLanguageTag("es-ES"));
             format.validateTitle(sheet, formatter);
@@ -69,7 +93,7 @@ public final class NativeXlsStatementPreparationAdapter implements StatementPrep
             log.error(
                     "Native workbook conversion failed: errorType={}", failure.getClass().getSimpleName());
             removePartialOutput(output, failure);
-            throw new IllegalArgumentException("No se pudo normalizar el Excel nativo", failure);
+            throw new IllegalArgumentException("No se pudo normalizar el Excel nativo: " + failure.getMessage(), failure);
         }
     }
 
@@ -86,12 +110,13 @@ public final class NativeXlsStatementPreparationAdapter implements StatementPrep
         }
     }
 
-    private NativeStatementFormat selectFormat(HSSFWorkbook workbook, Product.Provider provider) {
+    private NativeStatementFormat selectFormat(HSSFWorkbook workbook, Product.Provider provider, StatementFormat expected) {
         var matches =
                 formats.stream()
                         .filter(
                                 f ->
-                                        f.provider() == provider && matchesHeaders(workbook.getSheet(f.sheetName()), f))
+                                        (expected == null || expected.identifierPrefix().equals(f.identifierPrefix()))
+                                        && f.provider() == provider && matchesHeaders(workbook.getSheet(f.sheetName()), f))
                         .toList();
         if (matches.size() != 1)
             throw new IllegalArgumentException("Formato nativo desconocido o ambiguo");
@@ -137,7 +162,7 @@ public final class NativeXlsStatementPreparationAdapter implements StatementPrep
                 Files.createTempFile(input.toAbsolutePath().getParent(), "statement-normalized-", ".csv");
         try {
             Files.setPosixFilePermissions(
-                    output, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+                    output, PosixFilePermissions.fromString("rw-------"));
             return output;
         } catch (IOException | RuntimeException failure) {
             removePartialOutput(output, failure);
@@ -229,8 +254,8 @@ public final class NativeXlsStatementPreparationAdapter implements StatementPrep
         if (format.textDates() && cell != null && cell.getCellType() == CellType.STRING)
             return LocalDate.parse(
                     cell.getStringCellValue().trim(),
-                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
-                            .withResolverStyle(java.time.format.ResolverStyle.STRICT));
+                    DateTimeFormatter.ofPattern("dd/MM/uuuu")
+                            .withResolverStyle(ResolverStyle.STRICT));
         if (cell == null
                 || cell.getCellType() != CellType.NUMERIC
                 || !DateUtil.isCellDateFormatted(cell))

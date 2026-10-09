@@ -1,7 +1,13 @@
 package com.finance.server.application.service;
 
 import com.finance.domain.Product;
-import com.finance.server.application.port.*;
+import com.finance.statements.StatementFormat;
+import java.util.Arrays;
+import java.util.List;
+import com.finance.server.application.port.SettingsPort;
+import com.finance.server.application.port.LedgerPort;
+import com.finance.server.application.port.StatementParserPort;
+import com.finance.server.application.port.UnitOfWorkPort;
 import java.io.InputStream;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -52,39 +58,32 @@ public final class ImportService {
           InputStream input,
           String productId) {
 
-    log.info(
-            "Statement processing started: productId={}",
-            productId);
+    return importStatement(input, productId, StatementFormat.CSV);
+  }
 
-    requireRegisteredProduct(productId);
+  public List<StatementFormat> availableFormats(String productId) {
+    Product product = requireRegisteredProduct(productId);
+    return Arrays.stream(StatementFormat.values()).filter(format -> format.supports(product)).toList();
+  }
 
+  public Result importStatement(InputStream input, String productId, StatementFormat format) {
+    Product product = requireRegisteredProduct(productId);
+    if (format == null || !format.supports(product))
+      throw new IllegalArgumentException("El formato no corresponde a la entidad o tipo del producto");
+    return unitOfWork.execute(() -> process(input, productId, format));
+  }
+
+  private Result process(InputStream input, String productId, StatementFormat format) {
+    log.info("Statement processing started: productId={}, format={}", productId, format);
     var rules = settings.rules();
-
-    var movements =
-            parser.parse(input, productId).stream()
-                    .map(movement ->
-                            classification.classify(movement, rules))
-                    .toList();
-
-    log.debug(
-            "Statement parsed and classified: productId={}, rows={}",
-            productId,
-            movements.size());
-
+    var parsed = format == StatementFormat.CSV
+        ? parser.parse(input, productId) : parser.parse(input, productId, format);
+    var movements = parsed.stream().map(movement -> classification.classify(movement, rules)).toList();
     int inserted = ledger.insert(movements);
     int duplicates = movements.size() - inserted;
-
-    log.info(
-            "Statement processed: productId={}, read={}, inserted={}, duplicates={}",
-            productId,
-            movements.size(),
-            inserted,
-            duplicates);
-
-    return new Result(
-            movements.size(),
-            inserted,
-            duplicates);
+    log.info("Statement processed: productId={}, format={}, read={}, inserted={}, duplicates={}",
+        productId, format, movements.size(), inserted, duplicates);
+    return new Result(movements.size(), inserted, duplicates);
   }
 
   private void validateAndSaveProduct(
@@ -168,10 +167,8 @@ public final class ImportService {
     }
   }
 
-  private void requireRegisteredProduct(String productId) {
-    if (ledger.product(productId).isEmpty()) {
-      throw new IllegalArgumentException(
-              "Registra el producto antes de importar: " + productId);
-    }
+  private Product requireRegisteredProduct(String productId) {
+    return ledger.product(productId).orElseThrow(() ->
+        new IllegalArgumentException("Registra el producto antes de importar: " + productId));
   }
 }

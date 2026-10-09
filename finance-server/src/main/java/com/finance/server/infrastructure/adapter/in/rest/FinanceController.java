@@ -7,6 +7,10 @@ import com.finance.server.application.port.MovementSearchPort;
 import java.math.BigDecimal;
 import com.finance.server.application.service.*;
 import com.finance.server.infrastructure.adapter.in.dto.ProductDto;
+import com.finance.server.infrastructure.adapter.in.dto.StatementFormatDto;
+import com.finance.statements.StatementFormat;
+import java.util.List;
+import java.util.Locale;
 import com.finance.server.infrastructure.adapter.in.mapper.ProductMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -59,11 +63,28 @@ public class FinanceController {
     ledger.deleteProduct(id);
   }
 
+  @GetMapping("/products/{id}/import-formats")
+  public List<StatementFormatDto> importFormats(@PathVariable String id) {
+    return imports.availableFormats(id).stream().map(StatementFormatDto::from).toList();
+  }
+
   @PostMapping(value = "/products/{id}/imports", consumes = "multipart/form-data")
-  public Object importCsv(@PathVariable String id, @RequestPart MultipartFile file)
-      throws IOException {
+  public ImportService.Result importStatement(
+      @PathVariable String id, @RequestPart MultipartFile file,
+      @RequestParam(defaultValue = "CSV") String format) throws IOException {
+    StatementFormat selected;
+    try {
+      selected = StatementFormat.valueOf(format);
+    } catch (IllegalArgumentException failure) {
+      throw new IllegalArgumentException("Formato de importación desconocido");
+    }
+    if (file.isEmpty()) throw new IllegalArgumentException("El fichero está vacío");
+    if (file.getSize() > 10L * 1024 * 1024) throw new IllegalArgumentException("Máximo 10 MB por fichero");
+    String name = file.getOriginalFilename();
+    if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(selected.extension()))
+      throw new IllegalArgumentException("Selecciona un fichero " + selected.extension() + " para este formato");
     try (var input = file.getInputStream()) {
-      return imports.importCsv(input, id);
+      return imports.importStatement(input, id, selected);
     }
   }
 

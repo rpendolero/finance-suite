@@ -6,6 +6,7 @@ import org.springframework.transaction.TransactionException;
 import jakarta.persistence.PersistenceException;
 import com.finance.server.infrastructure.adapter.out.persistence.DatabaseFailure;
 import org.slf4j.MDC;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,11 @@ public class ApiErrors {
             e instanceof IllegalArgumentException ? e.getMessage() : "Petición inválida");
     p.setTitle("Datos inválidos");
     return p;
+  }
+
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ProblemDetail oversizedUpload(MaxUploadSizeExceededException error) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, "Máximo 10 MB por fichero");
   }
 
   @ExceptionHandler(IllegalStateException.class)

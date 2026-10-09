@@ -1,4 +1,4 @@
-package com.finance.importer.infrastructure.adapter.out.csv;
+package com.finance.statements;
 
 import com.finance.domain.Product.Provider;
 import java.util.List;

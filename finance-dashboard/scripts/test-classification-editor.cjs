@@ -14,7 +14,7 @@ const test = async (name, run) => { await run(); passed++; console.log(`OK ${nam
         fs.symlinkSync(path.resolve('node_modules'), path.join(temporary, 'node_modules'), 'dir');
         await build({logLevel: 'silent', build: {
             outDir: temporary, emptyOutDir: false,
-            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), api: path.resolve('src/api.ts')},
+            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts')},
                 formats: ['cjs'], fileName: (_format, name) => `${name}.cjs`},
             rollupOptions: {external: ['react', 'react/jsx-runtime']}
         }});
@@ -78,6 +78,39 @@ const test = async (name, run) => { await run(); passed++; console.log(`OK ${nam
         await test('validation failures show the API detail', async () => {
             global.fetch = async () => ({ok: false, status: 400, statusText: 'Bad Request', json: async () => ({detail: 'Selecciona subcategoría'})});
             await assert.rejects(api.classifyMovement('one', {category: 'NO_COMPUTABLE', kind: 'NON_COMPUTABLE', createRule: false, applyToSimilar: false}), /Selecciona subcategoría/);
+        });
+        await test('statement upload uses multipart, session and CSRF without a fixed content type', async () => {
+            global.document = {cookie: 'XSRF-TOKEN=upload%20token'};
+            let captured;
+            global.fetch = async (url, init) => {
+                captured = {url, init};
+                return {ok: true, status: 200, json: async () => ({read: 3, inserted: 2, duplicates: 1})};
+            };
+            const file = new File(['bank workbook'], 'statement.xls');
+            assert.deepEqual(await api.importStatement('product-one', 'KUTXABANK_ACCOUNT_XLS', file), {read: 3, inserted: 2, duplicates: 1});
+            assert.equal(captured.url, '/api/products/product-one/imports');
+            assert.equal(captured.init.method, 'POST');
+            assert.equal(captured.init.credentials, 'include');
+            assert.equal(captured.init.headers['X-XSRF-TOKEN'], 'upload token');
+            assert.equal(captured.init.headers['Content-Type'], undefined);
+            assert.ok(captured.init.body instanceof FormData);
+            assert.equal(captured.init.body.get('format'), 'KUTXABANK_ACCOUNT_XLS');
+            assert.equal(captured.init.body.get('file').name, 'statement.xls');
+        });
+        await test('statement screen offers product, format, file and new-product controls', () => {
+            const importerModule = require(path.join(temporary, 'importer.cjs'));
+            const Importer = importerModule.default || importerModule;
+            const html = renderToStaticMarkup(React.createElement(Importer, {
+                products: [{id: 'account', name: 'Mi cuenta', provider: 'ING', type: 'ACCOUNT'}],
+                onImported: () => {}, onProductCreated: () => {}
+            }));
+            for (const label of ['Mi cuenta', 'Formato del fichero', 'Extracto bancario', 'Nuevo producto', 'type="file"'])
+                assert.ok(html.includes(label), label);
+            assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""/);
+        });
+        await test('statement upload exposes backend format validation details', async () => {
+            global.fetch = async () => ({ok: false, status: 400, json: async () => ({detail: 'El formato no corresponde al producto'})});
+            await assert.rejects(api.importStatement('account', 'ING_ACCOUNT_XLS', new File(['file'], 'statement.xls')), /El formato no corresponde al producto/);
         });
         console.log(`${passed} checks passed`);
     } finally { fs.rmSync(temporary, {recursive: true, force: true}); }

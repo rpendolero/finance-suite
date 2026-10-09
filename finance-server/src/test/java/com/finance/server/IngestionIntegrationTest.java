@@ -5,6 +5,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.finance.server.application.port.CategoryCatalogPort;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @Sql("/ingestion-schema.sql")
 class IngestionIntegrationTest {
+  @MockitoBean CategoryCatalogPort catalog;
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   String product =
@@ -53,7 +56,7 @@ class IngestionIntegrationTest {
               multipart("/api/importer/products/a/batches")
                   .file(snapshot(product))
                   .file(file(csv))
-                  .with(httpBasic("importer", "importer-secret-for-test-54321")))
+                  .with(user("importer").roles("IMPORTER")))
           .andExpect(status().isOk())
           .andExpect(jsonPath("inserted").value(i == 0 ? 1 : 0));
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM movement", Integer.class)).isEqualTo(1);
@@ -66,7 +69,7 @@ class IngestionIntegrationTest {
             multipart("/api/importer/products/a/batches")
                 .file(snapshot(product))
                 .file(file("incorrect\n"))
-                .with(httpBasic("importer", "importer-secret-for-test-54321")))
+                .with(user("importer").roles("IMPORTER")))
         .andExpect(status().isBadRequest());
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM product", Integer.class)).isZero();
   }
@@ -77,13 +80,13 @@ class IngestionIntegrationTest {
             multipart("/api/importer/products/a/batches")
                 .file(snapshot(product))
                 .file(file(csv))
-                .with(httpBasic("importer", "importer-secret-for-test-54321")))
+                .with(user("importer").roles("IMPORTER")))
         .andExpect(status().isOk());
     mvc.perform(
             multipart("/api/importer/products/a/batches")
                 .file(snapshot(product.replace("2026-10-02", "2026-10-01")))
                 .file(file(csv))
-                .with(httpBasic("importer", "importer-secret-for-test-54321")))
+                .with(user("importer").roles("IMPORTER")))
         .andExpect(status().isBadRequest());
   }
 }

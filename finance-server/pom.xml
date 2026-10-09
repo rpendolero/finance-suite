@@ -31,6 +31,10 @@
   <dependencies>
     <dependency>
       <groupId>com.finance</groupId>
+      <artifactId>finance-statements</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.finance</groupId>
       <artifactId>finance-domain</artifactId>
     </dependency>
     <dependency>

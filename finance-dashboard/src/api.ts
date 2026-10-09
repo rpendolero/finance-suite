@@ -1,3 +1,5 @@
+export type StatementFormat = {id: string; label: string; extension: string};
+export type ImportResult = {read: number; inserted: number; duplicates: number};
 export type BankConnection = {id: string; bankName: string; country: string; status: string; validUntil?: string; lastSyncAt?: string};
 export type BankAccount = {id: string; externalAccountId: string; productId?: string; name: string; currency: string; cashAccountType?: string};
 export type BankSyncResult = {read: number; inserted: number; duplicates: number; balancesUpdated: number; balancesSkipped: number};
@@ -166,6 +168,13 @@ export const api = {
     login: (username: string, password: string) => json<UserSession>('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password})}),
     me: () => json<UserSession>('/api/auth/me'),
     logout: () => json<void>('/api/auth/logout', {method: 'POST'}),
+    importFormats: (productId: string) => json<StatementFormat[]>(`/api/products/${encodeURIComponent(productId)}/import-formats`),
+    importStatement: (productId: string, format: string, file: File) => {
+        const body = new FormData();
+        body.append('file', file);
+        body.append('format', format);
+        return json<ImportResult>(`/api/products/${encodeURIComponent(productId)}/imports`, {method: 'POST', body});
+    },
     products: () => json<Product[]>('/api/products'),
     saveProduct: (product: ProductInput) => sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),

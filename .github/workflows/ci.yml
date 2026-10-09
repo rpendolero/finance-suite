@@ -34,5 +34,7 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install
+      - name: Test dashboard
+        run: npm test
       - name: Build dashboard
         run: npm run build

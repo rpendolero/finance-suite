@@ -1,12 +1,15 @@
-package com.finance.importer.infrastructure.adapter.out.csv;
+package com.finance.statements;
 
+import com.finance.domain.Product.Provider;
 import java.util.List;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 
 /** Format strategy: identifies a workbook and defines its native columns/statuses. */
 public interface NativeStatementFormat {
-  default com.finance.domain.Product.Provider provider() {
-    return com.finance.domain.Product.Provider.ING;
+  default Provider provider() {
+    return Provider.ING;
   }
 
   default int dateColumn() {

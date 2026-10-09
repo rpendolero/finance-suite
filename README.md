@@ -14,6 +14,7 @@ Dos aplicaciones Java 21 independientes, con arquitectura hexagonal:
 |---|---|---|
 | `finance-importer` | Tu ordenador Linux con escritorio | Playwright, login/2FA, CSV local y envío autenticado |
 | `finance-server` | Servidor local/remoto | Ingestión, MySQL, clasificación, REST y 18 herramientas MCP |
+| `finance-statements` | Biblioteca compartida, no proceso | Parsers de extractos bancarios utilizados por la API y el importador |
 | `finance-domain` | Biblioteca compartida, no proceso | Modelo e invariantes comunes sin Spring ni Playwright |
 
 El servidor no contiene Playwright ni perfiles bancarios. OpenClaw puede estar en una tercera máquina. El importador inicia la actualización desde tu ordenador; no hay orden remota/polling implementado ni se abren puertos en el importador. El servidor sigue disponible cuando tu ordenador está apagado.
@@ -188,3 +189,22 @@ See [logging configuration and Lombok usage](docs/LOGGING.md). Set `FINANCE_LOG_
 ## Kutxabank
 
 [Configuración de cuenta, recorrido y conversión XLS](docs/KUTXABANK.md).
+
+
+### Importación de movimientos desde el frontend
+
+Con la sesión `admin`, abre **Importar**, elige el producto (cuenta o tarjeta), selecciona el formato y sube el fichero original. Si todavía no existe el producto, pulsa **Nuevo producto** en esa misma pantalla. La lista de formatos se obtiene de la API según la entidad y el tipo de producto:
+
+| Entidad / producto | Formato de fichero |
+| --- | --- |
+| ING / cuenta | Excel `.xls`, hoja `Movimientos` |
+| ING / tarjeta de crédito | Excel `.xls`, hoja `Tarjetas`, operaciones liquidadas |
+| Kutxabank / cuenta | Excel `.xls`, hoja `Listado` con columna `saldo` |
+| Kutxabank / tarjeta de crédito o débito | Excel `.xls`, hoja `Listado` con columna `importe de la operación` |
+| Cualquier producto, incluido PayPal | CSV normalizado UTF-8, separado por `;` |
+
+Los límites son 10 MB y 50.000 movimientos por fichero. No se admite `.xlsx` ni formatos nativos distintos de los anteriores. El resultado muestra leídos, importados y duplicados omitidos. Los movimientos se categorizan con las reglas existentes; puedes completar los pendientes en **Revisar**. Se conserva el signo del importe: ingresos positivos y gastos negativos. El fichero importa movimientos; no sustituye el saldo registrado del producto.
+
+Se mantienen los identificadores estables del importador automático. Reimportar el mismo extracto en el mismo producto omite los identificadores ya existentes y conserva las clasificaciones manuales. Las operaciones idénticas repetidas dentro del extracto se conservan mediante un ordinal. La deduplicación utiliza `(productId, externalId)`; una importación manual y una sincronización de Enable Banking pueden proporcionar identificadores distintos para el mismo movimiento y requieren revisión. En CSV debes mantener el mismo `external_id` en futuras importaciones.
+
+La API ofrece `GET /api/products/{id}/import-formats` y `POST /api/products/{id}/imports` (multipart: `file` y `format`). Omitir `format` mantiene la importación CSV anterior. Solo `ADMIN` puede ejecutar esta importación; `READER` puede consultar los formatos. Los parsers residen en `finance-statements` y se comparten con `finance-importer`, sin incluir Playwright en la API. El Dockerfile del servidor incorpora este módulo: reconstruye las imágenes del servidor y del frontend desde la raíz del repositorio para desplegar esta función.

@@ -513,3 +513,18 @@ nav button{display:flex;align-items:center;gap:12px;padding:11px 12px;border-rad
 .product-create-modal .app-modal-head,.product-create-modal .app-modal-actions{flex-shrink:0}
 .product-create-modal select{width:100%;min-height:42px;border:1px solid #d0d5dd;border-radius:9px;padding:9px 11px;font:inherit;background:#fff;color:#101828}
 .product-create-modal p{margin:0;font-size:13px;color:#667085}
+
+/* Bank statement upload */
+.statement-import {display:grid;gap:20px;max-width:1000px}
+.statement-import-form {display:grid;gap:18px;max-width:620px;margin:24px 0}
+.statement-import-form label {display:grid;gap:8px;font-weight:600}
+.statement-import-form input,.statement-import-form select {width:100%;min-width:0;padding:12px;border:1px solid #dce4ed;border-radius:10px;background:#fff;color:inherit;font:inherit}
+.statement-import-form .action {justify-self:start;display:flex;align-items:center;gap:8px;border:0;border-radius:9px;background:#2762c9;color:#fff;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer}
+.statement-import button:disabled {opacity:.55;cursor:default}
+.statement-import button:focus-visible {outline:3px solid #93c5fd;outline-offset:3px}
+.statement-import-result dl {display:flex;flex-wrap:wrap;gap:36px}
+.statement-import-result dt {color:#64748b;font-size:13px}
+.statement-import-result dd {margin:6px 0;font-size:26px;font-weight:700}
+.statement-csv-help {margin-top:20px;font-size:14px}
+.statement-csv-help summary {cursor:pointer;font-weight:600}
+.statement-csv-help pre {overflow:auto;padding:14px;border-radius:8px;background:#f1f5f9;font-size:12px}

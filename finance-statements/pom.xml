@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent><groupId>com.finance</groupId><artifactId>finance-suite</artifactId><version>0.4.6</version></parent>
+  <artifactId>finance-statements</artifactId>
+  <description>Shared bank statement formats for the API and automated importer</description>
+  <dependencies>
+    <dependency><groupId>com.finance</groupId><artifactId>finance-domain</artifactId></dependency>
+    <dependency><groupId>org.apache.poi</groupId><artifactId>poi</artifactId><version>5.4.1</version></dependency>
+    <dependency><groupId>org.apache.commons</groupId><artifactId>commons-csv</artifactId><version>1.14.1</version></dependency>
+    <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId></dependency>
+  </dependencies>
+</project>

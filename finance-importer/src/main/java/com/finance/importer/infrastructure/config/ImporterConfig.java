@@ -6,7 +6,8 @@ import com.finance.importer.application.service.ImportCleanupService;
 import com.finance.importer.application.service.ImporterService;
 import com.finance.importer.infrastructure.adapter.file.LocalFileCleanupAdapter;
 import com.finance.importer.infrastructure.adapter.in.cli.ImporterJobRunner;
-import com.finance.importer.infrastructure.adapter.out.csv.*;
+import com.finance.importer.infrastructure.adapter.out.csv.NativeStatementPreparationAdapter;
+import com.finance.statements.NativeXlsStatementPreparationAdapter;
 import com.finance.importer.infrastructure.adapter.out.http.HttpIngestionAdapter;
 import com.finance.importer.infrastructure.adapter.out.enablebanking.EnableBankingClient;
 import com.finance.importer.infrastructure.adapter.out.playwright.*;
@@ -104,13 +105,7 @@ public class ImporterConfig {
   @Bean
   StatementPreparationPort csvPreparation() {
 
-    return new NativeXlsStatementPreparationAdapter(
-            List.of(
-                    new IngAccountStatementFormat(),
-                    new IngCreditCardStatementFormat(),
-                    new KutxabankAccountStatementFormat(),
-                    new KutxabankCardStatementFormat()),
-            new CanonicalCsvValidator());
+    return new NativeStatementPreparationAdapter(new NativeXlsStatementPreparationAdapter());
   }
 
   // -------------------------------------------------------------------------
