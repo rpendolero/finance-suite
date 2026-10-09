@@ -5,6 +5,7 @@ import FinancialFlowView from './FinancialFlowView';
 import BankingConnections from './BankingConnections';
 import StatementImport from './StatementImport';
 import PeriodSelector from './PeriodSelector';
+import FinancialCalendar from './FinancialCalendar';
 import {periodRange} from './periods';
 import {useEffect, useState} from 'react';
 import {
@@ -281,11 +282,7 @@ function SectionView({
         </div>) : <Empty>No se han detectado movimientos recurrentes.</Empty>}</div>
     </Page>;
     if (view === 'calendar') return <Page title="Calendario financiero">
-        <div className="calendar-grid">{calendar.map((d: CalendarDay) => <div
-            className={'day ' + (d.expenses > 0 ? 'has-expense' : '')} key={d.date}>
-            <b><time dateTime={d.date}>{dateLabel(d.date)}</time></b><small>{d.operations} op.</small><span
-            className="neg">{d.expenses ? '-' + eur(d.expenses) : ''}</span><span
-            className="pos">{d.income ? '+' + eur(d.income) : ''}</span></div>)}</div>
+        <FinancialCalendar days={calendar}/>
     </Page>;
     if (view === 'insights') return <Page title="Insights financieros">
         <div className="insight-grid">{insights.length ? insights.map((i: Insight) => <div

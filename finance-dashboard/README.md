@@ -18,6 +18,10 @@ Si la API no está disponible, el dashboard muestra el error de conexión.
 
 El selector superior conserva «Este mes», «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado». También permite elegir de enero a diciembre. Al seleccionar un mes aparece el selector «Año», inicialmente con el año actual; el intervalo incluye el mes completo y respeta los años bisiestos. El año elegido para los meses se conserva al cambiar de opción, sin alterar los períodos relativos. Las fechas utilizadas se muestran junto al selector.
 
+## Calendario
+
+El calendario muestra las columnas Lunes, Martes, Miércoles, Jueves, Viernes, Sábado y Domingo. Cada fecha ocupa la columna de su día de la semana, con huecos antes del primer día del período. Conserva el día y el mes, el número de operaciones y los importes de ingresos y gastos. Los períodos que abarcan varios meses mantienen la secuencia de semanas. En pantallas pequeñas permite desplazamiento horizontal para conservar las siete columnas.
+
 ## Ingresos y gastos
 
 El apartado «Ingresos y gastos» permite alternar entre ambas vistas y utiliza el período elegido en la cabecera. Cada vista muestra el total y las categorías. Al pulsar una categoría se despliegan sus movimientos, paginados de 25 en 25; una segunda pulsación oculta el detalle. Solo se abre una categoría a la vez. Al cambiar de período o de vista se cierra el detalle.
