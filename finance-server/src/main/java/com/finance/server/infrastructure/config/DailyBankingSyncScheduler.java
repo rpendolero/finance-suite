@@ -8,7 +8,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(prefix = "finance.enable-banking", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("\u0027${finance.enable-banking.enabled:false}\u0027 == \u0027true\u0027 && \u0027${finance.enable-banking.sync.enabled:true}\u0027 == \u0027true\u0027")
 public class DailyBankingSyncScheduler {
   private final BankingSyncService synchronization;
   private final Clock clock;
@@ -24,8 +24,6 @@ public class DailyBankingSyncScheduler {
 
   @Scheduled(cron = "${finance.enable-banking.sync.cron:0 0 6 * * *}",
              zone = "${finance.enable-banking.sync.zone:Europe/Madrid}")
-  @ConditionalOnProperty(prefix = "finance.enable-banking.sync", name = "enabled",
-                         havingValue = "true", matchIfMissing = true)
   public void synchronize() {
     if (!running.compareAndSet(false, true)) {
       log.warn("Scheduled bank synchronization skipped: previous execution is still running");
