@@ -10,6 +10,7 @@ Examples:
   scripts/publish-docker.sh 0.5.3 myuser frontend
 
 Uses the checked-out source version. Builds all selected images before pushing.
+The script can be placed in the project root or a subdirectory such as scripts/.
 Docker login prompts for credentials; credentials are never passed as arguments.
 EOF
 }
@@ -38,7 +39,11 @@ case "$selection" in
   *) fail 'Select all, server or frontend.' ;;
 esac
 
-project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+while [[ ! -f "$project_dir/pom.xml" || ! -d "$project_dir/finance-server" || ! -d "$project_dir/finance-dashboard" ]]; do
+  [[ "$project_dir" != '/' ]] || fail 'Finance Suite root not found. Place the script in the repository root or scripts/.'
+  project_dir="$(dirname -- "$project_dir")"
+done
 cd "$project_dir"
 
 source_version="$(awk '

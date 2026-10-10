@@ -69,7 +69,7 @@ Con Docker instalado y arrancado, utiliza el código de la versión que quieras 
 
 El script comprueba que la versión coincide con el código, inicia sesión, construye el API y el frontend y publica `TU_USUARIO_DOCKERHUB/finance-server:0.5.3` y `TU_USUARIO_DOCKERHUB/finance-dashboard:0.5.3`. Construye ambas imágenes antes de iniciar las subidas y se detiene si falla un comando. Usa la raíz del proyecto como contexto del API y `finance-dashboard` como contexto del frontend, aunque se ejecute desde otro directorio.
 
-Puedes añadir `server` o `frontend` como tercer argumento para publicar solo uno. Para otra versión, actualiza el código y sustituye `0.5.3` por la versión correspondiente. `./scripts/publish-docker.sh --help` muestra los ejemplos.
+Puedes añadir `server` o `frontend` como tercer argumento para publicar solo uno. Para otra versión, actualiza el código y sustituye `0.5.3` por la versión correspondiente. El script también funciona si lo guardas en la raíz y ejecutas `./publish-docker.sh`: detecta la raíz del proyecto buscando el POM y sus módulos. `./scripts/publish-docker.sh --help` muestra los ejemplos.
 
 ## 1. Servidor
 
