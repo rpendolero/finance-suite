@@ -79,4 +79,11 @@ for image in "${images[@]}"; do
   docker push "$docker_user/$image:$version"
 done
 
-printf 'Published version %s successfully.\n' "$version"
+# Publish latest only after all versioned images have been pushed successfully.
+for image in "${images[@]}"; do
+  printf 'Tagging and publishing %s/%s:latest\n' "$docker_user" "$image"
+  docker tag "$docker_user/$image:$version" "$docker_user/$image:latest"
+  docker push "$docker_user/$image:latest"
+done
+
+printf 'Published version %s and latest successfully.\n' "$version"
