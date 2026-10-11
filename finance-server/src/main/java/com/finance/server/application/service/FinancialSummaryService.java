@@ -61,9 +61,10 @@ public class FinancialSummaryService {
     return new Summary(p, income, expenses, operatingNet, savingsRate, categories,
         included.size(), all.size() - included.size(),
         (int) all.stream().filter(m -> m.status() == Movement.Status.PENDING).count(),
-        "Consumo sin inversiones ni financiación; cuotas de deuda sin desglose no "
-            + "se imputan a gastos. Disponible calculado antes de otros movimientos excluidos.",
-        investment, financing, operatingNet.subtract(investment).subtract(financing),
+        "Consumo e intereses financieros incluidos en gastos. Las cuotas sin desglose se "
+            + "imputan a financiación; los intereses identificados no se descuentan dos veces.",
+        investment, financing, operatingNet.subtract(investment).subtract(financing)
+            .add(FinancialMovementAllocation.total(included, FinancialMovementAllocation::financingInterest, true)),
         operatingMarginRate);
   }
 
