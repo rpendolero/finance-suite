@@ -61,7 +61,11 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     }, [from, to, direction, category, offset, detailKey]);
 
     const income = direction === 'INCOME';
-    const title = income ? 'Ingresos' : 'Gastos';
+    const titles: Record<FlowDirection, string> = {
+        INCOME: 'Ingresos', EXPENSE: 'Gastos de consumo',
+        SAVINGS: 'Ahorro e inversión', FINANCING: 'Financiación'
+    };
+    const title = titles[direction];
     const data = summary?.context === context ? summary.data : null;
     const selectedDetail = detail?.key === detailKey ? detail : null;
     const productNames = new Map(products.map(product => [product.id, product.name]));
@@ -82,14 +86,20 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     };
 
     return <section className="page financial-flow">
-        <div className="section-head"><h2>Análisis de ingresos y gastos</h2></div>
+        <div className="section-head"><h2>Análisis de ingresos, consumo, ahorro y financiación</h2></div>
         <div className="flow-switch" role="group" aria-label="Tipo de análisis">
-            <button type="button" aria-pressed={!income} onClick={() => selectDirection('EXPENSE')}>Gastos</button>
+            <button type="button" aria-pressed={direction === 'EXPENSE'} onClick={() => selectDirection('EXPENSE')}>Gastos</button>
             <button type="button" aria-pressed={income} onClick={() => selectDirection('INCOME')}>Ingresos</button>
+            <button type="button" aria-pressed={direction === 'SAVINGS'} onClick={() => selectDirection('SAVINGS')}>Ahorro e inversión</button>
+            <button type="button" aria-pressed={direction === 'FINANCING'} onClick={() => selectDirection('FINANCING')}>Financiación</button>
         </div>
-        <p className="flow-note">{income
-            ? 'Abonos contabilizados. Las devoluciones reducen los gastos y no se cuentan como ingresos.'
-            : 'Cargos contabilizados menos devoluciones. Los movimientos mantienen su signo original.'}
+        <p className="flow-note">{direction === 'INCOME'
+            ? 'Abonos ordinarios; las devoluciones no se cuentan como ingresos.'
+            : direction === 'EXPENSE'
+                ? 'Consumo neto de devoluciones más intereses de deuda identificados. Sin aportaciones ni amortizaciones.'
+                : direction === 'SAVINGS'
+                    ? 'Aportaciones netas a planes de pensiones, fondos y otras inversiones; no son gasto de consumo.'
+                    : 'Cuotas y amortizaciones de deuda. Solo se distinguen capital e intereses cuando vienen desglosados.'}
             {' '}Los movimientos no computables y pendientes quedan excluidos.</p>
         {message && <div className="classification-message" role="status">{message}</div>}
         {catalogError && <div className="api-error" role="alert">{catalogError}</div>}

@@ -188,11 +188,17 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
                         title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
+                        icon={TrendingUp}/><Card title="Consumo e intereses" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
-                                                 tone="red"/><Card title="Ahorro del período" value={eur(overview.savings)}
-                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % tasa de ahorro'}
-                                                                   icon={PiggyBank} tone="purple"/></section>
+                                                 tone="red"/><Card title="Ahorro e inversión" value={eur(overview.savings)}
+                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados'}
+                                                                   icon={PiggyBank} tone="purple"/>
+                        <Card title="Pagos de financiación" value={eur(overview.financingPayments)}
+                              sub={eur(overview.financingUnallocated) + ' sin desglose de capital/intereses'}
+                              icon={Landmark}/>
+                        <Card title="Flujo disponible del período" value={eur(overview.availableAfterAllocations)}
+                              sub="Ingresos − consumo − ahorro − financiación; no es el saldo bancario"
+                              icon={Wallet} tone="green"/></section>
                     <section className="grid3">
                         <div className="card wide"><Title t="Evolución financiera"/>{trend.length ?
                             <ResponsiveContainer width="100%" height={245}><BarChart data={trend}><CartesianGrid
@@ -205,14 +211,14 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                             <Empty>Sin movimientos en el período.</Empty>}</div>
                         <div className="card"><Title t="Gastos por categoría"/>{categories.length ?
                             <div className="pie"><ResponsiveContainer width="48%" height={220}><PieChart><Pie
-                                data={categories} dataKey="amount" nameKey="category" innerRadius={55}
-                                outerRadius={82}>{categories.map((_, i) => <Cell key={i}
+                                data={categories.filter(category => category.amount > 0)} dataKey="amount" nameKey="category" innerRadius={55}
+                                outerRadius={82}>{categories.filter(category => category.amount > 0).map((_, i) => <Cell key={i}
                                 fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}/>)}</Pie><Tooltip
                                 formatter={(v) => eur(Number(v))}/></PieChart></ResponsiveContainer>
-                                <div className="legend">{categories.slice(0, 7).map((c, i) => <div key={c.category}>
+                                <div className="legend">{categories.filter(category => category.amount > 0).slice(0, 7).map((c, i) => <div key={c.category}>
                                     <span className="legend-label"><i
                                         style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
-                            </div> : <Empty>Sin gastos clasificados.</Empty>}</div>
+                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones sin compra identificada se reflejan como ajuste negativo, no como ingreso ni porción del gráfico.</p></div>
                         <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
                                 <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
                                 30 días.</p></> :
