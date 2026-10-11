@@ -92,7 +92,8 @@ class FinanceServiceTest {
     assertThat(s.net()).isEqualByComparingTo("2920");
     assertThat(s.excluded()).isEqualTo(3);
     assertThat(s.pending()).isEqualTo(1);
-    assertThat(s.savingsRatePercent()).isEqualByComparingTo("97.33");
+    assertThat(s.savingsRatePercent()).isEqualByComparingTo("0");
+    assertThat(s.operatingMarginRatePercent()).isEqualByComparingTo("97.33");
   }
 
   @Test
