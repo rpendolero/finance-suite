@@ -81,15 +81,20 @@ public class DashboardAnalysisService {
             case SAVINGS -> included.stream().filter(FinancialMovementAllocation::saving).toList();
             case FINANCING -> included.stream().filter(FinancialMovementAllocation::financing).toList();
         };
-        if (category != null)
-            movements = movements.stream().filter(m -> category.equals(blank(m.category(), "Sin categoría"))).toList();
+        if (category != null) {
+            var selected = direction;
+            movements = movements.stream().filter(m ->
+                category.equals(selected == FlowDirection.EXPENSE
+                    ? expenseCategory(m) : blank(m.category(), "Sin categoría"))).toList();
+        }
         Function<List<Movement>, BigDecimal> sum = switch (direction) {
             case INCOME -> this::income;
             case EXPENSE -> this::expenses;
             case SAVINGS, FINANCING -> this::cashOutflow;
         };
         var total = sum.apply(movements);
-        var categories = stats(movements, m -> blank(m.category(), "Sin categoría"), total, sum).stream()
+        var categories = stats(movements, m -> direction == FlowDirection.EXPENSE
+                ? expenseCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
                 .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
         var counterparties = stats(movements, m -> blank(m.merchant(), blank(m.description(), "Desconocido")), total, sum).stream()
                 .map(s -> new MerchantStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
@@ -132,7 +137,7 @@ public class DashboardAnalysisService {
     public List<CategoryStat> categories(Period period, String productId) {
         var expense = expenseMovements(included(period, productId));
         var total = expenses(expense);
-        return stats(expense, m -> blank(m.category(), "Sin categoría"), total).stream()
+        return stats(expense, this::expenseCategory, total).stream()
                 .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
     }
 
@@ -231,6 +236,12 @@ public class DashboardAnalysisService {
 
     private BigDecimal money(BigDecimal n) {
         return n == null ? ZERO : n.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String expenseCategory(Movement movement) {
+        return "INGRESOS".equalsIgnoreCase(movement.category())
+                && "DEVOLUCIONES".equalsIgnoreCase(movement.subcategory())
+            ? "DEVOLUCIONES_SIN_ASOCIAR" : blank(movement.category(), "Sin categoría");
     }
 
     private String blank(String s, String fallback) {
