@@ -7,10 +7,10 @@ const eur = (amount: number) => new Intl.NumberFormat('es-ES', {style: 'currency
 const PAGE_SIZE = 25;
 type Expansion = {context: string; category: string; offset: number};
 
-export default function FinancialFlowView({from, to, products, canEdit, onClassified}: {
-    from: string; to: string; products: Product[]; canEdit: boolean; onClassified: () => void;
+export default function FinancialFlowView({from, to, products, canEdit, onClassified, initialDirection = 'EXPENSE'}: {
+    from: string; to: string; products: Product[]; canEdit: boolean; onClassified: () => void; initialDirection?: FlowDirection;
 }) {
-    const [direction, setDirection] = useState<FlowDirection>('EXPENSE');
+    const [direction, setDirection] = useState<FlowDirection>(initialDirection);
     const context = `${from}:${to}:${direction}`;
     const [expanded, setExpanded] = useState<Expansion | null>(null);
     const category = expanded?.context === context ? expanded.category : undefined;
@@ -19,6 +19,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const [summaryError, setSummaryError] = useState('');
     const [revision, setRevision] = useState(0);
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
     const [catalogError, setCatalogError] = useState('');
     const [message, setMessage] = useState('');
     const detailKey = JSON.stringify([context, category, offset, revision]);
@@ -26,6 +27,14 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const accordionId = useId();
 
     useEffect(() => { setExpanded(null); setMessage(''); }, [context]);
+
+    useEffect(() => {
+        let active = true;
+        api.adminCategories().then(items => {
+            if (active) setCategoryNames(Object.fromEntries(items.map(item => [item.code, item.name])));
+        }).catch(() => { /* Fall back to public catalog labels for non-admin users. */ });
+        return () => { active = false; };
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -67,6 +76,8 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     };
     const title = titles[direction];
     const data = summary?.context === context ? summary.data : null;
+    const visibleCategories = (data?.categories ?? []).filter(item => item.operations > 0);
+    const categoryLabel = (code: string) => categoryNames[code] ?? catalog.find(item => item.code === code)?.label ?? code;
     const selectedDetail = detail?.key === detailKey ? detail : null;
     const productNames = new Map(products.map(product => [product.id, product.name]));
     const selectDirection = (value: FlowDirection) => {
@@ -90,13 +101,11 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
         <div className="flow-switch" role="group" aria-label="Tipo de análisis">
             <button type="button" aria-pressed={direction === 'EXPENSE'} onClick={() => selectDirection('EXPENSE')}>Gastos</button>
             <button type="button" aria-pressed={income} onClick={() => selectDirection('INCOME')}>Ingresos</button>
-            <button type="button" aria-pressed={direction === 'SAVINGS'} onClick={() => selectDirection('SAVINGS')}>Ahorro e inversión</button>
-            <button type="button" aria-pressed={direction === 'FINANCING'} onClick={() => selectDirection('FINANCING')}>Financiación</button>
         </div>
         <p className="flow-note">{direction === 'INCOME'
-            ? 'Abonos ordinarios; las devoluciones no se cuentan como ingresos.'
+            ? 'Ingresos ordinarios y devoluciones positivas. Financiación y ahorro e inversión se muestran en Gastos.'
             : direction === 'EXPENSE'
-                ? 'Consumo neto de devoluciones más intereses de deuda identificados. Sin aportaciones ni amortizaciones.'
+                ? 'Gastos de consumo, financiación y ahorro e inversión, separados por categorías. Las devoluciones positivas se muestran en ingresos.'
                 : direction === 'SAVINGS'
                     ? 'Aportaciones netas a planes de pensiones, fondos y otras inversiones; no son gasto de consumo.'
                     : 'Cuotas y amortizaciones de deuda. Solo se distinguen capital e intereses cuando vienen desglosados.'}
@@ -106,20 +115,20 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
         {summaryError ? <div className="api-error" role="alert">{summaryError}</div> : !data ?
             <div className="loading" role="status">Cargando {title.toLowerCase()}…</div> : <>
             <div className="card flow-total">
-                <span>Total de {title.toLowerCase()} del período</span>
+                <span>{income ? 'Total de ingresos del período' : 'Total de gastos, financiación y ahorro del período'}</span>
                 <strong>{eur(data.total)}</strong>
                 <small>{data.operations} operaciones · {from} — {to}</small>
             </div>
             <div className="card flow-categories">
                 <div className="title"><h2>Categorías</h2></div>
                 <p className="flow-note">Pulsa una categoría para mostrar u ocultar sus movimientos.</p>
-                {data.categories.length ? data.categories.map((item, index) => {
+                {visibleCategories.length ? visibleCategories.map((item, index) => {
                     const open = category === item.category;
                     const regionId = `${accordionId}-category-${index}`;
                     return <section className="flow-category" key={item.category}>
                         <h3><button type="button" className="flow-category-toggle" id={`${regionId}-toggle`}
                             aria-expanded={open} aria-controls={regionId} onClick={() => toggleCategory(item.category)}>
-                            <span><b>{item.category}</b><small>{item.operations} operaciones · {item.share.toFixed(1)} %</small></span>
+                            <span><b>{categoryLabel(item.category)}</b><small>{item.operations} operaciones · {item.share.toFixed(1)} %</small></span>
                             <strong>{eur(item.amount)}</strong><ChevronDown size={20} aria-hidden="true"/>
                         </button></h3>
                         {open && <div className="flow-category-detail" id={regionId} role="region" aria-labelledby={`${regionId}-toggle`}>

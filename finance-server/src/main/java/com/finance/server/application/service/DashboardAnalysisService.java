@@ -77,7 +77,7 @@ public class DashboardAnalysisService {
         var included = included(period, productId);
         var movements = switch (direction) {
             case INCOME -> incomeMovements(included);
-            case EXPENSE -> expenseMovements(included);
+            case EXPENSE -> included.stream().filter(m -> FinancialMovementAllocation.consumption(m) || FinancialMovementAllocation.saving(m) || FinancialMovementAllocation.financing(m)).toList();
             case SAVINGS -> included.stream().filter(FinancialMovementAllocation::saving).toList();
             case FINANCING -> included.stream().filter(FinancialMovementAllocation::financing).toList();
         };
@@ -85,16 +85,16 @@ public class DashboardAnalysisService {
             var selected = direction;
             movements = movements.stream().filter(m ->
                 category.equals(selected == FlowDirection.EXPENSE
-                    ? expenseCategory(m) : blank(m.category(), "Sin categoría"))).toList();
+                    ? expenseFlowCategory(m) : selected == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"))).toList();
         }
         Function<List<Movement>, BigDecimal> sum = switch (direction) {
-            case INCOME -> this::income;
-            case EXPENSE -> this::expenses;
+            case INCOME -> this::flowIncome;
+            case EXPENSE -> this::cashOutflow;
             case SAVINGS, FINANCING -> this::cashOutflow;
         };
         var total = sum.apply(movements);
         var categories = stats(movements, m -> direction == FlowDirection.EXPENSE
-                ? expenseCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
+                ? expenseFlowCategory(m) : direction == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
                 .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
         var counterparties = stats(movements, m -> blank(m.merchant(), blank(m.description(), "Desconocido")), total, sum).stream()
                 .map(s -> new MerchantStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
@@ -192,6 +192,21 @@ public class DashboardAnalysisService {
         return ms.stream().filter(FinancialMovementAllocation::consumption).toList();
     }
 
+    private String expenseFlowCategory(Movement movement) {
+        if (FinancialMovementAllocation.saving(movement)) return "Ahorro e inversión";
+        if (FinancialMovementAllocation.financing(movement)) return "Financiación";
+        return expenseCategory(movement);
+    }
+
+    private String incomeCategory(Movement movement) {
+        if (FinancialMovementAllocation.refund(movement)) return "Devoluciones";
+        return blank(movement.category(), "Sin categoría");
+    }
+
+    private BigDecimal flowIncome(List<Movement> ms) {
+        return ms.stream().map(Movement::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     private BigDecimal income(List<Movement> ms) {
         return incomeMovements(ms).stream().map(Movement::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -239,9 +254,7 @@ public class DashboardAnalysisService {
     }
 
     private String expenseCategory(Movement movement) {
-        return "INGRESOS".equalsIgnoreCase(movement.category())
-                && "DEVOLUCIONES".equalsIgnoreCase(movement.subcategory())
-            ? "DEVOLUCIONES_SIN_ASOCIAR" : blank(movement.category(), "Sin categoría");
+        return blank(movement.category(), "Sin categoría");
     }
 
     private String blank(String s, String fallback) {

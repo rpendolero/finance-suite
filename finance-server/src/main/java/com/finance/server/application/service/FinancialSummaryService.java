@@ -69,9 +69,7 @@ public class FinancialSummaryService {
   }
 
   private String expenseCategory(Movement movement) {
-    return "INGRESOS".equalsIgnoreCase(movement.category())
-            && "DEVOLUCIONES".equalsIgnoreCase(movement.subcategory())
-        ? "DEVOLUCIONES_SIN_ASOCIAR" : movement.category();
+    return movement.category();
   }
 
   public Comparison compare(Period a, Period b, String id) {
