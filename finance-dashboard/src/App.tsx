@@ -188,7 +188,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
                         title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Gasto de consumo" value={eur(overview.expenses)}
+                        icon={TrendingUp}/><Card title="Consumo e intereses" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
                                                  tone="red"/><Card title="Ahorro e inversión" value={eur(overview.savings)}
                                                                    sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados'}
