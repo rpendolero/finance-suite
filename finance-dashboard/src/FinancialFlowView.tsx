@@ -19,6 +19,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const [summaryError, setSummaryError] = useState('');
     const [revision, setRevision] = useState(0);
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
+    const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
     const [catalogError, setCatalogError] = useState('');
     const [message, setMessage] = useState('');
     const detailKey = JSON.stringify([context, category, offset, revision]);
@@ -26,6 +27,14 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const accordionId = useId();
 
     useEffect(() => { setExpanded(null); setMessage(''); }, [context]);
+
+    useEffect(() => {
+        let active = true;
+        api.adminCategories().then(items => {
+            if (active) setCategoryNames(Object.fromEntries(items.map(item => [item.code, item.name])));
+        }).catch(() => { /* Fall back to public catalog labels for non-admin users. */ });
+        return () => { active = false; };
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -68,6 +77,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const title = titles[direction];
     const data = summary?.context === context ? summary.data : null;
     const visibleCategories = (data?.categories ?? []).filter(item => item.operations > 0);
+    const categoryLabel = (code: string) => categoryNames[code] ?? catalog.find(item => item.code === code)?.label ?? code;
     const selectedDetail = detail?.key === detailKey ? detail : null;
     const productNames = new Map(products.map(product => [product.id, product.name]));
     const selectDirection = (value: FlowDirection) => {
@@ -118,7 +128,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
                     return <section className="flow-category" key={item.category}>
                         <h3><button type="button" className="flow-category-toggle" id={`${regionId}-toggle`}
                             aria-expanded={open} aria-controls={regionId} onClick={() => toggleCategory(item.category)}>
-                            <span><b>{item.category}</b><small>{item.operations} operaciones · {item.share.toFixed(1)} %</small></span>
+                            <span><b>{categoryLabel(item.category)}</b><small>{item.operations} operaciones · {item.share.toFixed(1)} %</small></span>
                             <strong>{eur(item.amount)}</strong><ChevronDown size={20} aria-hidden="true"/>
                         </button></h3>
                         {open && <div className="flow-category-detail" id={regionId} role="region" aria-labelledby={`${regionId}-toggle`}>
