@@ -1,6 +1,10 @@
-# Finance Dashboard 0.5.3
+# Finance Dashboard 0.5.6
 
 Dashboard React/TypeScript de Finance Suite. Consume exclusivamente la API REST del finance-server.
+
+## Inicio de sesión (0.5.6)
+
+El campo de usuario comienza vacío y debe completarse manualmente. La contraseña permanece oculta por defecto y se puede mostrar u ocultar mediante el icono de ojo. El botón de visibilidad no envía el formulario y conserva las etiquetas accesibles.
 
 ## Desarrollo
 

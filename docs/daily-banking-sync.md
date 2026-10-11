@@ -20,5 +20,5 @@ No automated reauthorization is attempted; the account owner must re-consent thr
 
 ## Build and release
 Run `mvn clean verify` in the repository root and publish Docker images only after the suite passes.
-The Maven parent and all child modules are set to `0.5.4`.
-The frontend is unchanged; the scheduler executes entirely in finance-server.
+Daily synchronization was introduced in 0.5.4. Check the root `pom.xml` for the current release version.
+The scheduler executes entirely in finance-server.
