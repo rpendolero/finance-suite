@@ -11,6 +11,8 @@ import {useEffect, useState} from 'react';
 import {
     CalendarDays,
     CreditCard,
+    Eye,
+    EyeOff,
     Landmark,
     LayoutDashboard,
     Lightbulb,
@@ -106,10 +108,54 @@ export default function App() {
     return <Dashboard session={session} onLogout={()=>api.logout().finally(()=>setSession(null))}/>;
 }
 
-function Login({onLogin}:{onLogin:(session:any)=>void}){
- const[username,setUsername]=useState('reader'),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- const submit=(e:any)=>{e.preventDefault();setBusy(true);setError('');api.login(username,password).then(onLogin).catch(()=>setError('Usuario o contraseña incorrectos')).finally(()=>setBusy(false))};
- return <div className="auth-screen"><form className="login-card" onSubmit={submit}><div className="login-logo">▥</div><h1>Finance Suite</h1><p>Accede a tu panel financiero</p><label>Usuario<input autoFocus autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></label><label>Contraseña<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="login-error">{error}</div>}<button disabled={busy||!username||!password}>{busy?'Accediendo…':'Iniciar sesión'}</button></form></div>
+function Login({onLogin}: {onLogin: (session: any) => void}) {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const submit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setBusy(true);
+        setError('');
+        api.login(username, password)
+            .then(onLogin)
+            .catch(() => setError('Usuario o contraseña incorrectos'))
+            .finally(() => setBusy(false));
+    };
+
+    return <div className="auth-screen">
+        <form className="login-card" onSubmit={submit}>
+            <div className="login-logo">▥</div>
+            <h1>Finance Suite</h1>
+            <p>Accede a tu panel financiero</p>
+            <div className="login-field">
+                <label htmlFor="login-username">Usuario</label>
+                <input id="login-username" autoFocus autoComplete="username"
+                       value={username} onChange={e => setUsername(e.target.value)}/>
+            </div>
+            <div className="login-field">
+                <label htmlFor="login-password">Contraseña</label>
+                <div className="password-field">
+                    <input id="login-password" type={showPassword ? 'text' : 'password'}
+                           autoComplete="current-password" value={password}
+                           onChange={e => setPassword(e.target.value)}/>
+                    <button type="button" className="password-visibility-toggle"
+                            onClick={() => setShowPassword(visible => !visible)}
+                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                            aria-pressed={showPassword}
+                            title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                        {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                    </button>
+                </div>
+            </div>
+            {error && <div className="login-error">{error}</div>}
+            <button type="submit" disabled={busy || !username || !password}>
+                {busy ? 'Accediendo…' : 'Iniciar sesión'}
+            </button>
+        </form>
+    </div>;
 }
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
