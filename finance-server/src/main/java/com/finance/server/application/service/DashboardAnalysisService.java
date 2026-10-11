@@ -46,10 +46,13 @@ public class DashboardAnalysisService {
 
     public record DashboardOverview(BigDecimal totalBalance, BigDecimal income, BigDecimal expenses, BigDecimal savings,
                                     BigDecimal savingsRate, BigDecimal averageDailyExpense,
+                                    BigDecimal financingPayments, BigDecimal availableAfterAllocations,
+                                    BigDecimal financingCapital, BigDecimal financingInterest,
+                                    BigDecimal financingUnallocated,
                                     List<CategoryStat> categories, List<MerchantStat> merchants) {
     }
 
-    public enum FlowDirection { EXPENSE, INCOME }
+    public enum FlowDirection { EXPENSE, INCOME, SAVINGS, FINANCING }
 
     public record FlowMovement(String id, String productId, LocalDate date, BigDecimal amount,
                                String description, String merchant, String normalizedMerchant, String category, String subcategory,
@@ -72,10 +75,19 @@ public class DashboardAnalysisService {
         if (offset < 0 || limit < 1 || limit > 100)
             throw new IllegalArgumentException("Paginación inválida: offset >= 0 y limit entre 1 y 100");
         var included = included(period, productId);
-        var movements = direction == FlowDirection.INCOME ? incomeMovements(included) : expenseMovements(included);
+        var movements = switch (direction) {
+            case INCOME -> incomeMovements(included);
+            case EXPENSE -> expenseMovements(included);
+            case SAVINGS -> included.stream().filter(FinancialMovementAllocation::saving).toList();
+            case FINANCING -> included.stream().filter(FinancialMovementAllocation::financing).toList();
+        };
         if (category != null)
             movements = movements.stream().filter(m -> category.equals(blank(m.category(), "Sin categoría"))).toList();
-        Function<List<Movement>, BigDecimal> sum = direction == FlowDirection.INCOME ? this::income : this::expenses;
+        Function<List<Movement>, BigDecimal> sum = switch (direction) {
+            case INCOME -> this::income;
+            case EXPENSE -> this::expenses;
+            case SAVINGS, FINANCING -> this::cashOutflow;
+        };
         var total = sum.apply(movements);
         var categories = stats(movements, m -> blank(m.category(), "Sin categoría"), total, sum).stream()
                 .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
@@ -91,12 +103,18 @@ public class DashboardAnalysisService {
         var ms = included(period, productId);
         var income = income(ms);
         var expenses = expenses(ms);
-        var savings = income.subtract(expenses);
+        var savings = savings(ms);
+        var financing = financing(ms);
+        var capital = FinancialMovementAllocation.total(ms, FinancialMovementAllocation::financingCapital, true);
+        var interest = FinancialMovementAllocation.total(ms, FinancialMovementAllocation::financingInterest, true);
         var days = Math.max(1, ChronoUnit.DAYS.between(period.from(), period.to()) + 1);
         var liquid = ledger.products().stream().filter(Product::liquid).map(Product::balance).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new DashboardOverview(money(liquid), money(income), money(expenses), money(savings),
-                income.signum() == 0 ? ZERO : savings.multiply(BigDecimal.valueOf(100)).divide(income, 2, RoundingMode.HALF_UP),
-                expenses.divide(BigDecimal.valueOf(days), 2, RoundingMode.HALF_UP), categories(period, productId), merchants(period, productId, 10));
+                income.signum() <= 0 ? ZERO : savings.multiply(BigDecimal.valueOf(100)).divide(income, 2, RoundingMode.HALF_UP),
+                expenses.divide(BigDecimal.valueOf(days), 2, RoundingMode.HALF_UP),
+                money(financing), money(income.subtract(expenses).subtract(savings).subtract(financing)),
+                money(capital), money(interest), money(financing.subtract(capital).subtract(interest)),
+                categories(period, productId), merchants(period, productId, 10));
     }
 
     public List<TrendPoint> trend(Period period, String productId, String groupBy) {
@@ -108,7 +126,7 @@ public class DashboardAnalysisService {
             default -> Movement::date;
         };
         return ms.stream().collect(Collectors.groupingBy(bucket, TreeMap::new, Collectors.toList())).entrySet().stream()
-                .map(e -> new TrendPoint(e.getKey(), money(income(e.getValue())), money(expenses(e.getValue())), money(income(e.getValue()).subtract(expenses(e.getValue()))))).toList();
+                .map(e -> new TrendPoint(e.getKey(), money(income(e.getValue())), money(expenses(e.getValue())), money(savings(e.getValue())))).toList();
     }
 
     public List<CategoryStat> categories(Period period, String productId) {
@@ -151,7 +169,7 @@ public class DashboardAnalysisService {
         var ms = included(period, productId);
         var in = income(ms);
         var ex = expenses(ms);
-        var save = in.subtract(ex);
+        var save = savings(ms);
         if (in.signum() > 0) {
             var rate = save.multiply(BigDecimal.valueOf(100)).divide(in, 2, RoundingMode.HALF_UP);
             result.add(new Insight(rate.signum() >= 0 ? "POSITIVE" : "WARNING", "SAVINGS_RATE", "Tasa de ahorro", "El ahorro representa el " + rate + " % de los ingresos.", rate));
@@ -166,7 +184,7 @@ public class DashboardAnalysisService {
     }
 
     private List<Movement> expenseMovements(List<Movement> ms) {
-        return ms.stream().filter(m -> m.amount().signum() < 0 || m.kind() == Movement.Kind.REFUND).toList();
+        return ms.stream().filter(FinancialMovementAllocation::consumption).toList();
     }
 
     private BigDecimal income(List<Movement> ms) {
@@ -174,11 +192,25 @@ public class DashboardAnalysisService {
     }
 
     private List<Movement> incomeMovements(List<Movement> ms) {
-        return ms.stream().filter(m -> m.amount().signum() > 0 && m.kind() != Movement.Kind.REFUND).toList();
+        return ms.stream().filter(FinancialMovementAllocation::income).toList();
     }
 
     private BigDecimal expenses(List<Movement> ms) {
-        return expenseMovements(ms).stream().map(m -> m.kind() == Movement.Kind.REFUND ? m.amount().negate() : m.amount().abs()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return expenseMovements(ms).stream().map(FinancialMovementAllocation::paid)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal savings(List<Movement> ms) {
+        return FinancialMovementAllocation.total(ms, FinancialMovementAllocation::saving, true);
+    }
+
+    private BigDecimal financing(List<Movement> ms) {
+        return FinancialMovementAllocation.total(ms, FinancialMovementAllocation::financing, true);
+    }
+
+    private BigDecimal cashOutflow(List<Movement> ms) {
+        return ms.stream().map(FinancialMovementAllocation::paid)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private record Stat(String key, BigDecimal amount, long operations, BigDecimal average, BigDecimal share) {
