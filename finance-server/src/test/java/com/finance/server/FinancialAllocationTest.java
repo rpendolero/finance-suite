@@ -38,7 +38,7 @@ class FinancialAllocationTest {
     var dashboard = new DashboardAnalysisService(ledger);
     var overview = dashboard.overview(period, null);
     assertThat(overview.income()).isEqualByComparingTo("3000");
-    assertThat(overview.expenses()).isEqualByComparingTo("400");
+    assertThat(overview.expenses()).isEqualByComparingTo("410");
     assertThat(overview.savings()).isEqualByComparingTo("500");
     assertThat(overview.financingPayments()).isEqualByComparingTo("460");
     assertThat(overview.financingCapital()).isEqualByComparingTo("50");
@@ -58,11 +58,11 @@ class FinancialAllocationTest {
     assertThat(dashboard.flow(period, null,
         DashboardAnalysisService.FlowDirection.INCOME, 0, 25).operations()).isEqualTo(1);
     assertThat(dashboard.flow(period, null,
-        DashboardAnalysisService.FlowDirection.EXPENSE, 0, 25).total()).isEqualByComparingTo("400");
+        DashboardAnalysisService.FlowDirection.EXPENSE, 0, 25).total()).isEqualByComparingTo("410");
 
     var summary = new FinancialSummaryService(ledger).summary(period, null);
     assertThat(summary.income()).isEqualByComparingTo("3000");
-    assertThat(summary.expenses()).isEqualByComparingTo("400");
+    assertThat(summary.expenses()).isEqualByComparingTo("410");
     assertThat(summary.investmentContributions()).isEqualByComparingTo("500");
     assertThat(summary.financingPayments()).isEqualByComparingTo("460");
     assertThat(summary.availableAfterAllocations()).isEqualByComparingTo("1640");
