@@ -139,7 +139,9 @@ UPDATE category SET active = FALSE
 WHERE code = 'HOGAR'
 AND NOT EXISTS (
  SELECT 1 FROM subcategory s WHERE s.category_id = category.id AND s.active = TRUE
-);
+)
+AND NOT EXISTS (SELECT 1 FROM movement m WHERE m.category = 'HOGAR')
+AND NOT EXISTS (SELECT 1 FROM classification_rule r WHERE r.category = 'HOGAR');
 -- DO NOT bulk-move VIVIENDA/HIPOTECA_ALQUILER: the historic entries may be rent OR debt.
 -- DO NOT bulk-move COMPRAS/ONLINE: the purchase type cannot be deduced from its channel.
 -- DO NOT exclude EFECTIVO/RETIRADA_CAJERO: not all cash spending is separately recorded.
