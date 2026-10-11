@@ -54,13 +54,18 @@ export type Overview = {
     savings: number;
     savingsRate: number;
     averageDailyExpense: number;
+    financingPayments: number;
+    availableAfterAllocations: number;
+    financingCapital: number;
+    financingInterest: number;
+    financingUnallocated: number;
     categories: CategoryStat[];
     merchants: MerchantStat[]
 };
 export type TrendPoint = { date: string; income: number; expenses: number; savings: number };
 export type CategoryStat = { category: string; amount: number; operations: number; average: number; share: number };
 export type MerchantStat = { merchant: string; amount: number; operations: number; average: number; share: number };
-export type FlowDirection = 'EXPENSE' | 'INCOME';
+export type FlowDirection = 'EXPENSE' | 'INCOME' | 'SAVINGS' | 'FINANCING';
 export type FinancialFlow = {
     direction: FlowDirection;
     total: number;
