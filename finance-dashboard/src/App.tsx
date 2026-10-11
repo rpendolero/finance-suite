@@ -87,9 +87,6 @@ type View =
     'overview'
     | 'trend'
     | 'expenses'
-    | 'income'
-    | 'financing'
-    | 'savings'
     | 'products'
     | 'movements'
     | 'recurring'
@@ -99,7 +96,7 @@ type View =
     | 'categoryAdmin'
     | 'banking'
     | 'imports';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Gastos', ReceiptText], ['income', 'Ingresos', TrendingUp], ['financing', 'Financiación', Landmark], ['savings', 'Ahorro e inversión', PiggyBank], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -184,8 +181,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
-            {view === 'imports' && session.roles?.includes('ADMIN') ? <StatementImport products={products} onImported={onClassified} onProductCreated={onProductCreated}/> : view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : (['expenses', 'income', 'financing', 'savings'] as View[]).includes(view) ?
-                <FinancialFlowView key={view} initialDirection={view === 'income' ? 'INCOME' : view === 'financing' ? 'FINANCING' : view === 'savings' ? 'SAVINGS' : 'EXPENSE'} from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
+            {view === 'imports' && session.roles?.includes('ADMIN') ? <StatementImport products={products} onImported={onClassified} onProductCreated={onProductCreated}/> : view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
+                <FinancialFlowView from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
                 <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
