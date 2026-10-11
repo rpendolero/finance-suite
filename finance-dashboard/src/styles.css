@@ -479,6 +479,18 @@ nav button{display:flex;align-items:center;gap:12px;padding:11px 12px;border-rad
 .subcategory-admin{margin-top:12px;border-top:1px solid #eef1f5;padding-top:8px}
 .subcategory-admin-row{grid-template-columns:180px minmax(180px,1fr) 80px 90px auto;padding:7px 0}
 .category-admin label,.subcategory-admin-row label{display:flex;gap:6px;align-items:center;font-size:13px}
+/* Acciones del catálogo: mismos botones primarios/secundarios que el resto del dashboard. */
+.category-create > button,.category-admin-head > button,.subcategory-admin-row > button{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    min-height:40px;padding:10px 16px;border:1px solid #2762c9;border-radius:8px;
+    background:#2762c9;color:#fff;font:inherit;font-weight:600;line-height:1.2;
+    cursor:pointer;transition:background-color .15s ease,border-color .15s ease;
+}
+.category-admin-head > button.secondary{background:#fff;color:#2762c9}
+.category-create > button:hover:not(:disabled),.category-admin-head > button:not(.secondary):hover:not(:disabled),.subcategory-admin-row > button:hover:not(:disabled){background:#1e4fa9;border-color:#1e4fa9}
+.category-admin-head > button.secondary:hover:not(:disabled){background:#e8f0ff}
+.category-create > button:focus-visible,.category-admin-head > button:focus-visible,.subcategory-admin-row > button:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.category-create > button:disabled,.category-admin-head > button:disabled,.subcategory-admin-row > button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:900px){.category-create,.category-admin-head,.subcategory-admin-row{grid-template-columns:1fr}.order-input{width:100%}}
 
 .period-selector{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
