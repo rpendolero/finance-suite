@@ -67,6 +67,10 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     };
     const title = titles[direction];
     const data = summary?.context === context ? summary.data : null;
+    const visibleCategories = income ? ['Devoluciones', 'Financiación', 'Ahorro e inversión'].reduce<FinancialFlow['categories']>((acc, name) => {
+        acc.push(data?.categories.find(item => item.category === name) ?? {category: name, amount: 0, operations: 0, average: 0, share: 0});
+        return acc;
+    }, []).concat((data?.categories ?? []).filter(item => !['Devoluciones', 'Financiación', 'Ahorro e inversión'].includes(item.category))) : (data?.categories ?? []);
     const selectedDetail = detail?.key === detailKey ? detail : null;
     const productNames = new Map(products.map(product => [product.id, product.name]));
     const selectDirection = (value: FlowDirection) => {
@@ -111,13 +115,14 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
             <div className="card flow-categories">
                 <div className="title"><h2>Categorías</h2></div>
                 <p className="flow-note">Pulsa una categoría para mostrar u ocultar sus movimientos.</p>
-                {data.categories.length ? data.categories.map((item, index) => {
+                {visibleCategories.length ? visibleCategories.map((item, index) => {
                     const open = category === item.category;
+                    const empty = item.operations === 0;
                     const regionId = `${accordionId}-category-${index}`;
                     return <section className="flow-category" key={item.category}>
                         <h3><button type="button" className="flow-category-toggle" id={`${regionId}-toggle`}
-                            aria-expanded={open} aria-controls={regionId} onClick={() => toggleCategory(item.category)}>
-                            <span><b>{item.category}</b><small>{item.operations} operaciones · {item.share.toFixed(1)} %</small></span>
+                            aria-expanded={open} aria-controls={regionId} disabled={empty} onClick={() => toggleCategory(item.category)}>
+                            <span><b>{item.category}</b><small>{empty ? 'Sin movimientos en este período' : `${item.operations} operaciones · ${item.share.toFixed(1)} %`}</small></span>
                             <strong>{eur(item.amount)}</strong><ChevronDown size={20} aria-hidden="true"/>
                         </button></h3>
                         {open && <div className="flow-category-detail" id={regionId} role="region" aria-labelledby={`${regionId}-toggle`}>
