@@ -7,7 +7,7 @@ import StatementImport from './StatementImport';
 import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
 import {periodRange} from './periods';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, type FormEvent} from 'react';
 import {
     CalendarDays,
     CreditCard,
@@ -115,7 +115,7 @@ function Login({onLogin}: {onLogin: (session: any) => void}) {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
 
-    const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    const submit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setBusy(true);
         setError('');
