@@ -211,14 +211,14 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                             <Empty>Sin movimientos en el período.</Empty>}</div>
                         <div className="card"><Title t="Gastos por categoría"/>{categories.length ?
                             <div className="pie"><ResponsiveContainer width="48%" height={220}><PieChart><Pie
-                                data={categories} dataKey="amount" nameKey="category" innerRadius={55}
+                                data={categories.filter(category => category.amount > 0)} dataKey="amount" nameKey="category" innerRadius={55}
                                 outerRadius={82}>{categories.map((_, i) => <Cell key={i}
                                 fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}/>)}</Pie><Tooltip
                                 formatter={(v) => eur(Number(v))}/></PieChart></ResponsiveContainer>
                                 <div className="legend">{categories.slice(0, 7).map((c, i) => <div key={c.category}>
                                     <span className="legend-label"><i
                                         style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
-                            </div> : <Empty>Sin gastos clasificados.</Empty>}</div>
+                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones sin compra identificada se reflejan como ajuste negativo, no como ingreso ni porción del gráfico.</p></div>
                         <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
                                 <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
                                 30 días.</p></> :
