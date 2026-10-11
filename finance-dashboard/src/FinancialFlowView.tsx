@@ -93,9 +93,9 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
             <button type="button" aria-pressed={income} onClick={() => selectDirection('INCOME')}>Ingresos</button>
         </div>
         <p className="flow-note">{direction === 'INCOME'
-            ? 'Ingresos y devoluciones positivas, con financiación y ahorro e inversión como categorías diferenciadas. Estas dos últimas representan salidas de dinero y reducen el flujo neto mostrado.'
+            ? 'Ingresos ordinarios y devoluciones positivas. Financiación y ahorro e inversión se muestran en Gastos.'
             : direction === 'EXPENSE'
-                ? 'Gastos de consumo e intereses identificados. Las devoluciones positivas se muestran en ingresos.'
+                ? 'Gastos de consumo, financiación y ahorro e inversión, separados por categorías. Las devoluciones positivas se muestran en ingresos.'
                 : direction === 'SAVINGS'
                     ? 'Aportaciones netas a planes de pensiones, fondos y otras inversiones; no son gasto de consumo.'
                     : 'Cuotas y amortizaciones de deuda. Solo se distinguen capital e intereses cuando vienen desglosados.'}
@@ -105,7 +105,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
         {summaryError ? <div className="api-error" role="alert">{summaryError}</div> : !data ?
             <div className="loading" role="status">Cargando {title.toLowerCase()}…</div> : <>
             <div className="card flow-total">
-                <span>{income ? 'Flujo neto de ingresos, financiación y ahorro del período' : `Total de ${title.toLowerCase()} del período`}</span>
+                <span>{income ? 'Total de ingresos del período' : 'Total de gastos, financiación y ahorro del período'}</span>
                 <strong>{eur(data.total)}</strong>
                 <small>{data.operations} operaciones · {from} — {to}</small>
             </div>
