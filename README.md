@@ -1,10 +1,19 @@
-# Finance Suite 0.5.5
+# Finance Suite 0.5.6
 
 Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
 Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
+
+## Novedades 0.5.6
+
+- Inicio de sesión: usuario vacío de forma predeterminada, sin `reader` precargado.
+- Contraseña oculta de forma predeterminada, con botón e icono de ojo para mostrarla u ocultarla.
+- Control accesible con el mismo estilo en escritorio y móvil.
+- No hay cambios nuevos en la API ni migraciones de base de datos.
+
+[Notas de versión 0.5.6](docs/RELEASE-0.5.6.md).
 
 ## Novedades 0.5.5
 
@@ -61,8 +70,8 @@ mvn clean install
 
 Genera dos ejecutables independientes:
 
-- `finance-server/target/finance-server-0.5.3.jar`
-- `finance-importer/target/finance-importer-0.5.3.jar`
+- `finance-server/target/finance-server-0.5.6.jar`
+- `finance-importer/target/finance-importer-0.5.6.jar`
 
 La biblioteca de dominio queda dentro de cada JAR; no es necesario desplegar otro proceso. Los binarios generados no se incluyen en el ZIP. Docker puede compilar y ejecutar el servidor sin instalar JDK en esa máquina.
 
@@ -71,12 +80,12 @@ La biblioteca de dominio queda dentro de cada JAR; no es necesario desplegar otr
 Con Docker instalado y arrancado, utiliza el código de la versión que quieras publicar:
 
 ```bash
-./scripts/publish-docker.sh 0.5.3 TU_USUARIO_DOCKERHUB
+./scripts/publish-docker.sh 0.5.6 TU_USUARIO_DOCKERHUB
 ```
 
-El script comprueba que la versión coincide con el código, inicia sesión, construye el API y el frontend y publica `TU_USUARIO_DOCKERHUB/finance-server:0.5.3` y `TU_USUARIO_DOCKERHUB/finance-dashboard:0.5.3`. Construye ambas imágenes antes de iniciar las subidas y se detiene si falla un comando. Usa la raíz del proyecto como contexto del API y `finance-dashboard` como contexto del frontend, aunque se ejecute desde otro directorio.
+El script comprueba que la versión coincide con el código, inicia sesión, construye el API y el frontend y publica `TU_USUARIO_DOCKERHUB/finance-server:0.5.6` y `TU_USUARIO_DOCKERHUB/finance-dashboard:0.5.6`. Construye ambas imágenes antes de iniciar las subidas y se detiene si falla un comando. Usa la raíz del proyecto como contexto del API y `finance-dashboard` como contexto del frontend, aunque se ejecute desde otro directorio.
 
-Puedes añadir `server` o `frontend` como tercer argumento para publicar solo uno. Para otra versión, actualiza el código y sustituye `0.5.3` por la versión correspondiente. El script también funciona si lo guardas en la raíz y ejecutas `./publish-docker.sh`: detecta la raíz del proyecto buscando el POM y sus módulos. `./scripts/publish-docker.sh --help` muestra los ejemplos.
+Puedes añadir `server` o `frontend` como tercer argumento para publicar solo uno. Para otra versión, actualiza el código y sustituye `0.5.6` por la versión correspondiente. El script también funciona si lo guardas en la raíz y ejecutas `./publish-docker.sh`: detecta la raíz del proyecto buscando el POM y sus módulos. `./scripts/publish-docker.sh --help` muestra los ejemplos.
 
 ## 1. Servidor
 
