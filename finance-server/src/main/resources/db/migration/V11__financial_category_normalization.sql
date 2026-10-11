@@ -81,7 +81,7 @@ SELECT c.id, 'OTRO_AHORRO', 'Otro ahorro', TRUE, 40 FROM category c
 WHERE c.code = 'AHORRO_E_INVERSION' AND NOT EXISTS (
  SELECT 1 FROM subcategory s WHERE s.category_id = c.id AND s.code = 'OTRO_AHORRO'
 );
--- OCIO/REGALOS -> COMPRAS/REGALOS; preserve kind, source, confidence and rule ID.
+-- OCIO/REGALOS -> COMPRAS/REGALOS, preserving kind, source, confidence and rule ID.
 UPDATE movement SET category = 'COMPRAS', subcategory = 'REGALOS'
 WHERE category = 'OCIO' AND subcategory = 'REGALOS';
 UPDATE classification_rule SET category = 'COMPRAS', subcategory = 'REGALOS'
@@ -90,7 +90,7 @@ UPDATE subcategory SET active = FALSE WHERE code = 'REGALOS'
  AND category_id = (SELECT id FROM category WHERE code = 'OCIO');
 UPDATE subcategory SET active = TRUE WHERE code = 'REGALOS'
  AND category_id = (SELECT id FROM category WHERE code = 'COMPRAS');
--- TRANSPORTE/FINANCIACION_VEHICULO -> FINANCIACION/VEHICULO; preserve kind, source, confidence and rule ID.
+-- TRANSPORTE/FINANCIACION_VEHICULO -> FINANCIACION/VEHICULO, preserving kind, source, confidence and rule ID.
 UPDATE movement SET category = 'FINANCIACION', subcategory = 'VEHICULO'
 WHERE category = 'TRANSPORTE' AND subcategory = 'FINANCIACION_VEHICULO';
 UPDATE classification_rule SET category = 'FINANCIACION', subcategory = 'VEHICULO'
@@ -99,7 +99,7 @@ UPDATE subcategory SET active = FALSE WHERE code = 'FINANCIACION_VEHICULO'
  AND category_id = (SELECT id FROM category WHERE code = 'TRANSPORTE');
 UPDATE subcategory SET active = TRUE WHERE code = 'VEHICULO'
  AND category_id = (SELECT id FROM category WHERE code = 'FINANCIACION');
--- VIVIENDA/HIPOTECA -> FINANCIACION/HIPOTECA; preserve kind, source, confidence and rule ID.
+-- VIVIENDA/HIPOTECA -> FINANCIACION/HIPOTECA, preserving kind, source, confidence and rule ID.
 UPDATE movement SET category = 'FINANCIACION', subcategory = 'HIPOTECA'
 WHERE category = 'VIVIENDA' AND subcategory = 'HIPOTECA';
 UPDATE classification_rule SET category = 'FINANCIACION', subcategory = 'HIPOTECA'
@@ -108,7 +108,7 @@ UPDATE subcategory SET active = FALSE WHERE code = 'HIPOTECA'
  AND category_id = (SELECT id FROM category WHERE code = 'VIVIENDA');
 UPDATE subcategory SET active = TRUE WHERE code = 'HIPOTECA'
  AND category_id = (SELECT id FROM category WHERE code = 'FINANCIACION');
--- SUSCRIPCIONES/TELEFONIA -> VIVIENDA/TELEFONIA; preserve kind, source, confidence and rule ID.
+-- SUSCRIPCIONES/TELEFONIA -> VIVIENDA/TELEFONIA, preserving kind, source, confidence and rule ID.
 UPDATE movement SET category = 'VIVIENDA', subcategory = 'TELEFONIA'
 WHERE category = 'SUSCRIPCIONES' AND subcategory = 'TELEFONIA';
 UPDATE classification_rule SET category = 'VIVIENDA', subcategory = 'TELEFONIA'
@@ -117,7 +117,7 @@ UPDATE subcategory SET active = FALSE WHERE code = 'TELEFONIA'
  AND category_id = (SELECT id FROM category WHERE code = 'SUSCRIPCIONES');
 UPDATE subcategory SET active = TRUE WHERE code = 'TELEFONIA'
  AND category_id = (SELECT id FROM category WHERE code = 'VIVIENDA');
--- IMPUESTOS/MULTAS -> OTROS/MULTAS; preserve kind, source, confidence and rule ID.
+-- IMPUESTOS/MULTAS -> OTROS/MULTAS, preserving kind, source, confidence and rule ID.
 UPDATE movement SET category = 'OTROS', subcategory = 'MULTAS'
 WHERE category = 'IMPUESTOS' AND subcategory = 'MULTAS';
 UPDATE classification_rule SET category = 'OTROS', subcategory = 'MULTAS'
@@ -126,7 +126,7 @@ UPDATE subcategory SET active = FALSE WHERE code = 'MULTAS'
  AND category_id = (SELECT id FROM category WHERE code = 'IMPUESTOS');
 UPDATE subcategory SET active = TRUE WHERE code = 'MULTAS'
  AND category_id = (SELECT id FROM category WHERE code = 'OTROS');
--- HOGAR/SERVICIO_DOMESTICO -> VIVIENDA/SERVICIO_DOMESTICO; preserve kind, source, confidence and rule ID.
+-- HOGAR/SERVICIO_DOMESTICO -> VIVIENDA/SERVICIO_DOMESTICO, preserving kind, source, confidence and rule ID.
 UPDATE movement SET category = 'VIVIENDA', subcategory = 'SERVICIO_DOMESTICO'
 WHERE category = 'HOGAR' AND subcategory = 'SERVICIO_DOMESTICO';
 UPDATE classification_rule SET category = 'VIVIENDA', subcategory = 'SERVICIO_DOMESTICO'
