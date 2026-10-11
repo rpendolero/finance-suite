@@ -21,7 +21,8 @@ class DashboardAnalysisServiceTest {
    new Movement("3","a","3",p.to(),new BigDecimal("-25"),"EUR","Compra","Mercado","ALIMENTACION",Movement.Kind.NORMAL,Movement.Status.BOOKED)));
   var s=new DashboardAnalysisService(ledger);var o=s.overview(p,null);
   assertThat(o.totalBalance()).isEqualByComparingTo("1000");assertThat(o.income()).isEqualByComparingTo("2000");
-  assertThat(o.expenses()).isEqualByComparingTo("75");assertThat(o.savings()).isEqualByComparingTo("1925");
+  assertThat(o.expenses()).isEqualByComparingTo("75");assertThat(o.savings()).isEqualByComparingTo("0");
+  assertThat(o.availableAfterAllocations()).isEqualByComparingTo("1925");
   assertThat(s.trend(p,null,"DAY")).hasSize(2);assertThat(s.categories(p,null).getFirst().operations()).isEqualTo(2);
   assertThat(s.merchants(p,null,10).getFirst().merchant()).isEqualTo("Mercado");assertThat(s.calendar(p,null)).hasSize(2);
  }
