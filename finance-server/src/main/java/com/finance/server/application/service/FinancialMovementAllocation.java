@@ -29,13 +29,13 @@ public final class FinancialMovementAllocation {
 
   public static boolean income(Movement movement) {
     return movement.included() && !saving(movement) && !financing(movement)
-        && !refund(movement) && movement.amount().signum() > 0;
+        && movement.amount().signum() > 0;
   }
 
   public static boolean consumption(Movement movement) {
     return movement.included() && !saving(movement)
         && (financingInterest(movement)
-            || (!financing(movement) && (movement.amount().signum() < 0 || refund(movement))));
+            || (!financing(movement) && movement.amount().signum() < 0));
   }
 
   /** Refunds and reversals are negative expenses; expenses are positive. */
