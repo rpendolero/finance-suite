@@ -7,10 +7,10 @@ const eur = (amount: number) => new Intl.NumberFormat('es-ES', {style: 'currency
 const PAGE_SIZE = 25;
 type Expansion = {context: string; category: string; offset: number};
 
-export default function FinancialFlowView({from, to, products, canEdit, onClassified}: {
-    from: string; to: string; products: Product[]; canEdit: boolean; onClassified: () => void;
+export default function FinancialFlowView({from, to, products, canEdit, onClassified, initialDirection = 'EXPENSE'}: {
+    from: string; to: string; products: Product[]; canEdit: boolean; onClassified: () => void; initialDirection?: FlowDirection;
 }) {
-    const [direction, setDirection] = useState<FlowDirection>('EXPENSE');
+    const [direction, setDirection] = useState<FlowDirection>(initialDirection);
     const context = `${from}:${to}:${direction}`;
     const [expanded, setExpanded] = useState<Expansion | null>(null);
     const category = expanded?.context === context ? expanded.category : undefined;
@@ -94,9 +94,9 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
             <button type="button" aria-pressed={direction === 'FINANCING'} onClick={() => selectDirection('FINANCING')}>Financiación</button>
         </div>
         <p className="flow-note">{direction === 'INCOME'
-            ? 'Abonos ordinarios; las devoluciones no se cuentan como ingresos.'
+            ? 'Abonos y devoluciones positivas contabilizados como ingresos.'
             : direction === 'EXPENSE'
-                ? 'Consumo neto de devoluciones más intereses de deuda identificados. Sin aportaciones ni amortizaciones.'
+                ? 'Gastos de consumo e intereses identificados. Las devoluciones positivas se muestran en ingresos.'
                 : direction === 'SAVINGS'
                     ? 'Aportaciones netas a planes de pensiones, fondos y otras inversiones; no son gasto de consumo.'
                     : 'Cuotas y amortizaciones de deuda. Solo se distinguen capital e intereses cuando vienen desglosados.'}
