@@ -76,8 +76,8 @@ public class DashboardAnalysisService {
             throw new IllegalArgumentException("Paginación inválida: offset >= 0 y limit entre 1 y 100");
         var included = included(period, productId);
         var movements = switch (direction) {
-            case INCOME -> included.stream().filter(m -> FinancialMovementAllocation.income(m) || FinancialMovementAllocation.saving(m) || FinancialMovementAllocation.financing(m)).toList();
-            case EXPENSE -> expenseMovements(included);
+            case INCOME -> incomeMovements(included);
+            case EXPENSE -> included.stream().filter(m -> FinancialMovementAllocation.consumption(m) || FinancialMovementAllocation.saving(m) || FinancialMovementAllocation.financing(m)).toList();
             case SAVINGS -> included.stream().filter(FinancialMovementAllocation::saving).toList();
             case FINANCING -> included.stream().filter(FinancialMovementAllocation::financing).toList();
         };
@@ -85,16 +85,16 @@ public class DashboardAnalysisService {
             var selected = direction;
             movements = movements.stream().filter(m ->
                 category.equals(selected == FlowDirection.EXPENSE
-                    ? expenseCategory(m) : selected == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"))).toList();
+                    ? expenseFlowCategory(m) : selected == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"))).toList();
         }
         Function<List<Movement>, BigDecimal> sum = switch (direction) {
             case INCOME -> this::flowIncome;
-            case EXPENSE -> this::expenses;
+            case EXPENSE -> this::cashOutflow;
             case SAVINGS, FINANCING -> this::cashOutflow;
         };
         var total = sum.apply(movements);
         var categories = stats(movements, m -> direction == FlowDirection.EXPENSE
-                ? expenseCategory(m) : direction == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
+                ? expenseFlowCategory(m) : direction == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
                 .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
         var counterparties = stats(movements, m -> blank(m.merchant(), blank(m.description(), "Desconocido")), total, sum).stream()
                 .map(s -> new MerchantStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
@@ -192,9 +192,13 @@ public class DashboardAnalysisService {
         return ms.stream().filter(FinancialMovementAllocation::consumption).toList();
     }
 
-    private String incomeCategory(Movement movement) {
+    private String expenseFlowCategory(Movement movement) {
         if (FinancialMovementAllocation.saving(movement)) return "Ahorro e inversión";
         if (FinancialMovementAllocation.financing(movement)) return "Financiación";
+        return expenseCategory(movement);
+    }
+
+    private String incomeCategory(Movement movement) {
         if (FinancialMovementAllocation.refund(movement)) return "Devoluciones";
         return blank(movement.category(), "Sin categoría");
     }
