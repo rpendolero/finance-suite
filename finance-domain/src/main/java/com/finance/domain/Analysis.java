@@ -18,7 +18,10 @@ public final class Analysis {
       int included,
       int excluded,
       int pending,
-      String basis) {}
+      String basis,
+      BigDecimal investmentContributions,
+      BigDecimal financingPayments,
+      BigDecimal availableAfterAllocations) {}
 
   public record Comparison(
       Summary current,
