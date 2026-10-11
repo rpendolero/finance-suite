@@ -96,7 +96,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
         <p className="flow-note">{direction === 'INCOME'
             ? 'Abonos ordinarios; las devoluciones no se cuentan como ingresos.'
             : direction === 'EXPENSE'
-                ? 'Consumo neto de devoluciones, sin aportaciones ni cuotas de financiación.'
+                ? 'Consumo neto de devoluciones más intereses de deuda identificados. Sin aportaciones ni amortizaciones.'
                 : direction === 'SAVINGS'
                     ? 'Aportaciones netas a planes de pensiones, fondos y otras inversiones; no son gasto de consumo.'
                     : 'Cuotas y amortizaciones de deuda. Solo se distinguen capital e intereses cuando vienen desglosados.'}
