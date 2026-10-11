@@ -497,6 +497,10 @@ nav button{display:flex;align-items:center;gap:12px;padding:11px 12px;border-rad
 .app-modal-body input{width:100%;box-sizing:border-box;min-height:42px;border:1px solid #d0d5dd;border-radius:9px;padding:9px 11px;font:inherit;color:#101828;background:#fff}
 .app-modal-body input:focus{outline:2px solid rgba(37,99,235,.18);border-color:#2563eb}
 .app-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
+.app-modal .app-modal-actions button{border:1px solid #2762c9;border-radius:8px;background:#2762c9;color:#fff;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+.app-modal .app-modal-actions button.secondary{background:#fff;color:#2762c9}
+.app-modal .app-modal-actions button:disabled{opacity:.5;cursor:not-allowed}
+.app-modal .app-modal-actions button:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
 @media(max-width:600px){.app-modal-backdrop{padding:12px;align-items:flex-end}.app-modal{border-radius:16px 16px 10px 10px}}
 
 .banking-page {display:grid; gap:18px}
