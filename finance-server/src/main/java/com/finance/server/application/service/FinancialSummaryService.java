@@ -34,39 +34,38 @@ public class FinancialSummaryService {
   }
 
   private Summary summarize(Period p, List<Movement> all) {
-    var ms = all.stream().filter(Movement::included).toList();
-    BigDecimal
-        income =
-            sum(
-                ms.stream()
-                    .filter(m -> m.amount().signum() > 0 && m.kind() != Movement.Kind.REFUND)
-                    .toList()),
-        expenses =
-            sum(ms.stream()
-                    .filter(m -> m.amount().signum() < 0 || m.kind() == Movement.Kind.REFUND)
-                    .toList())
-                .negate();
+    var included = all.stream().filter(Movement::included).toList();
+    BigDecimal income = FinancialMovementAllocation.total(included,
+        FinancialMovementAllocation::income, false);
+    BigDecimal expenses = FinancialMovementAllocation.total(included,
+        FinancialMovementAllocation::consumption, true);
+    BigDecimal investment = FinancialMovementAllocation.total(included,
+        FinancialMovementAllocation::saving, true);
+    BigDecimal financing = FinancialMovementAllocation.total(included,
+        FinancialMovementAllocation::financing, true);
+
     var categories = new TreeMap<String, BigDecimal>();
-    ms.stream()
-        .filter(m -> m.amount().signum() < 0 || m.kind() == Movement.Kind.REFUND)
-        .forEach(m -> categories.merge(m.category(), m.amount().negate(), BigDecimal::add));
-    BigDecimal net = income.subtract(expenses),
-        rate =
-            income.signum() > 0
-                ? net.multiply(new BigDecimal("100")).divide(income, 2, RoundingMode.HALF_UP)
-                : null;
-    return new Summary(
-        p,
-        income,
-        expenses,
-        net,
-        rate,
-        categories,
-        ms.size(),
-        all.size() - ms.size(),
+    included.stream().filter(FinancialMovementAllocation::consumption)
+        .forEach(m -> categories.merge(expenseCategory(m),
+            FinancialMovementAllocation.paid(m), BigDecimal::add));
+
+    BigDecimal operatingNet = income.subtract(expenses);
+    BigDecimal rate = income.signum() > 0
+        ? operatingNet.multiply(new BigDecimal("100"))
+            .divide(income, 2, RoundingMode.HALF_UP)
+        : null;
+    return new Summary(p, income, expenses, operatingNet, rate, categories,
+        included.size(), all.size() - included.size(),
         (int) all.stream().filter(m -> m.status() == Movement.Status.PENDING).count(),
-        "Compras contabilizadas por fecha; liquidaciones y transferencias internas excluidas."
-            + " Devoluciones marcadas REFUND reducen el gasto de su categoría.");
+        "Consumo sin inversiones ni financiación; cuotas de deuda sin desglose no "
+            + "se imputan a gastos. Disponible calculado antes de otros movimientos excluidos.",
+        investment, financing, operatingNet.subtract(investment).subtract(financing));
+  }
+
+  private String expenseCategory(Movement movement) {
+    return "INGRESOS".equalsIgnoreCase(movement.category())
+            && "DEVOLUCIONES".equalsIgnoreCase(movement.subcategory())
+        ? "DEVOLUCIONES_SIN_ASOCIAR" : movement.category();
   }
 
   public Comparison compare(Period a, Period b, String id) {
