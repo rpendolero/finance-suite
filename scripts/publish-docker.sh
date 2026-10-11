@@ -6,8 +6,8 @@ usage() {
 Usage: scripts/publish-docker.sh VERSION DOCKERHUB_USER [all|server|frontend]
 
 Examples:
-  scripts/publish-docker.sh 0.5.3 myuser
-  scripts/publish-docker.sh 0.5.3 myuser frontend
+  scripts/publish-docker.sh 0.5.6 myuser
+  scripts/publish-docker.sh 0.5.6 myuser frontend
 
 Uses the checked-out source version. Builds all selected images before pushing.
 The script can be placed in the project root or a subdirectory such as scripts/.
