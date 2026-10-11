@@ -117,7 +117,7 @@ public class DashboardAnalysisService {
         return new DashboardOverview(money(liquid), money(income), money(expenses), money(savings),
                 income.signum() <= 0 ? ZERO : savings.multiply(BigDecimal.valueOf(100)).divide(income, 2, RoundingMode.HALF_UP),
                 expenses.divide(BigDecimal.valueOf(days), 2, RoundingMode.HALF_UP),
-                money(financing), money(income.subtract(expenses).subtract(savings).subtract(financing)),
+                money(financing), money(income.subtract(expenses).subtract(savings).subtract(financing).add(interest)),
                 money(capital), money(interest), money(financing.subtract(capital).subtract(interest)),
                 categories(period, productId), merchants(period, productId, 10));
     }
