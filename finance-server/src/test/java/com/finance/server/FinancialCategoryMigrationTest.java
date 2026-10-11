@@ -79,7 +79,8 @@ class FinancialCategoryMigrationTest {
     try (var input = getClass().getResourceAsStream(
         "/db/migration/V11__financial_category_normalization.sql")) {
       assertThat(input).isNotNull();
-      String sql = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+      String sql = new String(input.readAllBytes(), StandardCharsets.UTF_8)
+          .replaceAll("(?m)^--[^\\r\\n]*", "");
       for (String command : sql.split(";")) {
         if (!command.isBlank()) statement.execute(command);
       }
