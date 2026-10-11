@@ -67,7 +67,7 @@ class FinancialCategoryMigrationTest {
         assertThat(select(statement, "SELECT category FROM classification_rule WHERE id='gift'")).isEqualTo("COMPRAS");
         assertThat(select(statement, "SELECT subcategory FROM classification_rule WHERE id='loan'")).isEqualTo("VEHICULO");
         assertThat(select(statement, "SELECT active FROM category WHERE code='HOGAR'")).isEqualTo("FALSE");
-        assertThat(select(statement, "SELECT active FROM subcategory s JOIN category c ON c.id=s.category_id "
+        assertThat(select(statement, "SELECT s.active FROM subcategory s JOIN category c ON c.id=s.category_id "
             + "WHERE c.code='OCIO' AND s.code='REGALOS'")).isEqualTo("FALSE");
         assertThat(select(statement, "SELECT COUNT(*) FROM subcategory s JOIN category c ON c.id=s.category_id "
             + "WHERE c.code='FINANCIACION' AND s.code='HIPOTECA'")).isEqualTo("1");
