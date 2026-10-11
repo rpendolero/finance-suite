@@ -40,6 +40,10 @@ finance:
     frontend-url: ${ENABLE_BANKING_FRONTEND_URL:/}
     country: ${ENABLE_BANKING_COUNTRY:ES}
     consent-days: ${ENABLE_BANKING_CONSENT_DAYS:90}
+    sync:
+      enabled: ${ENABLE_BANKING_SYNC_ENABLED:true}
+      cron: '${ENABLE_BANKING_SYNC_CRON:0 0 6 * * *}'
+      zone: ${ENABLE_BANKING_SYNC_ZONE:Europe/Madrid}
   security:
     reader-password: ${FINANCE_READER_PASSWORD}
     admin-password: ${FINANCE_ADMIN_PASSWORD}
