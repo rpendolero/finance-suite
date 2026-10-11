@@ -4,4 +4,4 @@ cd "$(dirname "$0")/.."
 set -a
 source .env
 set +a
-exec java -jar target/finance-importer-0.5.3.jar "$@"
+exec java -jar target/finance-importer-0.5.6.jar "$@"
