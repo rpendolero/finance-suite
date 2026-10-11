@@ -1,10 +1,17 @@
-# Finance Suite 0.5.3
+# Finance Suite 0.5.5
 
 Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
 Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
+
+## Novedades 0.5.5
+
+- Análisis «Ingresos y gastos»: devoluciones positivas en ingresos y financiación y ahorro e inversión en gastos, separados por categoría.
+- Las categorías sin movimientos en el período seleccionado no se muestran.
+- Los títulos de las categorías usan el nombre del catálogo (`name`) y conservan el código (`code`) para el filtrado.
+- Cambios procedentes de las PR #18 y #19.
 
 ## Importación local y análisis remoto
 
