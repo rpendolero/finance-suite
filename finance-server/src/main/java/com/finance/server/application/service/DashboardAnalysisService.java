@@ -76,7 +76,7 @@ public class DashboardAnalysisService {
             throw new IllegalArgumentException("Paginación inválida: offset >= 0 y limit entre 1 y 100");
         var included = included(period, productId);
         var movements = switch (direction) {
-            case INCOME -> incomeMovements(included);
+            case INCOME -> included.stream().filter(m -> FinancialMovementAllocation.income(m) || FinancialMovementAllocation.saving(m) || FinancialMovementAllocation.financing(m)).toList();
             case EXPENSE -> expenseMovements(included);
             case SAVINGS -> included.stream().filter(FinancialMovementAllocation::saving).toList();
             case FINANCING -> included.stream().filter(FinancialMovementAllocation::financing).toList();
@@ -85,16 +85,16 @@ public class DashboardAnalysisService {
             var selected = direction;
             movements = movements.stream().filter(m ->
                 category.equals(selected == FlowDirection.EXPENSE
-                    ? expenseCategory(m) : blank(m.category(), "Sin categoría"))).toList();
+                    ? expenseCategory(m) : selected == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"))).toList();
         }
         Function<List<Movement>, BigDecimal> sum = switch (direction) {
-            case INCOME -> this::income;
+            case INCOME -> this::flowIncome;
             case EXPENSE -> this::expenses;
             case SAVINGS, FINANCING -> this::cashOutflow;
         };
         var total = sum.apply(movements);
         var categories = stats(movements, m -> direction == FlowDirection.EXPENSE
-                ? expenseCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
+                ? expenseCategory(m) : direction == FlowDirection.INCOME ? incomeCategory(m) : blank(m.category(), "Sin categoría"), total, sum).stream()
                 .map(s -> new CategoryStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
         var counterparties = stats(movements, m -> blank(m.merchant(), blank(m.description(), "Desconocido")), total, sum).stream()
                 .map(s -> new MerchantStat(s.key(), s.amount(), s.operations(), s.average(), s.share())).toList();
@@ -190,6 +190,17 @@ public class DashboardAnalysisService {
 
     private List<Movement> expenseMovements(List<Movement> ms) {
         return ms.stream().filter(FinancialMovementAllocation::consumption).toList();
+    }
+
+    private String incomeCategory(Movement movement) {
+        if (FinancialMovementAllocation.saving(movement)) return "Ahorro e inversión";
+        if (FinancialMovementAllocation.financing(movement)) return "Financiación";
+        if (FinancialMovementAllocation.refund(movement)) return "Devoluciones";
+        return blank(movement.category(), "Sin categoría");
+    }
+
+    private BigDecimal flowIncome(List<Movement> ms) {
+        return ms.stream().map(Movement::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal income(List<Movement> ms) {
