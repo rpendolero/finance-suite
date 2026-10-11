@@ -188,11 +188,17 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
                         title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
+                        icon={TrendingUp}/><Card title="Gasto de consumo" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
-                                                 tone="red"/><Card title="Ahorro del período" value={eur(overview.savings)}
-                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % tasa de ahorro'}
-                                                                   icon={PiggyBank} tone="purple"/></section>
+                                                 tone="red"/><Card title="Ahorro e inversión" value={eur(overview.savings)}
+                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados'}
+                                                                   icon={PiggyBank} tone="purple"/>
+                        <Card title="Pagos de financiación" value={eur(overview.financingPayments)}
+                              sub={eur(overview.financingUnallocated) + ' sin desglose de capital/intereses'}
+                              icon={Landmark}/>
+                        <Card title="Flujo disponible del período" value={eur(overview.availableAfterAllocations)}
+                              sub="Ingresos − consumo − ahorro − financiación; no es el saldo bancario"
+                              icon={Wallet} tone="green"/></section>
                     <section className="grid3">
                         <div className="card wide"><Title t="Evolución financiera"/>{trend.length ?
                             <ResponsiveContainer width="100%" height={245}><BarChart data={trend}><CartesianGrid
