@@ -21,7 +21,8 @@ public final class Analysis {
       String basis,
       BigDecimal investmentContributions,
       BigDecimal financingPayments,
-      BigDecimal availableAfterAllocations) {}
+      BigDecimal availableAfterAllocations,
+      BigDecimal operatingMarginRatePercent) {}
 
   public record Comparison(
       Summary current,
