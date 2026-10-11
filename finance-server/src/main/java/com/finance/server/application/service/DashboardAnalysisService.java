@@ -239,9 +239,7 @@ public class DashboardAnalysisService {
     }
 
     private String expenseCategory(Movement movement) {
-        return "INGRESOS".equalsIgnoreCase(movement.category())
-                && "DEVOLUCIONES".equalsIgnoreCase(movement.subcategory())
-            ? "DEVOLUCIONES_SIN_ASOCIAR" : blank(movement.category(), "Sin categoría");
+        return blank(movement.category(), "Sin categoría");
     }
 
     private String blank(String s, String fallback) {
