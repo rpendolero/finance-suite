@@ -50,16 +50,21 @@ public class FinancialSummaryService {
             FinancialMovementAllocation.paid(m), BigDecimal::add));
 
     BigDecimal operatingNet = income.subtract(expenses);
-    BigDecimal rate = income.signum() > 0
+    BigDecimal savingsRate = income.signum() > 0
+        ? investment.multiply(new BigDecimal("100"))
+            .divide(income, 2, RoundingMode.HALF_UP)
+        : null;
+    BigDecimal operatingMarginRate = income.signum() > 0
         ? operatingNet.multiply(new BigDecimal("100"))
             .divide(income, 2, RoundingMode.HALF_UP)
         : null;
-    return new Summary(p, income, expenses, operatingNet, rate, categories,
+    return new Summary(p, income, expenses, operatingNet, savingsRate, categories,
         included.size(), all.size() - included.size(),
         (int) all.stream().filter(m -> m.status() == Movement.Status.PENDING).count(),
         "Consumo sin inversiones ni financiación; cuotas de deuda sin desglose no "
             + "se imputan a gastos. Disponible calculado antes de otros movimientos excluidos.",
-        investment, financing, operatingNet.subtract(investment).subtract(financing));
+        investment, financing, operatingNet.subtract(investment).subtract(financing),
+        operatingMarginRate);
   }
 
   private String expenseCategory(Movement movement) {
