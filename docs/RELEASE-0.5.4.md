@@ -3,10 +3,10 @@
 ## Semántica contable
 
 - **Ingresos**: abonos ordinarios contabilizados. No incluyen traspasos internos, retornos de inversión, desembolsos de préstamos ni devoluciones identificadas.
-- **Gastos de consumo**: cargos normales y devoluciones con signo contrario. Las devoluciones registradas en `INGRESOS / DEVOLUCIONES` aparecen como `DEVOLUCIONES_SIN_ASOCIAR` hasta asociarlas manualmente a una compra.
+- **Gastos de consumo e intereses**: cargos normales, intereses financieros desglosados y devoluciones con signo contrario. Las devoluciones registradas en `INGRESOS / DEVOLUCIONES` aparecen como `DEVOLUCIONES_SIN_ASOCIAR` hasta asociarlas manualmente a una compra.
 - **Ahorro e inversión** (`AHORRO_E_INVERSION`): aportaciones netas (cargos positivos en el resumen, rescates negativos); no es gasto de consumo.
 - **Financiación** (`FINANCIACION`): cuotas netas pagadas. Se separan **capital** (`AMORTIZACION_CAPITAL`) e **intereses** (`INTERESES`) solamente cuando el movimiento ya llega desglosado. El resto se muestra como **sin desglose**.
-- **Flujo disponible del período** = ingresos ordinarios − consumo neto − ahorro neto aportado − pagos netos de financiación. No es el saldo actual de ninguna cuenta y no incluye movimientos excluidos/pending.
+- **Flujo disponible del período** = ingresos ordinarios − (consumo neto + intereses desglosados) − ahorro neto aportado − pagos netos de financiación + intereses ya incluidos en gastos (para no descontarlos dos veces). No es el saldo actual de ninguna cuenta y no incluye movimientos excluidos/pending.
 
 Los movimientos de tipo no computable permanecen fuera de estas cifras. La retirada en cajero se mantiene computable **hasta revisión**, pues excluirla sin registrar los pagos efectivos provocaría infravalorar los gastos.
 
