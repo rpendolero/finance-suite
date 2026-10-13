@@ -318,14 +318,40 @@ function SectionView({
                                                                   fill="#6c7cff"/></BarChart></ResponsiveContainer>
         </div>
     </Page>;
-    if (view === 'products') return <Page title="Productos financieros">
-        {session?.roles?.includes('ADMIN') && <ProductCreateButton products={products} onCreated={onProductCreated}/>}
-        <div className="card table">
-            <div className="thead"><b>Producto</b><b>Entidad</b><b>Tipo</b><b>Saldo</b><b>Gasto período</b></div>
-            {productStats.map((s: ProductStat) => <div className="trow" key={s.productId}>
-                <b>{s.name}</b><span>{s.provider}</span><span>{s.type}</span><span>{eur(s.balance)}</span><strong>{eur(s.expenses)}</strong>
-            </div>)}</div>
-    </Page>;
+    if (view === 'products') {
+        const totalBalance = productStats.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+        const totalExpenses = productStats.reduce((sum, item) => sum + Number(item.expenses || 0), 0);
+        return <Page title="Productos financieros">
+            <section className="products-hero">
+                <div>
+                    <span className="products-eyebrow">TU CARTERA FINANCIERA</span>
+                    <h3>Todos tus productos, de un vistazo</h3>
+                    <p>Consulta tus cuentas y tarjetas y compara sus movimientos durante el período seleccionado.</p>
+                </div>
+                {session?.roles?.includes('ADMIN') && <ProductCreateButton products={products} onCreated={onProductCreated}/>}
+            </section>
+            <div className="products-summary" aria-label="Resumen de productos">
+                <div className="card products-summary-item"><span className="products-summary-icon"><Wallet size={21}/></span><div><small>Productos</small><strong>{productStats.length}</strong><span>Registrados</span></div></div>
+                <div className="card products-summary-item"><span className="products-summary-icon"><Landmark size={21}/></span><div><small>Saldo agregado</small><strong>{eur(totalBalance)}</strong><span>Suma de saldos de productos</span></div></div>
+                <div className="card products-summary-item"><span className="products-summary-icon"><TrendingDown size={21}/></span><div><small>Gastos del período</small><strong>{eur(totalExpenses)}</strong><span>Según el filtro de fechas</span></div></div>
+            </div>
+            {productStats.length ? <div className="products-grid">
+                {productStats.map((item: ProductStat) => {
+                    const card = /card|tarjeta/i.test(item.type || '');
+                    return <article className="card product-tile" key={item.productId}>
+                        <div className="product-tile-head">
+                            <span className={'product-tile-icon ' + (card ? 'is-card' : '')}>{card ? <CreditCard size={23}/> : <Landmark size={23}/>}</span>
+                            <span className="product-tile-type">{item.type || 'Producto financiero'}</span>
+                        </div>
+                        <h3>{item.name}</h3>
+                        <p className="product-tile-provider">{item.provider || 'Entidad no especificada'}</p>
+                        <div className="product-tile-balance"><small>Saldo</small><strong>{eur(item.balance)}</strong></div>
+                        <div className="product-tile-footer"><span>Gasto del período</span><strong>{eur(item.expenses)}</strong></div>
+                    </article>;
+                })}
+            </div> : <div className="card products-empty"><Wallet size={30}/><h3>Sin productos disponibles</h3><p>Añade un producto financiero para empezar a consultar tus cuentas y tarjetas.</p></div>}
+        </Page>;
+    }
     if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')} onClassified={onClassified}/>;
     if (view === 'recurring') return <Page title="Gastos recurrentes">
         <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
