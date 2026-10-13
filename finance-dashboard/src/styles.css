@@ -676,3 +676,8 @@ button{touch-action:manipulation}
 .products-empty h3{color:#10213a}
 @media(max-width:900px){.products-summary{grid-template-columns:1fr}}
 @media(max-width:600px){.products-hero{padding:21px}.products-hero button{width:100%}.products-summary-item{padding:16px}.products-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Shared brand icon across login, loading state and sidebar. */
+.login-logo{overflow:hidden;background:transparent}
+.login-logo img{display:block;width:100%;height:100%;object-fit:contain;border-radius:14px}
+.brand-logo{display:block;width:36px;height:36px;flex-shrink:0;object-fit:contain;border-radius:9px}
