@@ -25,7 +25,8 @@ import {
     TriangleAlert,
     Wallet,
     Tags,
-    Upload
+    Upload,
+    LogOut
 } from 'lucide-react';
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
@@ -223,7 +224,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <PeriodSelector preset={periodPreset} year={periodYear} currentYear={now.getFullYear()} from={from} to={to}
                                     onPresetChange={selectPeriod} onYearChange={year => selectPeriod(periodPreset, year)}
                                     onFromChange={setFrom} onToChange={setTo}/>
-                    <button className="logout" onClick={onLogout}>{session.username} · Salir</button>
+                    <button type="button" className="logout" onClick={onLogout} title="Cerrar sesión"><LogOut size={17} aria-hidden="true"/><span>{session.username} · Salir</span></button>
                 </div>
             </header>
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
