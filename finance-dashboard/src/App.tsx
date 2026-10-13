@@ -231,6 +231,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                 <FinancialFlowView from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
                 <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
+                    <div className="finance-page-hero finance-overview-hero"><div><span className="products-eyebrow">RESUMEN DE TU ECONOMÍA</span><h2>Tu situación financiera, de un vistazo</h2><p>Consulta los indicadores clave, la evolución de tus movimientos y el estado de tus finanzas en el período seleccionado.</p></div></div>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
                         title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
