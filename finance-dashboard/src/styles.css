@@ -642,3 +642,37 @@ button{touch-action:manipulation}
  main{padding:18px}
  .two-cols{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Financial products: responsive portfolio cards */
+.products-hero{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:26px 28px;margin-bottom:20px;border-radius:18px;background:linear-gradient(120deg,#10213a,#174d91);color:white}
+.products-hero h3{font-size:clamp(21px,2.3vw,28px);margin:8px 0;font-weight:750}
+.products-hero p{margin:0;max-width:570px;color:#d5e6fb;line-height:1.55}
+.products-eyebrow{font-size:11px;font-weight:750;letter-spacing:.13em;color:#9fd5ff}
+.products-hero button{background:#fff;color:#124a8a;border:0;border-radius:10px;padding:12px 20px;font-weight:700;cursor:pointer;min-height:44px}
+.products-hero button:hover{background:#eaf4ff}
+.products-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:20px}
+.products-summary-item{display:flex;align-items:center;gap:15px;padding:20px;min-width:0}
+.products-summary-item>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.products-summary-item small,.products-summary-item span:not(.products-summary-icon){color:#64748b;font-size:12px}
+.products-summary-item strong{font-size:clamp(20px,2vw,26px);color:#10213a;overflow-wrap:anywhere}
+.products-summary-icon{display:grid;place-items:center;flex-shrink:0;width:45px;height:45px;border-radius:13px;background:#e8f2ff;color:#1264db}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:18px}
+.product-tile{padding:23px;display:flex;flex-direction:column;gap:0;border:1px solid #e5edf6;transition:box-shadow .2s,transform .2s}
+.product-tile:hover{box-shadow:0 12px 28px #10213a12;transform:translateY(-2px)}
+.product-tile-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.product-tile-icon{display:grid;place-items:center;width:49px;height:49px;border-radius:14px;background:#e7f2ff;color:#1162d0}
+.product-tile-icon.is-card{background:#e5f9f3;color:#078d73}
+.product-tile-type{font-size:12px;font-weight:700;padding:6px 10px;border-radius:20px;background:#f1f5f9;color:#475569;text-align:right}
+.product-tile h3{font-size:18px;line-height:1.3;margin:0 0 6px;color:#10213a;overflow-wrap:anywhere}
+.product-tile-provider{font-size:13px;color:#64748b;margin:0 0 24px}
+.product-tile-balance{display:flex;flex-direction:column;gap:7px;margin-top:auto}
+.product-tile-balance small{font-size:12px;color:#64748b}
+.product-tile-balance strong{font-size:clamp(21px,2vw,27px);color:#10213a;overflow-wrap:anywhere}
+.product-tile-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;padding-top:17px;border-top:1px solid #e8edf4;font-size:13px;color:#64748b}
+.product-tile-footer strong{color:#10213a;font-size:15px;text-align:right}
+.products-empty{text-align:center;padding:45px 20px;color:#64748b}
+.products-empty svg{color:#1264db}
+.products-empty h3{color:#10213a}
+@media(max-width:900px){.products-summary{grid-template-columns:1fr}}
+@media(max-width:600px){.products-hero{padding:21px}.products-hero button{width:100%}.products-summary-item{padding:16px}.products-grid{grid-template-columns:minmax(0,1fr)}}
