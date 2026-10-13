@@ -97,7 +97,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     };
 
     return <section className="page financial-flow">
-        <div className="section-head"><h2>Análisis de ingresos, consumo, ahorro y financiación</h2></div>
+        <div className="finance-page-hero"><div><span className="products-eyebrow">ANÁLISIS FINANCIERO</span><h2>Ingresos y gastos</h2><p>Explora tus ingresos, consumo, ahorro y financiación por categorías y períodos.</p></div></div>
         <div className="flow-switch" role="group" aria-label="Tipo de análisis">
             <button type="button" aria-pressed={direction === 'EXPENSE'} onClick={() => selectDirection('EXPENSE')}>Gastos</button>
             <button type="button" aria-pressed={income} onClick={() => selectDirection('INCOME')}>Ingresos</button>
