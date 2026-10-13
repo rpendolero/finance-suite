@@ -11,7 +11,11 @@ export type Product = {
     currency: string;
     balance: number;
     provider: string;
-    maskedPan?: string
+    maskedPan?: string;
+    creditLimit?: number | null;
+    balanceAt?: string;
+    linkedAccountId?: string;
+    externalId?: string;
 };
 export type ProductInput = Product & {
     balanceAt: string;
