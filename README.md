@@ -1,10 +1,19 @@
-# Finance Suite 0.5.6
+# Finance Suite 0.5.7
 
 Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
 Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
+
+## Novedades 0.5.7
+
+- Diseño visual unificado del dashboard y de la pantalla de productos.
+- Nuevo logotipo en login y navegación; botón de salida con icono y color diferenciado.
+- Tarjetas de crédito: edición del límite y cálculo del disponible estimado con los gastos del período.
+- Correcciones de presentación JSX.
+
+[Notas de versión 0.5.7](docs/RELEASE-0.5.7.md).
 
 ## Novedades 0.5.6
 
