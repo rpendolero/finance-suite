@@ -48,7 +48,7 @@ public class SecurityConfig {
   SecurityFilterChain security(
       HttpSecurity http,
       @Value("${finance.security.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
-          String allowedOrigins)
+          String allowedOrigins,\n      @Value("${finance.security.mcp-api-key-sha256:}") String mcpApiKeySha256)
       throws Exception {
     var trustedOrigins =
         java.util.Arrays.stream(allowedOrigins.split(","))
@@ -56,7 +56,7 @@ public class SecurityConfig {
             .filter(value -> !value.isBlank())
             .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
-    return http.addFilterBefore(
+    return http.addFilterBefore(new McpApiKeyFilter(mcpApiKeySha256),\n            org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)\n        .addFilterBefore(
             new OriginFilter(trustedOrigins),
             org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)
         .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
