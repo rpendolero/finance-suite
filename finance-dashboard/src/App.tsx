@@ -103,7 +103,7 @@ const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
     useEffect(()=>{api.me().then(setSession).catch(()=>setSession(null)).finally(()=>setAuthLoading(false))},[]);
-    if(authLoading)return <div className="auth-screen"><div className="login-card"><div className="login-logo">▥</div><h1>Finance Suite</h1><p>Comprobando sesión…</p></div></div>;
+    if(authLoading)return <div className="auth-screen"><div className="login-card"><div className="login-logo"><img src="/favicon.svg" alt="Finance Suite" /></div><h1>Finance Suite</h1><p>Comprobando sesión…</p></div></div>;
     if(!session)return <Login onLogin={setSession}/>;
     return <Dashboard session={session} onLogout={()=>api.logout().finally(()=>setSession(null))}/>;
 }
@@ -127,7 +127,7 @@ function Login({onLogin}: {onLogin: (session: any) => void}) {
 
     return <div className="auth-screen">
         <form className="login-card" onSubmit={submit}>
-            <div className="login-logo">▥</div>
+            <div className="login-logo"><img src="/favicon.svg" alt="Finance Suite" /></div>
             <h1>Finance Suite</h1>
             <p>Accede a tu panel financiero</p>
             <div className="login-field">
@@ -208,7 +208,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
         <aside>
-            <div className="brand"><b>▥</b><span>Finance Suite</span></div>
+            <div className="brand"><img className="brand-logo" src="/favicon.svg" alt="" /><span>Finance Suite</span></div>
             <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
