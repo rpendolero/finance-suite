@@ -63,7 +63,8 @@ export default function StatementImport({products, onImported, onProductCreated}
         } finally { setBusy(false); }
     };
 
-    return <div className="statement-import">
+    return <div className="statement-import finance-import-page">
+        <div className="finance-page-hero"><div><span className="products-eyebrow">GESTIÓN DE MOVIMIENTOS</span><h2>Importar movimientos</h2><p>Incorpora extractos bancarios de forma segura y conserva tus reglas de categorización.</p></div></div>
         <section className="card">
             <div className="title"><h2>Importar movimientos</h2><button className="action" disabled={busy} onClick={() => setCreating(true)}>Nuevo producto</button></div>
             <p className="muted">Selecciona la cuenta o tarjeta y sube el extracto descargado de tu banco. Se importan todas las fechas del fichero.</p>
