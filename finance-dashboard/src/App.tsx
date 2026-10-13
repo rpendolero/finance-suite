@@ -352,7 +352,7 @@ function SectionView({
                         <h3>{item.name}</h3>
                         <p className="product-tile-provider">{item.provider || 'Entidad no especificada'}</p>
                         <div className="product-tile-balance"><small>{creditCard ? 'Crédito disponible' : 'Saldo'}</small><strong>{creditCard ? available == null ? 'Límite sin configurar' : eur(available) : eur(item.balance)}</strong></div>
-                        {creditCard && <div className="product-credit-details"><span>Límite: {limit == null ? 'Sin definir' : eur(Number(limit))}</span><span>Utilizado: {eur(debt)}</span>{session?.roles?.includes('ADMIN') && product && <CreditLimitEditor product={product} onSaved={onProductCreated}/>}</div>
+                        {creditCard && <div className="product-credit-details"><span>Límite: {limit == null ? 'Sin definir' : eur(Number(limit))}</span><span>Utilizado: {eur(debt)}</span>{session?.roles?.includes('ADMIN') && product && <CreditLimitEditor product={product} onSaved={onProductCreated}/>}</div>}
                         <div className="product-tile-footer"><span>Gasto del período</span><strong>{eur(item.expenses)}</strong></div>
                     </article>;
                 })}
