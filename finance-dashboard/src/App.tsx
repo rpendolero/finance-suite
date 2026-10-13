@@ -594,9 +594,21 @@ function CategoryAdministration() {
 }
 
 function Page({title, children}: { title: string; children: any }) {
-    return <section className="page">
-        <div className="section-head"><h2>{title}</h2></div>
-        {children}</section>
+    const descriptions: Record<string, string> = {
+        'Evolución financiera': 'Analiza cómo cambian tus ingresos, gastos y ahorro con el tiempo.',
+        'Gastos recurrentes': 'Identifica los cargos habituales y controla tus compromisos periódicos.',
+        'Calendario financiero': 'Explora tus movimientos y su distribución a lo largo del mes.',
+        'Insights financieros': 'Descubre tendencias y oportunidades para mejorar tus finanzas.',
+        'Movimientos': 'Consulta y revisa el detalle de tus operaciones financieras.',
+        'Movimientos pendientes de categorizar': 'Organiza tus movimientos para mantener los informes al día.',
+        'Administración de categorías': 'Personaliza cómo se clasifican tus ingresos y gastos.'
+    };
+    return <section className="page finance-page">
+        {title === 'Productos financieros'
+            ? <div className="section-head"><h2>{title}</h2></div>
+            : <div className="finance-page-hero"><div><span className="products-eyebrow">FINANCE SUITE</span><h2>{title}</h2><p>{descriptions[title] || 'Gestiona y consulta tu información financiera desde un mismo lugar.'}</p></div></div>}
+        {children}
+    </section>
 }
 
 function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean; onClassified: () => void }) {
