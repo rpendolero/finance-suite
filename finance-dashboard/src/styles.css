@@ -722,3 +722,10 @@ button{touch-action:manipulation}
 .credit-limit-editor button{border:1px solid #bfd5f3;border-radius:8px;padding:8px 12px;cursor:pointer}
 .credit-limit-editor button[type=submit]{background:#1764c7;color:white;border-color:#1764c7}
 .credit-limit-editor small{color:#b4233c}
+
+/* Logout: distinct warm accent, aligned with the Finance Suite design system. */
+.header-actions .logout{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#b93848;border:1px solid #a62d3e;color:#fff;border-radius:10px;padding:11px 16px;font-weight:650;box-shadow:0 4px 12px #b9384826;transition:background .2s,box-shadow .2s,transform .2s}
+.header-actions .logout:hover{background:#992739;box-shadow:0 6px 16px #99273935}
+.header-actions .logout:active{transform:translateY(1px)}
+.header-actions .logout:focus-visible{outline:3px solid #fda4af;outline-offset:3px}
+.header-actions .logout svg{flex-shrink:0}
