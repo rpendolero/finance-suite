@@ -342,8 +342,8 @@ function SectionView({
                     const creditCard = item.type === 'CREDIT_CARD';
                     const product = products.find(p => p.id === item.productId);
                     const limit = product?.creditLimit;
-                    const debt = Math.max(0, -Number(item.balance || 0));
-                    const available = limit == null ? null : Number(limit) - debt;
+                    const spent = Math.max(0, Number(item.expenses || 0));
+                    const available = limit == null ? null : Number(limit) - spent;
                     return <article className="card product-tile" key={item.productId}>
                         <div className="product-tile-head">
                             <span className={'product-tile-icon ' + (card ? 'is-card' : '')}>{card ? <CreditCard size={23}/> : <Landmark size={23}/>}</span>
@@ -352,7 +352,7 @@ function SectionView({
                         <h3>{item.name}</h3>
                         <p className="product-tile-provider">{item.provider || 'Entidad no especificada'}</p>
                         <div className="product-tile-balance"><small>{creditCard ? 'Crédito disponible' : 'Saldo'}</small><strong>{creditCard ? available == null ? 'Límite sin configurar' : eur(available) : eur(item.balance)}</strong></div>
-                        {creditCard && <div className="product-credit-details"><span>Límite: {limit == null ? 'Sin definir' : eur(Number(limit))}</span><span>Utilizado: {eur(debt)}</span>{session?.roles?.includes('ADMIN') && product && <CreditLimitEditor product={product} onSaved={onProductCreated}/>}</div>}
+                        {creditCard && <div className="product-credit-details"><span>Límite: {limit == null ? 'Sin definir' : eur(Number(limit))}</span><span>Gastado en el período: {eur(spent)}</span>{session?.roles?.includes('ADMIN') && product && <CreditLimitEditor product={product} onSaved={onProductCreated}/>}</div>}
                         <div className="product-tile-footer"><span>Gasto del período</span><strong>{eur(item.expenses)}</strong></div>
                     </article>;
                 })}
