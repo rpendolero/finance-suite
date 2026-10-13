@@ -21,7 +21,7 @@ export default function ProductCreate({products, initialName = '', initialProvid
         try {
             const input: ProductInput = {id: crypto.randomUUID(), name: name.trim(), provider, type, currency: 'EUR', balance: Number(balance), balanceAt: new Date(`${balanceAt}T12:00:00`).toISOString(),
                 ...(card && linkedAccountId ? {linkedAccountId} : {}),
-                ...(card && creditLimit !== '' ? {creditLimit: Number(creditLimit)} : {}),
+                ...(type === 'CREDIT_CARD' && creditLimit !== '' ? {creditLimit: Number(creditLimit)} : {}),
                 ...(card && lastDigits ? {maskedPan: `**** ${lastDigits}`} : {})};
             const product = await api.saveProduct(input);
             onCreated(product);
@@ -42,7 +42,7 @@ export default function ProductCreate({products, initialName = '', initialProvid
                 <p>El saldo inicial se registra manualmente. Tras vincularlo, la sincronización consultará el saldo al banco.</p>
                 {card && <>
                     <label>Cuenta asociada (opcional)<select value={linkedAccountId} onChange={e => setLinkedAccountId(e.target.value)}><option value="">Sin cuenta asociada</option>{products.filter(p => p.type === 'ACCOUNT' && p.provider === provider).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-                    <label>Límite (opcional)<input type="number" min="0" step="0.01" value={creditLimit} onChange={e => setCreditLimit(e.target.value)}/></label>
+                    {type === 'CREDIT_CARD' && <label>Límite de crédito (opcional)<input type="number" min="0" step="0.01" value={creditLimit} onChange={e => setCreditLimit(e.target.value)}/></label>}
                     <label>Últimos cuatro dígitos (opcional)<input inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={lastDigits} onChange={e => setLastDigits(e.target.value)}/></label>
                 </>}
             </div>
