@@ -339,6 +339,11 @@ function SectionView({
             {productStats.length ? <div className="products-grid">
                 {productStats.map((item: ProductStat) => {
                     const card = /card|tarjeta/i.test(item.type || '');
+                    const creditCard = item.type === 'CREDIT_CARD';
+                    const product = products.find(p => p.id === item.productId);
+                    const limit = product?.creditLimit;
+                    const debt = Math.max(0, -Number(item.balance || 0));
+                    const available = limit == null ? null : Number(limit) - debt;
                     return <article className="card product-tile" key={item.productId}>
                         <div className="product-tile-head">
                             <span className={'product-tile-icon ' + (card ? 'is-card' : '')}>{card ? <CreditCard size={23}/> : <Landmark size={23}/>}</span>
@@ -346,7 +351,8 @@ function SectionView({
                         </div>
                         <h3>{item.name}</h3>
                         <p className="product-tile-provider">{item.provider || 'Entidad no especificada'}</p>
-                        <div className="product-tile-balance"><small>Saldo</small><strong>{eur(item.balance)}</strong></div>
+                        <div className="product-tile-balance"><small>{creditCard ? 'Crédito disponible' : 'Saldo'}</small><strong>{creditCard ? available == null ? 'Límite sin configurar' : eur(available) : eur(item.balance)}</strong></div>
+                        {creditCard && <div className="product-credit-details"><span>Límite: {limit == null ? 'Sin definir' : eur(Number(limit))}</span><span>Utilizado: {eur(debt)}</span>{session?.roles?.includes('ADMIN') && product && <CreditLimitEditor product={product} onSaved={onProductCreated}/>}</div>
                         <div className="product-tile-footer"><span>Gasto del período</span><strong>{eur(item.expenses)}</strong></div>
                     </article>;
                 })}
@@ -693,6 +699,37 @@ function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified
             <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
         </>}</div>
     </Page>
+}
+
+function CreditLimitEditor({product, onSaved}: {product: Product; onSaved: () => void}) {
+    const [editing, setEditing] = useState(false);
+    const [limit, setLimit] = useState(String(product.creditLimit ?? ''));
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const save = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const amount = Number(limit);
+        if (!limit.trim() || !Number.isFinite(amount) || amount < 0) {
+            setError('Introduce un límite válido, igual o superior a cero.');
+            return;
+        }
+        setSaving(true);
+        setError('');
+        try {
+            await api.saveProduct({...product, creditLimit: amount, balanceAt: product.balanceAt || new Date().toISOString()});
+            setEditing(false);
+            onSaved();
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : 'No se pudo guardar el límite.');
+        } finally {
+            setSaving(false);
+        }
+    };
+    return editing ? <form className="credit-limit-editor" onSubmit={save}>
+        <label>Límite de crédito (€)<input autoFocus type="number" min="0" step="0.01" required value={limit} onChange={e => setLimit(e.target.value)}/></label>
+        {error && <small role="alert">{error}</small>}
+        <div><button type="button" className="secondary" disabled={saving} onClick={() => setEditing(false)}>Cancelar</button><button type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+    </form> : <button type="button" className="credit-limit-edit-button" onClick={() => {setLimit(String(product.creditLimit ?? '')); setEditing(true);}}>Editar límite</button>;
 }
 
 function ProductCreateButton({products, onCreated}: {products: Product[]; onCreated: () => void}) {
