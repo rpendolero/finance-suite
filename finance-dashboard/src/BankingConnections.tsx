@@ -76,8 +76,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
                 setLinks(current => ({...current, [creatingFor.externalAccountId]: product.id}));
                 setCreatingFor(null); onProductCreated();
             }}/>}
-        <h2>Bancos · Enable Banking</h2>
-        <p>Conecta tu banco, vincula cada cuenta con un producto y sincroniza sus movimientos.</p>
+        <div className="finance-page-hero"><div><span className="products-eyebrow">CONEXIONES SEGURAS</span><h2>Bancos · Enable Banking</h2><p>Conecta tu banco, vincula cada cuenta con un producto y sincroniza sus movimientos.</p></div></div>
         {new URLSearchParams(window.location.search).get('banking') === 'connected' && <p role="status">Autorización completada. Descubre las cuentas para vincularlas.</p>}
         {new URLSearchParams(window.location.search).get('banking') === 'cancelled' && <p role="alert">La autorización se ha cancelado o el banco la ha rechazado. Puedes volver a conectar.</p>}
         {error && <div className="api-error" role="alert">{error}</div>}
