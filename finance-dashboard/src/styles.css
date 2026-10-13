@@ -712,3 +712,13 @@ button{touch-action:manipulation}
 .finance-import-page .statement-import-form{gap:18px}
 .finance-import-page .statement-import-result{margin-top:18px}
 @media(max-width:767px){.finance-overview-hero{margin-bottom:16px}.banking-page .banking-actions{padding:16px;align-items:stretch}.banking-page .banking-actions label,.banking-page .banking-actions button{flex:1 1 100%}.finance-import-page>.card{padding:16px}}
+
+.product-credit-details{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:12px;color:#64748b;font-size:12px}
+.credit-limit-edit-button{border:1px solid #bfd5f3;background:#eff6ff;color:#1755a4;border-radius:8px;padding:7px 10px;font-weight:650;cursor:pointer}
+.credit-limit-editor{display:grid;gap:8px;margin-top:12px;padding:12px;border-radius:10px;background:#f4f8ff}
+.credit-limit-editor label{display:grid;gap:5px;font-size:12px;font-weight:650}
+.credit-limit-editor input{width:100%;border:1px solid #cad7e9;border-radius:8px;padding:9px}
+.credit-limit-editor>div{display:flex;gap:8px}
+.credit-limit-editor button{border:1px solid #bfd5f3;border-radius:8px;padding:8px 12px;cursor:pointer}
+.credit-limit-editor button[type=submit]{background:#1764c7;color:white;border-color:#1764c7}
+.credit-limit-editor small{color:#b4233c}
