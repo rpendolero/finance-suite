@@ -321,8 +321,8 @@ function SectionView({
         </div>
     </Page>;
     if (view === 'products') {
-        const totalBalance = productStats.reduce((sum, item) => sum + Number(item.balance || 0), 0);
-        const totalExpenses = productStats.reduce((sum, item) => sum + Number(item.expenses || 0), 0);
+        const totalBalance = productStats.reduce((sum: number, item: ProductStat) => sum + Number(item.balance || 0), 0);
+        const totalExpenses = productStats.reduce((sum: number, item: ProductStat) => sum + Number(item.expenses || 0), 0);
         return <Page title="Productos financieros">
             <section className="products-hero">
                 <div>
@@ -341,7 +341,7 @@ function SectionView({
                 {productStats.map((item: ProductStat) => {
                     const card = /card|tarjeta/i.test(item.type || '');
                     const creditCard = item.type === 'CREDIT_CARD';
-                    const product = products.find(p => p.id === item.productId);
+                    const product = products.find((p: Product) => p.id === item.productId);
                     const limit = product?.creditLimit;
                     const spent = Math.max(0, Number(item.expenses || 0));
                     const available = limit == null ? null : Number(limit) - spent;
