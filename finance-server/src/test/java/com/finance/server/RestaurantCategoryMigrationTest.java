@@ -84,10 +84,10 @@ class RestaurantCategoryMigrationTest {
         assertThat(value(statement, "SELECT COUNT(*) FROM subcategory s JOIN category c ON c.id=s.category_id "
             + "WHERE c.code='RESTAURACION' AND s.code IN ('RESTAURANTE','RESTAURANTES','BARES_CAFETERIAS','COMIDA_DOMICILIO')"))
             .isEqualTo("4");
-        assertThat(value(statement, "SELECT name FROM subcategory s JOIN category c ON c.id=s.category_id "
+        assertThat(value(statement, "SELECT s.name FROM subcategory s JOIN category c ON c.id=s.category_id "
             + "WHERE c.code='RESTAURACION' AND s.code='BARES_CAFETERIAS'"))
             .isEqualTo("Bares y cafeterías");
-        assertThat(value(statement, "SELECT name FROM subcategory s JOIN category c ON c.id=s.category_id "
+        assertThat(value(statement, "SELECT s.name FROM subcategory s JOIN category c ON c.id=s.category_id "
             + "WHERE c.code='ALIMENTACION' AND s.code='OTROS_ALIMENTOS'"))
             .isEqualTo("Otros alimentos");
       }
