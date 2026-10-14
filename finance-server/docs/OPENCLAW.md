@@ -63,4 +63,4 @@ La consulta MCP trabaja con movimientos almacenados en MySQL; no inicia sesión 
 
 El puente Node stdio sigue disponible en `scripts/openclaw-bridge.mjs` y `scripts/start-openclaw-bridge.sh` para instalaciones antiguas o casos especiales. Su configuración anterior usa `FINANCE_READER_PASSWORD`; no es el procedimiento recomendado para OpenClaw 2026.9.5.
 
-Documentación adicional: [API Key](../../docs/MCP-API-KEY.md), https://docs.openclaw.ai/cli/mcp.
+Documentación adicional: [OpenCode y API Key](OPENCODE.md), https://docs.openclaw.ai/cli/mcp.
