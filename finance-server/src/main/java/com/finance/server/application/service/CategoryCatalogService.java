@@ -90,7 +90,8 @@ public final class CategoryCatalogService {
     Map<String, String> aliases = new HashMap<>();
     add(aliases, "INGRESOS", "INCOME", "SALARY", "NOMINA");
     add(aliases, "VIVIENDA", "HOUSING", "HOME", "UTILITIES");
-    add(aliases, "ALIMENTACION", "FOOD", "GROCERIES", "SUPERMARKET", "RESTAURANTS");
+    add(aliases, "ALIMENTACION", "FOOD", "GROCERIES", "SUPERMARKET");
+    add(aliases, "RESTAURACION", "RESTAURANTE", "RESTAURANTES", "RESTAURANT", "RESTAURANTS", "DINING");
     add(aliases, "TRANSPORTE", "TRANSPORT", "TRANSPORTATION", "FUEL");
     add(aliases, "OCIO", "LEISURE", "ENTERTAINMENT");
     add(aliases, "SALUD", "HEALTH", "MEDICAL");
