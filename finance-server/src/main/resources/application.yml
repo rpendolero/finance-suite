@@ -45,7 +45,7 @@ finance:
       cron: '${ENABLE_BANKING_SYNC_CRON:0 0 6 * * *}'
       zone: ${ENABLE_BANKING_SYNC_ZONE:Europe/Madrid}
   security:
-    reader-password: ${FINANCE_READER_PASSWORD}
+    mcp-api-key-sha256: ${FINANCE_MCP_API_KEY_SHA256:}\n    reader-password: ${FINANCE_READER_PASSWORD}
     admin-password: ${FINANCE_ADMIN_PASSWORD}
     importer-password: ${FINANCE_IMPORTER_PASSWORD}
     allowed-origins: ${FINANCE_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
