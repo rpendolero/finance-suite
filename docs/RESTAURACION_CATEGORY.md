@@ -13,10 +13,10 @@ actualizar el servidor. No modificar el fichero `V6` de instalaciones existentes
 
 La migración:
 1. crea o reactiva `RESTAURACION`;
-2. **mueve** las dos subcategorías existentes, conservando sus IDs, sin dejar copias inactivas en Alimentación;
+2. **mueve** las subcategorías existentes `RESTAURANTES`, `COMIDA_DOMICILIO` y el código histórico opcional `RESTAURANTE`, conservando sus IDs y sin dejar copias inactivas en Alimentación;
 3. crea Bares y cafeterías y Otros alimentos (no clasifica automáticamente movimientos ambiguos);
 4. actualiza solamente los movimientos y reglas clasificados como
-   `ALIMENTACION / RESTAURANTES` o `ALIMENTACION / COMIDA_DOMICILIO`;
+   `ALIMENTACION / RESTAURANTES`, `ALIMENTACION / RESTAURANTE` o `ALIMENTACION / COMIDA_DOMICILIO`;
 5. no modifica importes, tipos computables/no computables, fuente ni confianza de clasificación.
 
 Si ya existe una categoría Restauración creada manualmente y además una subcategoría
