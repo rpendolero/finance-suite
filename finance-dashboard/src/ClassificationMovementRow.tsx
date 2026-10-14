@@ -103,7 +103,7 @@ export default function ClassificationMovementRow({movement, catalog, canEdit, b
                 onChange={event => setChoice({...choice, subcategory: event.target.value || undefined,
                     kind: excludedKinds[event.target.value] || choice.kind})}>
                 <option value="">Sin subcategoría</option>
-                {(definition?.subcategories || []).map(value => <option value={value} key={value}>{value.replaceAll('_', ' ')}</option>)}
+                {(definition?.subcategories || []).map(value => <option value={value} key={value}>{definition?.subcategoryLabels?.[value] || value.replaceAll('_', ' ')}</option>)}
             </select>
         </div>
         {canEdit && <div className="classification-actions">
