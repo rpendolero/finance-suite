@@ -6,6 +6,7 @@ import BankingConnections from './BankingConnections';
 import StatementImport from './StatementImport';
 import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
+import MovementSummaryModal from './MovementSummaryModal';
 import {periodRange} from './periods';
 import {useEffect, useState, type FormEvent} from 'react';
 import {
@@ -167,6 +168,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [from, setFrom] = useState(initialPeriod.from);
     const [to, setTo] = useState(initialPeriod.to);
     const [classificationRevision, setClassificationRevision] = useState(0);
+    const [movementSelection, setMovementSelection] = useState<{productId?: string; date?: string} | null>(null);
+    const openMovements = (selection: {productId?: string; date?: string}) => setMovementSelection(selection);
     const onClassified = () => setClassificationRevision(current => current + 1);
     const selectPeriod = (preset: string, year = periodYear) => {
         setPeriodPreset(preset);
@@ -208,6 +211,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     };
     const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
+        {movementSelection && <MovementSummaryModal selection={movementSelection} from={from} to={to} products={products} onClose={() => setMovementSelection(null)}/>}
         <aside>
             <div className="brand"><img className="brand-logo" src="/favicon.svg" alt="" /><span>Finance Suite</span></div>
             <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
@@ -230,7 +234,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
             {view === 'imports' && session.roles?.includes('ADMIN') ? <StatementImport products={products} onImported={onClassified} onProductCreated={onProductCreated}/> : view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
                 <FinancialFlowView from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
-                <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified}/> : loading ?
+                <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified} movementSelection={movementSelection}/> : loading ?
                 <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
                     <div className="finance-page-hero finance-overview-hero"><div><span className="products-eyebrow">RESUMEN DE TU ECONOMÍA</span><h2>Tu situación financiera, de un vistazo</h2><p>Consulta los indicadores clave, la evolución de tus movimientos y el estado de tus finanzas en el período seleccionado.</p></div></div>
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
@@ -293,7 +297,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <SectionView view={view} trend={trend}
                                  productStats={productStats} products={products}
                                  recurring={recurring} calendar={calendar} insights={insights}
-                                 anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated} onClassified={onClassified}/> : null}</main>
+                                 anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated} onClassified={onClassified} onOpenMovements={openMovements}/> : null}</main>
     </div>
 }
 
@@ -310,7 +314,9 @@ function SectionView({
                          from,
                          to,
                          onProductCreated,
-                         onClassified
+                         onClassified,
+                         onOpenMovements,
+                         movementSelection
                      }: any) {
     if (view === 'trend') return <Page title="Evolución financiera">
         <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
@@ -355,12 +361,13 @@ function SectionView({
                         <div className="product-tile-balance"><small>{creditCard ? 'Crédito disponible' : 'Saldo'}</small><strong>{creditCard ? available == null ? 'Límite sin configurar' : eur(available) : eur(item.balance)}</strong></div>
                         {creditCard && <div className="product-credit-details"><span>Límite: {limit == null ? 'Sin definir' : eur(Number(limit))}</span><span>Gastado en el período: {eur(spent)}</span>{session?.roles?.includes('ADMIN') && product && <CreditLimitEditor product={product} onSaved={onProductCreated}/>}</div>}
                         <div className="product-tile-footer"><span>Gasto del período</span><strong>{eur(item.expenses)}</strong></div>
+                        <button type="button" className="product-movements-button" onClick={() => onOpenMovements({productId: item.productId})}>Ver movimientos</button>
                     </article>;
                 })}
             </div> : <div className="card products-empty"><Wallet size={30}/><h3>Sin productos disponibles</h3><p>Añade un producto financiero para empezar a consultar tus cuentas y tarjetas.</p></div>}
         </Page>;
     }
-    if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')} onClassified={onClassified}/>;
+    if (view === 'movements') return <MovementSearch products={products} initialFrom={from} initialTo={to} canEdit={session?.roles?.includes('ADMIN')} onClassified={onClassified} selection={movementSelection}/>;
     if (view === 'recurring') return <Page title="Gastos recurrentes">
         <div className="card list-cards">{recurring.length ? recurring.map((r: Recurring, i: number) => <div
             className="list-item" key={i}>
@@ -368,7 +375,7 @@ function SectionView({
         </div>) : <Empty>No se han detectado movimientos recurrentes.</Empty>}</div>
     </Page>;
     if (view === 'calendar') return <Page title="Calendario financiero">
-        <FinancialCalendar days={calendar}/>
+        <FinancialCalendar days={calendar} onSelectDay={(date: string) => onOpenMovements({date})}/>
     </Page>;
     if (view === 'insights') return <Page title="Insights financieros">
         <div className="insight-grid">{insights.length ? insights.map((i: Insight) => <div
@@ -619,8 +626,8 @@ function Page({title, children}: { title: string; children: any }) {
     </section>
 }
 
-function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean; onClassified: () => void }) {
-    const [filters, setFilters] = useState<any>({from: initialFrom, to: initialTo, sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
+function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified, selection}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean; onClassified: () => void; selection?: {productId?: string; date?: string} | null }) {
+    const [filters, setFilters] = useState<any>({from: selection?.date || initialFrom, to: selection?.date || initialTo, productId: selection?.productId || '', sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
     const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
     const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
     const [deleting, setDeleting] = useState<Movement | null>(null);
@@ -638,6 +645,7 @@ function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified
         setFilters(next); load(next);
     }, [initialFrom, initialTo]);
 
+    useEffect(() => {if (!selection) return; const next = {...filters, from: selection.date || initialFrom, to: selection.date || initialTo, productId: selection.productId || '', offset: 0}; setFilters(next); load(next);}, [selection]);
     const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
     const submit = (e: any) => { e.preventDefault(); load(filters) };
     const move = (offset: number) => { const next = {...filters, offset}; setFilters(next); load(next) };

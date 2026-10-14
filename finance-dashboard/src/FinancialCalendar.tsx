@@ -17,20 +17,20 @@ export function calendarCells(days: CalendarDay[]) {
 
 const eur = (amount: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(amount);
 
-export default function FinancialCalendar({days}: {days: CalendarDay[]}) {
+export default function FinancialCalendar({days, onSelectDay}: {days: CalendarDay[]; onSelectDay?: (date: string) => void}) {
     return <>
         <div className="calendar-scroll" tabIndex={0} role="region" aria-label="Calendario financiero de lunes a domingo">
             <div className="calendar-grid">
                 {WEEKDAYS.map((weekday, index) => <div className="calendar-weekday" key={weekday}
                     style={{gridColumn: index + 1, gridRow: 1}}>{weekday}</div>)}
-                {calendarCells(days).map(({day, column, row}) => <div key={day.date}
+                {calendarCells(days).map(({day, column, row}) => <button type="button" key={day.date} onClick={() => onSelectDay?.(day.date)} aria-label={`Ver movimientos del ${day.date}`}
                     className={'day ' + (day.expenses > 0 ? 'has-expense' : '')}
                     style={{gridColumn: column, gridRow: row}}>
                     <b><time dateTime={day.date}>{dayLabel.format(new Date(`${day.date}T00:00:00Z`))}</time></b>
                     <small>{day.operations} op.</small>
                     <span className="neg">{day.expenses ? '-' + eur(day.expenses) : ''}</span>
                     <span className="pos">{day.income ? '+' + eur(day.income) : ''}</span>
-                </div>)}
+                </button>)}
             </div>
         </div>
         {!days.length && <div className="empty">Sin datos en el período seleccionado.</div>}
