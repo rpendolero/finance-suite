@@ -114,7 +114,7 @@ class RestaurantCategoryMigrationTest {
   }
 
   private void createSchema(Statement statement) throws Exception {
-    statement.execute("CREATE TABLE category (id BIGINT PRIMARY KEY, code VARCHAR(64) UNIQUE, "
+    statement.execute("CREATE TABLE category (id BIGINT AUTO_INCREMENT PRIMARY KEY, code VARCHAR(64) UNIQUE, "
         + "name VARCHAR(100), active BOOLEAN DEFAULT TRUE, display_order INT)");
     statement.execute("CREATE TABLE subcategory (id BIGINT AUTO_INCREMENT PRIMARY KEY, "
         + "category_id BIGINT REFERENCES category(id), code VARCHAR(64), name VARCHAR(100), "
