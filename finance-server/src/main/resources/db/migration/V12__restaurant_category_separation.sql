@@ -13,12 +13,13 @@ UPDATE subcategory
 SET category_id = (SELECT id FROM category WHERE code = 'RESTAURACION'),
     active = TRUE,
     display_order = CASE code
+      WHEN 'RESTAURANTE' THEN 10
       WHEN 'RESTAURANTES' THEN 10
       WHEN 'COMIDA_DOMICILIO' THEN 30
       ELSE display_order
     END
 WHERE category_id = (SELECT id FROM category WHERE code = 'ALIMENTACION')
-  AND code IN ('RESTAURANTES', 'COMIDA_DOMICILIO');
+  AND code IN ('RESTAURANTE', 'RESTAURANTES', 'COMIDA_DOMICILIO');
 
 -- Ensure standard subcategories exist, including installations customized by users.
 INSERT INTO subcategory (category_id, code, name, active, display_order)
@@ -57,8 +58,8 @@ WHERE category_id = (SELECT id FROM category WHERE code = 'RESTAURACION')
 -- Do not move unclassified or generic ALIMENTACION movements without evidence.
 UPDATE movement SET category = 'RESTAURACION'
 WHERE category = 'ALIMENTACION'
-  AND subcategory IN ('RESTAURANTES', 'COMIDA_DOMICILIO');
+  AND subcategory IN ('RESTAURANTE', 'RESTAURANTES', 'COMIDA_DOMICILIO');
 
 UPDATE classification_rule SET category = 'RESTAURACION'
 WHERE category = 'ALIMENTACION'
-  AND subcategory IN ('RESTAURANTES', 'COMIDA_DOMICILIO');
+  AND subcategory IN ('RESTAURANTE', 'RESTAURANTES', 'COMIDA_DOMICILIO');
