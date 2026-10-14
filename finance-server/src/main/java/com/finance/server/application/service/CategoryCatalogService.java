@@ -14,7 +14,7 @@ public final class CategoryCatalogService {
 
   public static final String UNCLASSIFIED = "UNCLASSIFIED";
 
-  public record CategoryDefinition(String code, String label, List<String> subcategories) {}
+  public record CategoryDefinition(String code, String label, List<String> subcategories, Map<String, String> subcategoryLabels) {}
 
   private final CategoryCatalogPort catalog;
 
@@ -25,7 +25,9 @@ public final class CategoryCatalogService {
         .map(category -> new CategoryDefinition(
             category.code(),
             category.name(),
-            category.subcategories().stream().map(CategoryCatalogPort.Subcategory::code).toList()))
+            category.subcategories().stream().map(CategoryCatalogPort.Subcategory::code).toList(),
+            category.subcategories().stream().collect(Collectors.toMap(
+                CategoryCatalogPort.Subcategory::code, CategoryCatalogPort.Subcategory::name))))
         .toList();
   }
 
@@ -90,7 +92,8 @@ public final class CategoryCatalogService {
     Map<String, String> aliases = new HashMap<>();
     add(aliases, "INGRESOS", "INCOME", "SALARY", "NOMINA");
     add(aliases, "VIVIENDA", "HOUSING", "HOME", "UTILITIES");
-    add(aliases, "ALIMENTACION", "FOOD", "GROCERIES", "SUPERMARKET", "RESTAURANTS");
+    add(aliases, "ALIMENTACION", "FOOD", "GROCERIES", "SUPERMARKET");
+    add(aliases, "RESTAURACION", "RESTAURANTE", "RESTAURANTES", "RESTAURANT", "RESTAURANTS", "DINING");
     add(aliases, "TRANSPORTE", "TRANSPORT", "TRANSPORTATION", "FUEL");
     add(aliases, "OCIO", "LEISURE", "ENTERTAINMENT");
     add(aliases, "SALUD", "HEALTH", "MEDICAL");

@@ -1,4 +1,12 @@
-# Finance Suite 0.5.9
+# Finance Suite 0.5.10
+
+## Novedades 0.5.10
+
+- Nueva categoría **Restauración**, independiente de Alimentación, con Restaurantes, Bares y cafeterías y Comida a domicilio.
+- Migración Flyway `V12` para movimientos históricos y reglas de clasificación, conservando importes y metadatos.
+- Alias de categorías actualizados y subcategorías mostradas con su nombre en el dashboard.
+
+[Notas de versión 0.5.10](docs/RELEASE-0.5.10.md) · [Guía de migración](docs/RESTAURACION_CATEGORY.md).
 
 ## Novedades 0.5.9
 
@@ -15,7 +23,7 @@ Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
 
-## Novedades 0.5.9
+## Otras mejoras 0.5.9
 
 - Diseño visual unificado del dashboard y de la pantalla de productos.
 - Nuevo logotipo en login y navegación; botón de salida con icono y color diferenciado.
