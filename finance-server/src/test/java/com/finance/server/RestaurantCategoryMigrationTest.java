@@ -23,18 +23,21 @@ class RestaurantCategoryMigrationTest {
             + "(11, 1, 'SUPERMERCADO', 'Supermercado', TRUE, 10), "
             + "(12, 1, 'RESTAURANTES', 'Restaurantes', TRUE, 20), "
             + "(13, 1, 'COMIDA_DOMICILIO', 'Comida a domicilio', TRUE, 30), "
-            + "(14, 2, 'HOTELES', 'Hoteles', TRUE, 50)");
+            + "(14, 2, 'HOTELES', 'Hoteles', TRUE, 50), "
+            + "(15, 1, 'RESTAURANTE', 'Restaurante', TRUE, 21)");
         statement.execute("INSERT INTO movement VALUES "
             + "(1, 'ALIMENTACION', 'RESTAURANTES', -45.00, 'NORMAL', 'MANUAL', 1.0000), "
             + "(2, 'ALIMENTACION', 'COMIDA_DOMICILIO', -20.00, 'NORMAL', 'MERCHANT_RULE', 0.9900), "
             + "(3, 'ALIMENTACION', 'SUPERMERCADO', -65.00, 'NORMAL', 'MANUAL', 1.0000), "
             + "(4, 'OCIO', 'HOTELES', -100.00, 'NORMAL', 'MANUAL', 1.0000), "
             + "(5, 'ALIMENTACION', NULL, -8.00, 'NORMAL', 'MANUAL', 1.0000), "
-            + "(6, 'UNCLASSIFIED', 'RESTAURANTES', -5.00, 'NORMAL', 'UNCLASSIFIED', 0.0000)");
+            + "(6, 'UNCLASSIFIED', 'RESTAURANTES', -5.00, 'NORMAL', 'UNCLASSIFIED', 0.0000), "
+            + "(7, 'ALIMENTACION', 'RESTAURANTE', -18.00, 'NORMAL', 'MANUAL', 1.0000)");
         statement.execute("INSERT INTO classification_rule VALUES "
             + "('restaurant', 'ALIMENTACION', 'RESTAURANTES'), "
             + "('delivery', 'ALIMENTACION', 'COMIDA_DOMICILIO'), "
-            + "('market', 'ALIMENTACION', 'SUPERMERCADO')");
+            + "('market', 'ALIMENTACION', 'SUPERMERCADO'), "
+            + "('restaurant_singular', 'ALIMENTACION', 'RESTAURANTE')");
 
         runMigration(statement);
         runMigration(statement);
@@ -44,6 +47,8 @@ class RestaurantCategoryMigrationTest {
         assertThat(value(statement, "SELECT category FROM movement WHERE id=1"))
             .isEqualTo("RESTAURACION");
         assertThat(value(statement, "SELECT category FROM movement WHERE id=2"))
+            .isEqualTo("RESTAURACION");
+        assertThat(value(statement, "SELECT category FROM movement WHERE id=7"))
             .isEqualTo("RESTAURACION");
         assertThat(value(statement, "SELECT category FROM movement WHERE id=3"))
             .isEqualTo("ALIMENTACION");
@@ -63,18 +68,22 @@ class RestaurantCategoryMigrationTest {
             .isEqualTo("RESTAURACION");
         assertThat(value(statement, "SELECT category FROM classification_rule WHERE id='delivery'"))
             .isEqualTo("RESTAURACION");
+        assertThat(value(statement, "SELECT category FROM classification_rule WHERE id='restaurant_singular'"))
+            .isEqualTo("RESTAURACION");
         assertThat(value(statement, "SELECT category FROM classification_rule WHERE id='market'"))
             .isEqualTo("ALIMENTACION");
         assertThat(value(statement, "SELECT c.code FROM subcategory s JOIN category c ON c.id=s.category_id WHERE s.id=12"))
             .isEqualTo("RESTAURACION");
+        assertThat(value(statement, "SELECT c.code FROM subcategory s JOIN category c ON c.id=s.category_id WHERE s.id=15"))
+            .isEqualTo("RESTAURACION");
         assertThat(value(statement, "SELECT c.code FROM subcategory s JOIN category c ON c.id=s.category_id WHERE s.id=13"))
             .isEqualTo("RESTAURACION");
         assertThat(value(statement, "SELECT COUNT(*) FROM subcategory s JOIN category c ON c.id=s.category_id "
-            + "WHERE c.code='ALIMENTACION' AND s.code IN ('RESTAURANTES','COMIDA_DOMICILIO')"))
+            + "WHERE c.code='ALIMENTACION' AND s.code IN ('RESTAURANTE','RESTAURANTES','COMIDA_DOMICILIO')"))
             .isEqualTo("0");
         assertThat(value(statement, "SELECT COUNT(*) FROM subcategory s JOIN category c ON c.id=s.category_id "
-            + "WHERE c.code='RESTAURACION' AND s.code IN ('RESTAURANTES','BARES_CAFETERIAS','COMIDA_DOMICILIO')"))
-            .isEqualTo("3");
+            + "WHERE c.code='RESTAURACION' AND s.code IN ('RESTAURANTE','RESTAURANTES','BARES_CAFETERIAS','COMIDA_DOMICILIO')"))
+            .isEqualTo("4");
         assertThat(value(statement, "SELECT name FROM subcategory s JOIN category c ON c.id=s.category_id "
             + "WHERE c.code='RESTAURACION' AND s.code='BARES_CAFETERIAS'"))
             .isEqualTo("Bares y cafeterías");
