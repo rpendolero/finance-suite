@@ -729,3 +729,10 @@ button{touch-action:manipulation}
 .header-actions .logout:active{transform:translateY(1px)}
 .header-actions .logout:focus-visible{outline:3px solid #fda4af;outline-offset:3px}
 .header-actions .logout svg{flex-shrink:0}
+
+/* Drill-down actions for products and calendar */
+.product-movements-button{width:100%;margin-top:12px;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;border:0;font-weight:650;cursor:pointer}
+.product-movements-button:hover{background:#1d4ed8}
+.calendar-grid button.day{font:inherit;text-align:left;color:inherit;cursor:pointer;width:100%;border:1px solid transparent}
+.calendar-grid button.day:hover{border-color:#2563eb;filter:brightness(.98)}
+.calendar-grid button.day:focus-visible,.product-movements-button:focus-visible{outline:3px solid #60a5fa;outline-offset:2px}
