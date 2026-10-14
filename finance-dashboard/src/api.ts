@@ -39,7 +39,8 @@ export type Movement = {
 export type CategoryDefinition = {
     code: string;
     label: string;
-    subcategories: string[]
+    subcategories: string[];
+    subcategoryLabels?: Record<string, string>;
 };
 export type AdminSubcategory = { id: number; code: string; name: string; active: boolean; displayOrder: number };
 export type AdminCategory = { id: number; code: string; name: string; active: boolean; displayOrder: number; subcategories: AdminSubcategory[] };
