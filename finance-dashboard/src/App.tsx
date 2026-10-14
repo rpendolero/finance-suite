@@ -6,6 +6,7 @@ import BankingConnections from './BankingConnections';
 import StatementImport from './StatementImport';
 import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
+import MovementSummaryModal from './MovementSummaryModal';
 import {periodRange} from './periods';
 import {useEffect, useState, type FormEvent} from 'react';
 import {
@@ -168,7 +169,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [to, setTo] = useState(initialPeriod.to);
     const [classificationRevision, setClassificationRevision] = useState(0);
     const [movementSelection, setMovementSelection] = useState<{productId?: string; date?: string} | null>(null);
-    const openMovements = (selection: {productId?: string; date?: string}) => {setMovementSelection(selection); setView('movements');};
+    const openMovements = (selection: {productId?: string; date?: string}) => setMovementSelection(selection);
     const onClassified = () => setClassificationRevision(current => current + 1);
     const selectPeriod = (preset: string, year = periodYear) => {
         setPeriodPreset(preset);
@@ -210,6 +211,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     };
     const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
+        {movementSelection && <MovementSummaryModal selection={movementSelection} from={from} to={to} products={products} onClose={() => setMovementSelection(null)}/>}
         <aside>
             <div className="brand"><img className="brand-logo" src="/favicon.svg" alt="" /><span>Finance Suite</span></div>
             <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
