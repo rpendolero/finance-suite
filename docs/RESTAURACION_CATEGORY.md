@@ -1,6 +1,6 @@
 # Categoría independiente «Restauración»
 
-Rama de validación: `feature/restauracion-independiente`. **No fusionar hasta validar**.
+Versión integrada: `0.5.10` en `master`. Rama de desarrollo: `feature/restauracion-independiente`.
 
 ## Catálogo resultante
 
