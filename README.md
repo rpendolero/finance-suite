@@ -1,4 +1,13 @@
-# Finance Suite 0.5.8
+# Finance Suite 0.5.9
+
+## Novedades 0.5.9
+
+- Resumen de movimientos computables desde Productos y Calendario en una ventana modal personalizada.
+- Totales de ingresos, gastos, balance y detalle por operación.
+- Sin migraciones ni cambios en los endpoints REST.
+
+[Notas de versión 0.5.9](docs/RELEASE-0.5.9.md).
+
 
 Errores de base de datos: [trazas y respuestas](docs/RELEASE-0.4.6.md).
 
@@ -6,14 +15,14 @@ Persistencia con [Spring Data JPA](docs/RELEASE-0.4.5.md).
 
 Identificación de varias tarjetas: [cambios y configuración](docs/RELEASE-0.4.4.md).
 
-## Novedades 0.5.8
+## Novedades 0.5.9
 
 - Diseño visual unificado del dashboard y de la pantalla de productos.
 - Nuevo logotipo en login y navegación; botón de salida con icono y color diferenciado.
 - Tarjetas de crédito: edición del límite y cálculo del disponible estimado con los gastos del período.
 - Correcciones de presentación JSX.
 
-[Notas de versión 0.5.8](docs/RELEASE-0.5.8.md).
+[Notas de versión 0.5.9](docs/RELEASE-0.5.9.md).
 
 ## Novedades 0.5.6
 
