@@ -63,7 +63,7 @@ La evolución financiera se mantiene en Inicio; se elimina la pantalla independi
 
 El panel **Previsión de saldo** utiliza los campos reales de `/api/analysis/forecast`: saldo de partida (`accountBalances`), flujo neto estimado (`estimatedNetFlow`) y saldo estimado (`estimatedAccountBalance`), junto al horizonte (`days`) y fecha del cálculo (`asOf`). Antes consultaba campos de gastos que ese endpoint no devuelve y mostraba erróneamente que no había proyección.
 
-Se muestran también estimaciones cero o negativas. El panel indica el período histórico y las limitaciones de la proyección lineal de cuentas. Es una estimación de liquidez que incluye liquidaciones de cuentas, no una previsión de gastos computables. Un fallo de esta consulta se muestra en el panel y no impide cargar el resto de Inicio.
+Se muestran también estimaciones cero o negativas. El panel indica el período histórico y las limitaciones de la proyección lineal. El flujo utiliza exclusivamente movimientos computables de todos los productos, con el mismo criterio que ingresos y gastos: contabilizados, de tipo NORMAL o REFUND y sin categoría NO_COMPUTABLE. Quedan fuera pendientes, duplicados, transferencias y liquidaciones. La fórmula es saldo actual de cuentas y monederos + (ingresos computables − gastos computables) / días del histórico × días del horizonte. Esta extrapolación no predice vencimientos ni fechas de cobro o pago. Un fallo de esta consulta se muestra en el panel y no impide cargar el resto de Inicio.
 
 ## Verificación
 

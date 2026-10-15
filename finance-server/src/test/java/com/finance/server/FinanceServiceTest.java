@@ -146,7 +146,7 @@ class FinanceServiceTest {
   }
 
   @Test
-  void cashForecastUsesAccountFlowsAndDoesNotSubtractCreditPurchasesTwice() {
+  void forecastUsesComputableCardPurchaseAndExcludesAccountSettlement() {
     when(ledger.products())
         .thenReturn(
             List.of(
@@ -172,7 +172,7 @@ class FinanceServiceTest {
         m(
             "payment",
             "2026-09-10",
-            "-100.00",
+            "-200.00",
             "card",
             Movement.Kind.CARD_SETTLEMENT,
             Movement.Status.BOOKED);

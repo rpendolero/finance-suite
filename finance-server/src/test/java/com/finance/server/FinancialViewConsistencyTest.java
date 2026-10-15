@@ -11,8 +11,10 @@ import com.finance.server.application.port.LedgerPort;
 import com.finance.server.application.service.DashboardAnalysisService;
 import com.finance.server.application.service.DashboardAnalysisService.FlowDirection;
 import com.finance.server.application.service.FinancialSummaryService;
+import com.finance.server.application.service.LiquidityForecastService;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +79,24 @@ class FinancialViewConsistencyTest {
         .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("1505.21");
   }
 
+  @Test
+  void forecastExtrapolatesOnlyComputableNetForFifteenDayHistory() {
+    var history = new Period(day, day.plusDays(14));
+    when(ledger.products()).thenReturn(List.of(
+        new Product("account", "Cuenta", Product.ProductType.ACCOUNT, "EUR", new BigDecimal("227.14"),
+            Instant.EPOCH, null, null)));
+    when(ledger.movements(history, null)).thenReturn(List.of(
+        movement("income", "640.20", "INGRESOS", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("expenses", "-4487.37", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED),
+        movement("excluded", "-6622.94", "NO_COMPUTABLE", Movement.Kind.NORMAL, Movement.Status.BOOKED)));
+
+    var forecast = new LiquidityForecastService(ledger, Clock.systemUTC()).forecast(history, 30);
+
+    assertThat(forecast.accountBalances()).isEqualByComparingTo("227.14");
+    assertThat(forecast.estimatedNetFlow()).isEqualByComparingTo("-7694.34");
+    assertThat(forecast.estimatedAccountBalance()).isEqualByComparingTo("-7467.20");
+  }
+
   private void assertTotals(String productId, String income, String expenses, int operations) {
     var overview = dashboard.overview(period, productId);
     var summary = summaries.summary(period, productId);
@@ -88,6 +108,12 @@ class FinancialViewConsistencyTest {
     assertThat(summary.availableAfterAllocations()).isEqualByComparingTo(summary.net());
     assertThat(overview.availableAfterAllocations()).isEqualByComparingTo(summary.net());
     assertThat(summary.included()).isEqualTo(operations);
+    if (productId == null) {
+      var forecast = new LiquidityForecastService(ledger, Clock.systemUTC()).forecast(period, 30);
+      assertThat(forecast.estimatedNetFlow())
+          .isEqualByComparingTo(summary.net().multiply(new BigDecimal("15")));
+      assertThat(forecast.estimatedAccountBalance()).isEqualByComparingTo(forecast.estimatedNetFlow());
+    }
     var calendar = dashboard.calendar(period, productId);
     assertThat(calendar.stream().map(DashboardAnalysisService.CalendarDay::expenses).reduce(BigDecimal.ZERO, BigDecimal::add))
         .isEqualByComparingTo(expenses);
@@ -116,7 +142,7 @@ class FinancialViewConsistencyTest {
     }
     when(ledger.products()).thenReturn(List.of(
         new Product("account", "Cuenta", Product.ProductType.ACCOUNT, "EUR", BigDecimal.ZERO, Instant.EPOCH, null, null),
-        new Product("second", "Otra cuenta", Product.ProductType.ACCOUNT, "EUR", BigDecimal.ZERO, Instant.EPOCH, null, null)));
+        new Product("second", "Tarjeta", Product.ProductType.CREDIT_CARD, "EUR", BigDecimal.ZERO, Instant.EPOCH, null, null)));
   }
 
   private Movement movement(String id, String amount, String category, Movement.Kind kind, Movement.Status status) {
