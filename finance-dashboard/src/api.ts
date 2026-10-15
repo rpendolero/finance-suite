@@ -100,7 +100,14 @@ export type Insight = {
     detail: string;
     value: number
 };
-export type Forecast = { projectedBalance?: number; projectedExpenses?: number; [key: string]: unknown };
+export type Forecast = {
+    asOf: string;
+    days: number;
+    accountBalances: number;
+    estimatedNetFlow: number;
+    estimatedAccountBalance: number;
+    limitations: string;
+};
 export type Recurring = {
     merchant?: string;
     description?: string;

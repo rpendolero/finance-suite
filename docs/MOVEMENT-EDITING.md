@@ -57,6 +57,14 @@ El listado general de búsqueda puede mostrar también movimientos excluidos par
 
 Caso de regresión: cargos ordinarios de 251,16 € y cuota de vehículo de 203,95 € deben producir **455,11 € de gastos** en todas las vistas. La corrección requiere actualizar tanto servidor como frontend, sin reclasificar ni modificar movimientos existentes.
 
+## Inicio y previsión
+
+La evolución financiera se mantiene en Inicio; se elimina la pantalla independiente y su entrada del menú.
+
+El panel **Previsión de saldo** utiliza los campos reales de `/api/analysis/forecast`: saldo de partida (`accountBalances`), flujo neto estimado (`estimatedNetFlow`) y saldo estimado (`estimatedAccountBalance`), junto al horizonte (`days`) y fecha del cálculo (`asOf`). Antes consultaba campos de gastos que ese endpoint no devuelve y mostraba erróneamente que no había proyección.
+
+Se muestran también estimaciones cero o negativas. El panel indica el período histórico y las limitaciones de la proyección lineal de cuentas. Es una estimación de liquidez que incluye liquidaciones de cuentas, no una previsión de gastos computables. Un fallo de esta consulta se muestra en el panel y no impide cargar el resto de Inicio.
+
 ## Verificación
 
 ```bash

@@ -14,12 +14,44 @@ const test = async (name, run) => { await run(); passed++; console.log(`OK ${nam
         fs.symlinkSync(path.resolve('node_modules'), path.join(temporary, 'node_modules'), 'dir');
         await build({logLevel: 'silent', build: {
             outDir: temporary, emptyOutDir: false,
-            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts'), periods: path.resolve('src/periods.ts'), periodSelector: path.resolve('src/PeriodSelector.tsx'), calendar: path.resolve('src/FinancialCalendar.tsx'), totals: path.resolve('src/movementTotals.ts')},
+            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts'), periods: path.resolve('src/periods.ts'), periodSelector: path.resolve('src/PeriodSelector.tsx'), calendar: path.resolve('src/FinancialCalendar.tsx'), totals: path.resolve('src/movementTotals.ts'), forecast: path.resolve('src/ForecastCard.tsx')},
                 formats: ['cjs'], fileName: (_format, name) => `${name}.cjs`},
             rollupOptions: {external: ['react', 'react/jsx-runtime']}
         }});
         const Row = require(path.join(temporary, 'editor.cjs')).default;
         const {api} = require(path.join(temporary, 'api.cjs'));
+        const forecastModule = require(path.join(temporary, 'forecast.cjs'));
+        const ForecastCard = forecastModule.default || forecastModule;
+        const forecast = {asOf:'2026-10-15', days:30, accountBalances:1000, estimatedNetFlow:-100,
+            estimatedAccountBalance:900, limitations:'Proyección lineal; no predice vencimientos.'};
+        const renderForecast = (data, error) => renderToStaticMarkup(React.createElement(ForecastCard, {
+            forecast:data, from:'2026-10-01', to:'2026-10-15', error
+        }));
+        await test('forecast displays the actual server balance, flow, horizon and history fields', () => {
+            const html = renderForecast({...forecast, days:15});
+            for (const text of ['Previsión de saldo', 'Saldo estimado dentro de 15 días', '900,00', '1000,00', '-100,00',
+                '1/10/2026', '15/10/2026', forecast.limitations]) assert.ok(html.includes(text), text);
+            assert.ok(!html.includes('No hay una previsión'));
+        });
+        await test('zero and negative forecasts are values, not missing projections', () => {
+            for (const [value, text] of [[0, '0,00'], [-125.5, '-125,50']]) {
+                const html = renderForecast({...forecast, estimatedAccountBalance:value});
+                assert.match(html, new RegExp(`<strong[^>]*>${text}`));
+                assert.ok(!html.includes('No hay una previsión'));
+            }
+        });
+        await test('missing forecasts and API failures never display an invented zero balance', () => {
+            for (const data of [null, {}, {...forecast, estimatedAccountBalance:null}]) {
+                const html = renderForecast(data);
+                assert.ok(html.includes('No hay una previsión de saldo disponible'));
+                assert.ok(!html.includes('<strong'));
+                assert.ok(!html.includes('NaN'));
+            }
+            const html = renderForecast(forecast, 'Servicio temporalmente no disponible');
+            assert.ok(html.includes('role="alert"'));
+            assert.ok(html.includes('Servicio temporalmente no disponible'));
+            assert.ok(!html.includes('900,00'));
+        });
         const {isComputableMovement, movementTotals} = require(path.join(temporary, 'totals.cjs'));
         const totalMovement = (amount, extra = {}) => ({amount, category: 'ALIMENTACION', kind: 'NORMAL', status: 'BOOKED', ...extra});
         await test('movement detail includes the vehicle payment in the 455.11 expense total', () => {

@@ -30,6 +30,7 @@ import React from 'react'; import {createRoot} from 'react-dom/client';
 import MovementSearch from '/src/MovementSearch.tsx'; import '/src/styles.css';
 import MovementSummaryModal from '/src/MovementSummaryModal.tsx';
 import FinancialFlowView from '/src/FinancialFlowView.tsx';
+import App from '/src/App.tsx';
 function FlowFixture() {
     const [month, setMonth] = React.useState('10');
     const [updates, setUpdates] = React.useState(0);
@@ -40,7 +41,7 @@ function FlowFixture() {
             products:[{id:'account', name:'Cuenta de prueba'}], canEdit:!location.search.includes('reader'),
             onClassified:() => setUpdates(value => value + 1)}));
 }
-const screen = location.search.includes('flow') ? React.createElement(FlowFixture) : location.search.includes('summary') ? React.createElement(MovementSummaryModal, {
+const screen = location.search.includes('home') ? React.createElement(App) : location.search.includes('flow') ? React.createElement(FlowFixture) : location.search.includes('summary') ? React.createElement(MovementSummaryModal, {
     selection: {date:'2026-10-01', productId:'account'}, from:'2026-10-01', to:'2026-10-31',
     products: [{id:'account', name:'Cuenta de prueba'}], onClose: () => {}
 }) : React.createElement(MovementSearch, {
@@ -69,10 +70,22 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Str
         const browserErrors = [];
         page.on('pageerror', error => browserErrors.push(error.message));
         let rows = fixture(230), requests = [], searches = [], flowRequests = [], failWrite = false;
+        let forecastBalance = 900, failForecast = false;
         let holdSelection = false, releaseSelection, selectionStarted;
         await page.route('**/api/**', async route => {
             const req = route.request(), url = new URL(req.url());
             const respond = (data, status = 200) => route.fulfill({status, json: data});
+            if (url.pathname === '/api/auth/me') return respond({username:'test', roles:['ADMIN']});
+            if (url.pathname === '/api/dashboard/overview') return respond({totalBalance:1000, income:100, expenses:200,
+                savings:0, savingsRate:0, averageDailyExpense:10, financingPayments:0, availableAfterAllocations:-100,
+                financingCapital:0, financingInterest:0, financingUnallocated:0, categories:[], merchants:[]});
+            if (url.pathname === '/api/dashboard/trend') return respond([{date:url.searchParams.get('from'), income:100, expenses:200, savings:0}]);
+            if (url.pathname === '/api/analysis/forecast') return failForecast
+                ? respond({detail:'Previsión temporalmente no disponible'}, 503)
+                : respond({asOf:'2026-10-15', days:30, accountBalances:1000, estimatedNetFlow:forecastBalance - 1000,
+                    estimatedAccountBalance:forecastBalance, limitations:'Proyección lineal de flujo de cuentas; no predice vencimientos.'});
+            if (['/api/dashboard/categories', '/api/products', '/api/movements', '/api/dashboard/insights',
+                '/api/dashboard/products', '/api/dashboard/calendar', '/api/analysis/recurring', '/api/analysis/anomalies'].includes(url.pathname)) return respond([]);
             if (url.pathname === '/api/categories') return respond(catalog);
             if (url.pathname === '/api/admin/categories') return respond(catalog.map(item => ({code:item.code, name:item.label})));
             if (url.pathname === '/api/dashboard/flows') {
@@ -365,6 +378,28 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Str
             await page.getByRole('button', {name:'Ingresos', exact:true}).click();
             await openCategory('Ingresos', 1);
             assert.equal(await page.locator('.movement-result-row input, .movement-result-row button').count(), 0);
+        });
+        await test('home retains the evolution chart, removes its duplicate menu and renders the forecast API contract', async () => {
+            await page.setViewportSize({width:1280, height:900});
+            forecastBalance = 900; failForecast = false;
+            await page.goto(origin + '?home');
+            await page.getByRole('heading', {name:'Evolución financiera', exact:true}).waitFor();
+            assert.equal(await page.locator('nav').getByRole('button', {name:'Evolución', exact:true}).count(), 0);
+            await page.locator('.forecast > strong').waitFor();
+            assert.equal((await page.locator('.forecast > strong').textContent()).replace(/\s/g, ''), '900,00€');
+            await page.getByText('Saldo estimado dentro de 30 días', {exact:true}).waitFor();
+            for (const [value, text] of [[0, '0,00€'], [-125.5, '-125,50€']]) {
+                forecastBalance = value; await page.reload(); await page.locator('.forecast > strong').waitFor();
+                assert.equal((await page.locator('.forecast > strong').textContent()).replace(/\s/g, ''), text);
+            }
+        });
+        await test('a forecast API error stays in its panel and does not hide the home summary', async () => {
+            failForecast = true; await page.reload();
+            await page.locator('.forecast').getByRole('alert').filter({hasText:'Previsión temporalmente no disponible'}).waitFor();
+            await page.getByRole('heading', {name:'Evolución financiera', exact:true}).waitFor();
+            assert.equal(await page.locator('.forecast > strong').count(), 0);
+            assert.equal(await page.getByText('No se han podido cargar los datos.', {exact:true}).count(), 0);
+            failForecast = false;
         });
         assert.deepEqual(browserErrors, []);
         console.log(`${passed} movement browser checks passed`);

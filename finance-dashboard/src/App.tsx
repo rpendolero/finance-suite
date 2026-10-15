@@ -8,6 +8,7 @@ import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
 import MovementSummaryModal from './MovementSummaryModal';
 import MovementSearch from './MovementSearch';
+import ForecastCard from './ForecastCard';
 import {periodRange} from './periods';
 import {useEffect, useState, type FormEvent} from 'react';
 import {
@@ -39,6 +40,7 @@ import {
     CategoryStat,
     CategoryDefinition,
     ClassificationResult,
+    Forecast,
     Insight,
     Movement,
     Overview,
@@ -90,7 +92,6 @@ function Empty({children}: { children: string }) {
 
 type View =
     'overview'
-    | 'trend'
     | 'expenses'
     | 'products'
     | 'movements'
@@ -101,7 +102,7 @@ type View =
     | 'categoryAdmin'
     | 'banking'
     | 'imports';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -162,7 +163,8 @@ function Login({onLogin}: {onLogin: (session: any) => void}) {
 }
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
-    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<Forecast | null>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [forecastError, setForecastError] = useState('');
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [periodYear, setPeriodYear] = useState(now.getFullYear());
@@ -185,7 +187,13 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         let active = true;
         setLoading(true);
         setError('');
-        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
+        setForecastError('');
+        setForecast(null);
+        const forecastRequest = api.forecast(from, to).catch(cause => {
+            if (active) setForecastError(cause instanceof Error ? cause.message : 'No se pudo obtener la estimación');
+            return null;
+        });
+        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), forecastRequest, api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
             if (!active) return;
             setOverview(o);
             setTrend(t);
@@ -210,7 +218,6 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         api.productStats(from, to).then(setProductStats).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los saldos'));
         api.overview(from, to).then(setOverview).catch(e => setError(e instanceof Error ? e.message : 'No se pudo actualizar el resumen'));
     };
-    const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
         {movementSelection && <MovementSummaryModal selection={movementSelection} from={from} to={to} products={products} onClose={() => setMovementSelection(null)}/>}
         <aside>
@@ -271,11 +278,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                                 <div className="legend">{categories.filter(category => category.amount > 0).slice(0, 7).map((c, i) => <div key={c.category}>
                                     <span className="legend-label"><i
                                         style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
-                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones sin compra identificada se reflejan como ajuste negativo, no como ingreso ni porción del gráfico.</p></div>
-                        <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
-                                <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
-                                30 días.</p></> :
-                            <Empty>El servidor no dispone de una proyección para este período.</Empty>}</div>
+                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones positivas se incluyen en ingresos.</p></div>
+                        <ForecastCard forecast={forecast} from={from} to={to} error={forecastError}/>
                     </section>
                     <section className="bottom">
                         <div className="card"><Title t="Movimientos recientes"/>{movements.length ?
@@ -295,7 +299,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                         </div>) : <Empty>No hay productos registrados.</Empty>}</div>
                     </section>
                 </> : !loading && overview ?
-                    <SectionView view={view} trend={trend}
+                    <SectionView view={view}
                                  productStats={productStats} products={products}
                                  recurring={recurring} calendar={calendar} insights={insights}
                                  anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated} onClassified={onClassified} onOpenMovements={openMovements}/> : null}</main>
@@ -304,7 +308,6 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
 
 function SectionView({
                          view,
-                         trend,
                          productStats,
                          products,
                          recurring,
@@ -319,14 +322,6 @@ function SectionView({
                          onOpenMovements,
                          movementSelection
                      }: any) {
-    if (view === 'trend') return <Page title="Evolución financiera">
-        <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
-            data={trend}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="date" tickFormatter={dateLabel}/><YAxis/><Tooltip
-            formatter={(v) => eur(Number(v))}/><Bar dataKey="income" name="Ingresos" fill="#42c997"/><Bar
-            dataKey="expenses" name="Gastos" fill="#ff7474"/><Bar dataKey="savings" name="Ahorro"
-                                                                  fill="#6c7cff"/></BarChart></ResponsiveContainer>
-        </div>
-    </Page>;
     if (view === 'products') {
         const totalBalance = productStats.reduce((sum: number, item: ProductStat) => sum + Number(item.balance || 0), 0);
         const totalExpenses = productStats.reduce((sum: number, item: ProductStat) => sum + Number(item.expenses || 0), 0);
@@ -611,7 +606,6 @@ function CategoryAdministration() {
 
 function Page({title, children}: { title: string; children: any }) {
     const descriptions: Record<string, string> = {
-        'Evolución financiera': 'Analiza cómo cambian tus ingresos, gastos y ahorro con el tiempo.',
         'Gastos recurrentes': 'Identifica los cargos habituales y controla tus compromisos periódicos.',
         'Calendario financiero': 'Explora tus movimientos y su distribución a lo largo del mes.',
         'Insights financieros': 'Descubre tendencias y oportunidades para mejorar tus finanzas.',
