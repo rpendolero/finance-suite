@@ -261,6 +261,8 @@ header p {
 }
 
 .forecast > strong {
+    display: block;
+    margin: 8px 0 16px;
     font-size: 28px
 }
 
@@ -268,6 +270,11 @@ header p {
     font-size: 12px;
     color: #70809b
 }
+
+.forecast-label,.forecast-breakdown{font-size:13px;color:#52627b}
+.forecast-breakdown{display:grid;gap:10px;margin:0}
+.forecast-breakdown div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px}
+.forecast-breakdown dd{margin:0;font-weight:600}
 
 .bottom {
     display: grid;
@@ -739,6 +746,35 @@ button{touch-action:manipulation}
 
 /* Finance Suite custom summary dialog (no Bootstrap/native dialog). */
 .movement-summary-backdrop{position:fixed;inset:0;z-index:2000;background:#101e36a8;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.movement-results{padding:0 18px 16px;overflow-anchor:none}
+.movement-list-toolbar,.movement-selection-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:16px 0;border-bottom:1px solid #e8edf4;font-size:13px;color:#52627b}
+.movement-list-toolbar{justify-content:space-between}.movement-list-toolbar label,.movement-selection-toolbar label{display:flex;align-items:center;gap:9px}
+.movement-list-toolbar select,.movement-dialog select{border:1px solid #d0d5dd;border-radius:8px;min-height:40px;padding:8px 10px;background:#fff;color:#263750;font:inherit}
+.movement-selection-toolbar button,.movement-result-row button,.movement-refresh{border:1px solid #2762c9;border-radius:8px;background:#2762c9;color:#fff;padding:9px 12px;cursor:pointer;font:inherit}
+.movement-selection-toolbar button.secondary,.movement-result-row button.secondary,.movement-refresh.secondary{background:#fff;color:#2762c9}
+.movement-search button:disabled,.movement-dialog button:disabled{opacity:.5;cursor:not-allowed}
+.movement-search input[type=checkbox]{width:18px;height:18px;accent-color:#2762c9;flex-shrink:0;cursor:pointer}
+.movement-result-row{display:grid;grid-template-columns:minmax(160px,2fr) minmax(130px,1fr) 110px;gap:16px;align-items:center;padding:17px 0;border-bottom:1px solid #edf1f6;font-size:13px}
+.movement-result-row.is-editable{grid-template-columns:22px minmax(160px,2fr) minmax(130px,1fr) 110px 88px;cursor:pointer}
+.movement-result-row.is-editable:hover,.movement-result-row.is-selected{background:#f2f7ff}
+.movement-result-description,.movement-result-category{display:grid;gap:5px;min-width:0}
+.movement-result-description strong,.movement-result-description span,.movement-result-category span{overflow-wrap:anywhere}
+.movement-result-description small,.movement-result-description span,.movement-result-category small{font-size:12px;color:#718096}
+.movement-result-category small.non-computable{color:#b45309}.movement-result-row>.pos,.movement-result-row>.neg{text-align:right;white-space:nowrap}
+.movement-result-row .movement-edit{display:flex;align-items:center;justify-content:center;gap:5px}
+.movement-search-note,.movement-edit-note{font-size:12px;line-height:1.5;color:#667085;margin:0}
+.movement-search :focus-visible,.movement-dialog :focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.movement-dialog{width:min(660px,100%);max-height:calc(100dvh - 48px);display:flex;flex-direction:column}
+.movement-dialog>.app-modal-body{overflow-y:auto;min-height:0}.movement-dialog>.app-modal-head{flex-shrink:0;flex-direction:row;align-items:center;margin-bottom:0}
+.movement-dialog .modal-close{flex-shrink:0;min-width:40px;min-height:40px}
+.movement-dialog .classification-row{grid-template-columns:1fr 1fr;padding:0;border:0;align-items:start}
+.movement-dialog .classification-movement,.movement-dialog .classification-field:nth-child(2),.movement-dialog .classification-actions{grid-column:1/-1}
+.movement-dialog .classification-movement b,.movement-dialog .classification-movement span{white-space:normal;overflow-wrap:anywhere}
+.movement-dialog .classification-actions{margin-top:6px;justify-content:flex-start}.movement-dialog .classification-actions button{min-height:42px}
+.movement-dialog .app-modal-actions{padding:8px 0 0;flex-wrap:wrap}.movement-dialog .app-modal-body p{margin:0;line-height:1.5}
+.movement-dialog .classification-field label{font-size:12px}.bulk-classification-form{display:grid;gap:14px}
+@media(max-width:800px){.movement-result-row.is-editable{grid-template-columns:22px minmax(0,1fr) auto;gap:10px}.movement-result-row.is-editable>.movement-result-category{grid-column:2;grid-row:2}.movement-result-row.is-editable>.pos,.movement-result-row.is-editable>.neg{grid-column:3;grid-row:1}.movement-result-row.is-editable>button{grid-column:3;grid-row:2}.movement-result-row:not(.is-editable){grid-template-columns:minmax(0,1fr) auto}.movement-result-row:not(.is-editable)>.movement-result-category{grid-column:1;grid-row:2}.movement-result-row:not(.is-editable)>.pos,.movement-result-row:not(.is-editable)>.neg{grid-column:2;grid-row:1}}
+@media(max-width:600px){.movement-results{padding:0 12px 14px}.movement-dialog{max-height:calc(100dvh - 24px)}.movement-dialog .classification-row{grid-template-columns:1fr}.movement-list-toolbar label{width:100%;justify-content:space-between}.movement-selection-toolbar{align-items:stretch}.movement-selection-toolbar button{width:100%;min-height:44px}.movement-result-row button{min-height:44px}.movement-dialog .app-modal-actions button{flex:1}.movement-dialog .classification-actions button{flex:auto}}
 .movement-summary-modal{width:min(760px,100%);max-height:min(85vh,900px);overflow:hidden;display:flex;flex-direction:column;background:#fff;border:1px solid #dce5f1;border-radius:20px;box-shadow:0 24px 80px #0b19384d;color:#25344b}
 .movement-summary-header{padding:24px 28px 14px;display:flex;justify-content:space-between;gap:20px;align-items:start}
 .movement-summary-header h2{margin:6px 0;font-size:24px}.movement-summary-header p{margin:0;color:#71809a}

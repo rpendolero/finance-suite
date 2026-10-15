@@ -1,11 +1,10 @@
-import {useEffect, useId, useState} from 'react';
+import {useCallback, useEffect, useId, useState} from 'react';
 import {ChevronDown} from 'lucide-react';
-import ClassificationMovementRow from './ClassificationMovementRow';
-import {api, CategoryDefinition, ClassificationResult, FinancialFlow, FlowDirection, Product} from './api';
+import MovementResults from './MovementResults';
+import {api, CategoryDefinition, FinancialFlow, FlowDirection, Product} from './api';
 
 const eur = (amount: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(amount);
-const PAGE_SIZE = 25;
-type Expansion = {context: string; category: string; offset: number};
+type Expansion = {context: string; category: string};
 
 export default function FinancialFlowView({from, to, products, canEdit, onClassified, initialDirection = 'EXPENSE'}: {
     from: string; to: string; products: Product[]; canEdit: boolean; onClassified: () => void; initialDirection?: FlowDirection;
@@ -14,7 +13,6 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const context = `${from}:${to}:${direction}`;
     const [expanded, setExpanded] = useState<Expansion | null>(null);
     const category = expanded?.context === context ? expanded.category : undefined;
-    const offset = expanded?.context === context ? expanded.offset : 0;
     const [summary, setSummary] = useState<{context: string; data: FinancialFlow} | null>(null);
     const [summaryError, setSummaryError] = useState('');
     const [revision, setRevision] = useState(0);
@@ -22,8 +20,6 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
     const [catalogError, setCatalogError] = useState('');
     const [message, setMessage] = useState('');
-    const detailKey = JSON.stringify([context, category, offset, revision]);
-    const [detail, setDetail] = useState<{key: string; data?: FinancialFlow; error?: string} | null>(null);
     const accordionId = useId();
 
     useEffect(() => { setExpanded(null); setMessage(''); }, [context]);
@@ -46,7 +42,6 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     useEffect(() => {
         let active = true;
         setSummaryError('');
-        setSummary(null);
         api.financialFlow(from, to, direction, 0, 1)
             .then(data => {
                 if (!active) return;
@@ -58,40 +53,24 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
         return () => { active = false; };
     }, [from, to, direction, context, revision]);
 
-    useEffect(() => {
-        let active = true;
-        setDetail(null);
-        if (category !== undefined) {
-            api.financialFlow(from, to, direction, offset, PAGE_SIZE, category)
-                .then(data => { if (active) setDetail({key: detailKey, data}); })
-                .catch(reason => { if (active) setDetail({key: detailKey, error: reason instanceof Error ? reason.message : 'No se pudieron cargar los movimientos'}); });
-        }
-        return () => { active = false; };
-    }, [from, to, direction, category, offset, detailKey]);
-
     const income = direction === 'INCOME';
     const titles: Record<FlowDirection, string> = {
-        INCOME: 'Ingresos', EXPENSE: 'Gastos de consumo',
+        INCOME: 'Ingresos', EXPENSE: 'Gastos',
         SAVINGS: 'Ahorro e inversión', FINANCING: 'Financiación'
     };
     const title = titles[direction];
     const data = summary?.context === context ? summary.data : null;
     const visibleCategories = (data?.categories ?? []).filter(item => item.operations > 0);
     const categoryLabel = (code: string) => categoryNames[code] ?? catalog.find(item => item.code === code)?.label ?? code;
-    const selectedDetail = detail?.key === detailKey ? detail : null;
-    const productNames = new Map(products.map(product => [product.id, product.name]));
     const selectDirection = (value: FlowDirection) => {
         if (value !== direction) {
             setDirection(value);
             setExpanded(null);
         }
     };
-    const toggleCategory = (value: string) => setExpanded(category === value ? null : {context, category: value, offset: 0});
-    const onSaved = (result: ClassificationResult, appliedToMerchant: boolean) => {
-        setMessage(appliedToMerchant
-            ? `Clasificación guardada. Regla del comercio aplicada a ${result.reclassified} movimientos de este comercio en el histórico.`
-            : 'Clasificación manual guardada.');
-        setExpanded(current => current ? {...current, offset: 0} : current);
+    const toggleCategory = (value: string) => {setExpanded(category === value ? null : {context, category: value}); setMessage('');};
+    const onChanged = (text: string) => {
+        setMessage(text);
         setRevision(current => current + 1);
         onClassified();
     };
@@ -103,7 +82,7 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
             <button type="button" aria-pressed={income} onClick={() => selectDirection('INCOME')}>Ingresos</button>
         </div>
         <p className="flow-note">{direction === 'INCOME'
-            ? 'Ingresos ordinarios y devoluciones positivas. Financiación y ahorro e inversión se muestran en Gastos.'
+            ? 'Abonos computables, incluidas las devoluciones y los reembolsos de inversión. Los cargos de financiación y ahorro e inversión se muestran en Gastos.'
             : direction === 'EXPENSE'
                 ? 'Gastos de consumo, financiación y ahorro e inversión, separados por categorías. Las devoluciones positivas se muestran en ingresos.'
                 : direction === 'SAVINGS'
@@ -132,10 +111,8 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
                             <strong>{eur(item.amount)}</strong><ChevronDown size={20} aria-hidden="true"/>
                         </button></h3>
                         {open && <div className="flow-category-detail" id={regionId} role="region" aria-labelledby={`${regionId}-toggle`}>
-                            {selectedDetail?.error ? <div className="api-error" role="alert">{selectedDetail.error}</div> : !selectedDetail?.data ?
-                                <div className="loading" role="status">Cargando movimientos…</div> :
-                                <CategoryMovements data={selectedDetail.data} catalog={catalog} canEdit={canEdit} onSaved={onSaved} productNames={productNames}
-                                    offset={offset} onPage={value => setExpanded({context, category: item.category, offset: value})}/>}
+                            <CategoryMovements key={JSON.stringify([context, item.category])} from={from} to={to} direction={direction}
+                                category={item.category} products={products} catalog={catalog} canEdit={canEdit} onChanged={onChanged}/>
                         </div>}
                     </section>;
                 }) : <div className="empty">No hay {title.toLowerCase()} en este período.</div>}
@@ -144,23 +121,15 @@ export default function FinancialFlowView({from, to, products, canEdit, onClassi
     </section>;
 }
 
-function CategoryMovements({data, catalog, canEdit, onSaved, productNames, offset, onPage}: {
-    data: FinancialFlow; catalog: CategoryDefinition[]; canEdit: boolean;
-    onSaved: (result: ClassificationResult, appliedToMerchant: boolean) => void;
-    productNames: Map<string, string>; offset: number; onPage: (offset: number) => void;
+function CategoryMovements({from, to, direction, category, products, catalog, canEdit, onChanged}: {
+    from: string; to: string; direction: FlowDirection; category: string; products: Product[];
+    catalog: CategoryDefinition[]; canEdit: boolean; onChanged: (message: string) => void;
 }) {
-    const [saving, setSaving] = useState(false);
-    return <>
-        {data.movements.length ? <div className="classification-list">{data.movements.map(movement =>
-            <ClassificationMovementRow key={movement.id} movement={movement} catalog={catalog} canEdit={canEdit} busy={saving}
-                productName={productNames.get(movement.productId)} onSaved={onSaved} onSaving={setSaving}/>)}</div>
-            : <div className="empty">No hay movimientos en esta categoría.</div>}
-        {data.operations > 0 && <div className="pagination">
-            <span>{offset + 1}–{Math.min(offset + PAGE_SIZE, data.operations)} de {data.operations}</span>
-            <div className="flow-page-actions">
-                <button type="button" disabled={saving || offset === 0} onClick={() => onPage(Math.max(0, offset - PAGE_SIZE))}>Anterior</button>
-                <button type="button" disabled={saving || offset + PAGE_SIZE >= data.operations} onClick={() => onPage(offset + PAGE_SIZE)}>Siguiente</button>
-            </div>
-        </div>}
-    </>;
+    const loadPage = useCallback(async (offset: number, limit: number) => {
+        const data = await api.financialFlow(from, to, direction, offset, limit, category);
+        return {items: data.movements, total: data.operations, offset: data.offset, limit: data.limit};
+    }, [from, to, direction, category]);
+    return <MovementResults products={products} catalog={catalog} canEdit={canEdit} loadPage={loadPage}
+        queryKey={JSON.stringify([from, to, direction, category])} selectionScope="movimientos de esta categoría"
+        selectionPageSize={100} onChanged={onChanged}/>;
 }

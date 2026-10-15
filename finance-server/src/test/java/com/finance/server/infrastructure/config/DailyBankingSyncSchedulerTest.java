@@ -9,9 +9,10 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockMakers;
 
 class DailyBankingSyncSchedulerTest {
-  private final BankingSyncService service = mock(BankingSyncService.class);
+  private final BankingSyncService service = mock(BankingSyncService.class, withSettings().mockMaker(MockMakers.INLINE));
   private final Instant now = Instant.parse("2026-10-11T04:00:00Z");
   private final DailyBankingSyncScheduler scheduler =
       new DailyBankingSyncScheduler(service, Clock.fixed(now, ZoneOffset.UTC));

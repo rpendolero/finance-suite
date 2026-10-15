@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 class FinancialAllocationTest {
 
   @Test
-  void keepsInvestmentsAndDebtPaymentsOutsideConsumptionAndIncome() {
+  void includesInvestmentsAndDebtPaymentsOnceInTotalsAndKeepsTheirNetBreakdowns() {
     Period period = new Period(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
     LedgerPort ledger = mock(LedgerPort.class);
     List<Movement> rows = List.of(
@@ -37,15 +37,15 @@ class FinancialAllocationTest {
 
     var dashboard = new DashboardAnalysisService(ledger);
     var overview = dashboard.overview(period, null);
-    assertThat(overview.income()).isEqualByComparingTo("3000");
-    assertThat(overview.expenses()).isEqualByComparingTo("410");
+    assertThat(overview.income()).isEqualByComparingTo("3200");
+    assertThat(overview.expenses()).isEqualByComparingTo("1560");
     assertThat(overview.savings()).isEqualByComparingTo("500");
     assertThat(overview.financingPayments()).isEqualByComparingTo("460");
     assertThat(overview.financingCapital()).isEqualByComparingTo("50");
     assertThat(overview.financingInterest()).isEqualByComparingTo("10");
     assertThat(overview.financingUnallocated()).isEqualByComparingTo("400");
     assertThat(overview.availableAfterAllocations()).isEqualByComparingTo("1640");
-    assertThat(overview.savingsRate()).isEqualByComparingTo("16.67");
+    assertThat(overview.savingsRate()).isEqualByComparingTo("15.63");
 
     var investments = dashboard.flow(period, null,
         DashboardAnalysisService.FlowDirection.SAVINGS, 0, 25);
@@ -56,18 +56,20 @@ class FinancialAllocationTest {
     assertThat(financing.total()).isEqualByComparingTo("460");
     assertThat(financing.operations()).isEqualTo(3);
     assertThat(dashboard.flow(period, null,
-        DashboardAnalysisService.FlowDirection.INCOME, 0, 25).operations()).isEqualTo(1);
+        DashboardAnalysisService.FlowDirection.INCOME, 0, 25).operations()).isEqualTo(3);
     assertThat(dashboard.flow(period, null,
-        DashboardAnalysisService.FlowDirection.EXPENSE, 0, 25).total()).isEqualByComparingTo("410");
+        DashboardAnalysisService.FlowDirection.EXPENSE, 0, 25).total()).isEqualByComparingTo("1560");
 
     var summary = new FinancialSummaryService(ledger).summary(period, null);
-    assertThat(summary.income()).isEqualByComparingTo("3000");
-    assertThat(summary.expenses()).isEqualByComparingTo("410");
+    assertThat(summary.income()).isEqualByComparingTo("3200");
+    assertThat(summary.expenses()).isEqualByComparingTo("1560");
     assertThat(summary.investmentContributions()).isEqualByComparingTo("500");
     assertThat(summary.financingPayments()).isEqualByComparingTo("460");
     assertThat(summary.availableAfterAllocations()).isEqualByComparingTo("1640");
-    assertThat(summary.expensesByCategory()).containsEntry("DEVOLUCIONES_SIN_ASOCIAR",
-        new BigDecimal("-100"));
+    assertThat(summary.expensesByCategory()).containsOnlyKeys("ALIMENTACION", "AHORRO_E_INVERSION", "FINANCIACION");
+    assertThat(summary.expensesByCategory().get("ALIMENTACION")).isEqualByComparingTo("500");
+    assertThat(summary.expensesByCategory().get("AHORRO_E_INVERSION")).isEqualByComparingTo("600");
+    assertThat(summary.expensesByCategory().get("FINANCIACION")).isEqualByComparingTo("460");
   }
 
   private Movement movement(String id, String amount, String category, String subcategory) {

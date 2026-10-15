@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {api, type Movement, type Product} from './api';
+import {isComputableMovement, movementTotals} from './movementTotals';
 
-const excludedKinds = new Set(['INTERNAL_TRANSFER', 'CARD_SETTLEMENT', 'WALLET_SETTLEMENT', 'NON_COMPUTABLE', 'DUPLICATE']);
 const eur = (value: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(value);
 
 export default function MovementSummaryModal({selection, from, to, products, onClose}: {
@@ -21,9 +21,9 @@ export default function MovementSummaryModal({selection, from, to, products, onC
                 const page = await api.searchMovements({
                     from: selection.date || from, to: selection.date || to,
                     productId: selection.productId, offset, limit: 200,
-                    sortBy: 'DATE', sortDirection: 'DESC'
+                    status: 'BOOKED', sortBy: 'DATE', sortDirection: 'DESC'
                 });
-                result.push(...page.items.filter(m => !excludedKinds.has(m.kind) && m.category !== 'NO_COMPUTABLE'));
+                result.push(...page.items.filter(isComputableMovement));
                 offset += page.items.length;
                 if (!page.items.length || offset >= page.total) break;
             }
@@ -39,8 +39,7 @@ export default function MovementSummaryModal({selection, from, to, products, onC
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
     const productName = products.find(p => p.id === selection.productId)?.name;
-    const expenses = rows.filter(m => m.amount < 0).reduce((sum, m) => sum - Number(m.amount), 0);
-    const income = rows.filter(m => m.amount > 0).reduce((sum, m) => sum + Number(m.amount), 0);
+    const {income, expenses, net} = movementTotals(rows);
     return <div className="movement-summary-backdrop" onMouseDown={e => {if (e.target === e.currentTarget) onClose();}}>
         <section className="movement-summary-modal" role="dialog" aria-modal="true" aria-labelledby="movement-summary-title">
             <header className="movement-summary-header">
@@ -54,7 +53,7 @@ export default function MovementSummaryModal({selection, from, to, products, onC
                     <div><small>Movimientos</small><strong>{rows.length}</strong></div>
                     <div><small>Ingresos</small><strong className="pos">{eur(income)}</strong></div>
                     <div><small>Gastos</small><strong className="neg">{eur(expenses)}</strong></div>
-                    <div><small>Balance</small><strong>{eur(income - expenses)}</strong></div>
+                    <div><small>Balance</small><strong>{eur(net)}</strong></div>
                 </div>
                 <div className="movement-summary-list">
                     {rows.length ? rows.map(m => <div className="movement-summary-item" key={m.id}>

@@ -148,6 +148,26 @@ class JpaAdapterTest {
   }
 
   @Test
+  @org.springframework.transaction.annotation.Transactional(
+      propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+  void missingMovementRollsBackTheWholeClassificationBatch() {
+    String productId = UUID.randomUUID().toString();
+    ledger.saveProduct(product(productId, Product.Provider.ING));
+    var first = movement(productId, "first", "-10.00", LocalDate.of(2026, 10, 1));
+    var missing = movement(productId, "missing", "-20.00", first.date());
+    ledger.insert(List.of(first));
+    try {
+      var changed = first.withClassification("NO_COMPUTABLE", "OTROS_NO_COMPUTABLES", Movement.Kind.NON_COMPUTABLE,
+          Movement.ClassificationSource.MANUAL, BigDecimal.ONE);
+      assertThatThrownBy(() -> ledger.updateClassifications(List.of(changed, missing)))
+          .isInstanceOf(IllegalArgumentException.class);
+      var persisted = ledger.movement(first.id()).orElseThrow();
+      assertThat(persisted.category()).isEqualTo(first.category());
+      assertThat(persisted.kind()).isEqualTo(first.kind());
+    } finally {ledger.deleteProduct(productId);}
+  }
+
+  @Test
   void twoCardsFromTheSameBankKeepSeparateMovementsAndIdentity() {
     ledger.saveProduct(product("shared-account", Product.Provider.KUTXABANK));
     ledger.saveProduct(card("card-a", "bank-card-a", "**** 1234"));

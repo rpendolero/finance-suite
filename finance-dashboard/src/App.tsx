@@ -7,6 +7,8 @@ import StatementImport from './StatementImport';
 import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
 import MovementSummaryModal from './MovementSummaryModal';
+import MovementSearch from './MovementSearch';
+import ForecastCard from './ForecastCard';
 import {periodRange} from './periods';
 import {useEffect, useState, type FormEvent} from 'react';
 import {
@@ -38,6 +40,7 @@ import {
     CategoryStat,
     CategoryDefinition,
     ClassificationResult,
+    Forecast,
     Insight,
     Movement,
     Overview,
@@ -89,7 +92,6 @@ function Empty({children}: { children: string }) {
 
 type View =
     'overview'
-    | 'trend'
     | 'expenses'
     | 'products'
     | 'movements'
@@ -100,7 +102,7 @@ type View =
     | 'categoryAdmin'
     | 'banking'
     | 'imports';
-const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['trend', 'Evolución', TrendingUp], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
+const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['expenses', 'Ingresos y gastos', ReceiptText], ['products', 'Productos', CreditCard], ['movements', 'Movimientos', Search], ['recurring', 'Recurrentes', RefreshCw], ['calendar', 'Calendario', CalendarDays], ['insights', 'Insights', Lightbulb], ['review', 'Revisar', TriangleAlert], ['categoryAdmin', 'Categorías', Tags], ['banking', 'Bancos', Landmark], ['imports', 'Importar', Upload]];
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
@@ -161,7 +163,8 @@ function Login({onLogin}: {onLogin: (session: any) => void}) {
 }
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
-    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<any>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<Forecast | null>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const [forecastError, setForecastError] = useState('');
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [periodYear, setPeriodYear] = useState(now.getFullYear());
@@ -184,7 +187,13 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         let active = true;
         setLoading(true);
         setError('');
-        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), api.forecast(from, to), api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
+        setForecastError('');
+        setForecast(null);
+        const forecastRequest = api.forecast(from, to).catch(cause => {
+            if (active) setForecastError(cause instanceof Error ? cause.message : 'No se pudo obtener la estimación');
+            return null;
+        });
+        Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), forecastRequest, api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
             if (!active) return;
             setOverview(o);
             setTrend(t);
@@ -209,7 +218,6 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         api.productStats(from, to).then(setProductStats).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los saldos'));
         api.overview(from, to).then(setOverview).catch(e => setError(e instanceof Error ? e.message : 'No se pudo actualizar el resumen'));
     };
-    const projected = Number(forecast?.projectedExpenses ?? forecast?.expenses ?? 0);
     return <div className="shell">
         {movementSelection && <MovementSummaryModal selection={movementSelection} from={from} to={to} products={products} onClose={() => setMovementSelection(null)}/>}
         <aside>
@@ -240,16 +248,16 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
                         title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Consumo e intereses" value={eur(overview.expenses)}
+                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
                                                  tone="red"/><Card title="Ahorro e inversión" value={eur(overview.savings)}
-                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados'}
+                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados · cargos incluidos en gastos'}
                                                                    icon={PiggyBank} tone="purple"/>
                         <Card title="Pagos de financiación" value={eur(overview.financingPayments)}
-                              sub={eur(overview.financingUnallocated) + ' sin desglose de capital/intereses'}
+                              sub={eur(overview.financingUnallocated) + ' sin desglose · cargos incluidos en gastos'}
                               icon={Landmark}/>
                         <Card title="Flujo disponible del período" value={eur(overview.availableAfterAllocations)}
-                              sub="Ingresos − consumo − ahorro − financiación; no es el saldo bancario"
+                              sub="Ingresos − gastos; no es el saldo bancario"
                               icon={Wallet} tone="green"/></section>
                     <section className="grid3">
                         <div className="card wide"><Title t="Evolución financiera"/>{trend.length ?
@@ -270,11 +278,8 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                                 <div className="legend">{categories.filter(category => category.amount > 0).slice(0, 7).map((c, i) => <div key={c.category}>
                                     <span className="legend-label"><i
                                         style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
-                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones sin compra identificada se reflejan como ajuste negativo, no como ingreso ni porción del gráfico.</p></div>
-                        <div className="card forecast"><Title t="Previsión"/>{projected > 0 ? <>
-                                <strong>{eur(projected)}</strong><p>Proyección calculada por el servidor para los próximos
-                                30 días.</p></> :
-                            <Empty>El servidor no dispone de una proyección para este período.</Empty>}</div>
+                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones positivas se incluyen en ingresos.</p></div>
+                        <ForecastCard forecast={forecast} from={from} to={to} error={forecastError}/>
                     </section>
                     <section className="bottom">
                         <div className="card"><Title t="Movimientos recientes"/>{movements.length ?
@@ -294,7 +299,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                         </div>) : <Empty>No hay productos registrados.</Empty>}</div>
                     </section>
                 </> : !loading && overview ?
-                    <SectionView view={view} trend={trend}
+                    <SectionView view={view}
                                  productStats={productStats} products={products}
                                  recurring={recurring} calendar={calendar} insights={insights}
                                  anomalies={anomalies} session={session} from={from} to={to} onProductCreated={onProductCreated} onClassified={onClassified} onOpenMovements={openMovements}/> : null}</main>
@@ -303,7 +308,6 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
 
 function SectionView({
                          view,
-                         trend,
                          productStats,
                          products,
                          recurring,
@@ -318,14 +322,6 @@ function SectionView({
                          onOpenMovements,
                          movementSelection
                      }: any) {
-    if (view === 'trend') return <Page title="Evolución financiera">
-        <div className="card chart-full"><ResponsiveContainer width="100%" height={420}><BarChart
-            data={trend}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="date" tickFormatter={dateLabel}/><YAxis/><Tooltip
-            formatter={(v) => eur(Number(v))}/><Bar dataKey="income" name="Ingresos" fill="#42c997"/><Bar
-            dataKey="expenses" name="Gastos" fill="#ff7474"/><Bar dataKey="savings" name="Ahorro"
-                                                                  fill="#6c7cff"/></BarChart></ResponsiveContainer>
-        </div>
-    </Page>;
     if (view === 'products') {
         const totalBalance = productStats.reduce((sum: number, item: ProductStat) => sum + Number(item.balance || 0), 0);
         const totalExpenses = productStats.reduce((sum: number, item: ProductStat) => sum + Number(item.expenses || 0), 0);
@@ -610,7 +606,6 @@ function CategoryAdministration() {
 
 function Page({title, children}: { title: string; children: any }) {
     const descriptions: Record<string, string> = {
-        'Evolución financiera': 'Analiza cómo cambian tus ingresos, gastos y ahorro con el tiempo.',
         'Gastos recurrentes': 'Identifica los cargos habituales y controla tus compromisos periódicos.',
         'Calendario financiero': 'Explora tus movimientos y su distribución a lo largo del mes.',
         'Insights financieros': 'Descubre tendencias y oportunidades para mejorar tus finanzas.',
@@ -624,90 +619,6 @@ function Page({title, children}: { title: string; children: any }) {
             : <div className="finance-page-hero"><div><span className="products-eyebrow">FINANCE SUITE</span><h2>{title}</h2><p>{descriptions[title] || 'Gestiona y consulta tu información financiera desde un mismo lugar.'}</p></div></div>}
         {children}
     </section>
-}
-
-function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified, selection}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean; onClassified: () => void; selection?: {productId?: string; date?: string} | null }) {
-    const [filters, setFilters] = useState<any>({from: selection?.date || initialFrom, to: selection?.date || initialTo, productId: selection?.productId || '', sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
-    const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
-    const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
-    const [deleting, setDeleting] = useState<Movement | null>(null);
-    const [busy, setBusy] = useState(false), [err, setErr] = useState('');
-    const [message, setMessage] = useState('');
-    const [savingClassification, setSavingClassification] = useState(false);
-
-    const load = (next = filters) => {
-        setBusy(true); setErr('');
-        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false));
-    };
-    useEffect(() => { load(filters); api.categoriesCatalog().then(setCatalog).catch(() => undefined) }, []);
-    useEffect(() => {
-        const next = {...filters, from: initialFrom, to: initialTo, offset: 0};
-        setFilters(next); load(next);
-    }, [initialFrom, initialTo]);
-
-    useEffect(() => {if (!selection) return; const next = {...filters, from: selection.date || initialFrom, to: selection.date || initialTo, productId: selection.productId || '', offset: 0}; setFilters(next); load(next);}, [selection]);
-    const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
-    const submit = (e: any) => { e.preventDefault(); load(filters) };
-    const move = (offset: number) => { const next = {...filters, offset}; setFilters(next); load(next) };
-    const onSaved = (result: ClassificationResult, appliedToMerchant: boolean) => {
-        setMessage(appliedToMerchant
-            ? `Clasificación guardada. Regla del comercio aplicada a ${result.reclassified} movimientos de este comercio en el histórico.`
-            : 'Clasificación manual guardada.');
-        onClassified();
-        const next = {...filters, offset: 0};
-        setFilters(next); load(next);
-    };
-    const deleteMovement = async () => {
-        if (!deleting) return;
-        setBusy(true); setErr('');
-        try {
-            await api.deleteMovement(deleting.id);
-            setDeleting(null);
-            onClassified();
-            const next = {...filters, offset: page.items.length === 1 ? Math.max(0, page.offset - page.limit) : page.offset};
-            setFilters(next); load(next);
-        } catch (e) {
-            setBusy(false);
-            setErr(e instanceof Error ? e.message : 'No se pudo eliminar el movimiento');
-        }
-    };
-
-    return <Page title="Movimientos">
-        {deleting && <div className="app-modal-backdrop">
-            <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="delete-movement-title">
-                <h3 id="delete-movement-title">Eliminar movimiento</h3>
-                <p>{dateLabel(deleting.date)} · {deleting.merchant || deleting.description} · {eur(deleting.amount)}</p>
-                <p>Se eliminará definitivamente. Una nueva importación o sincronización puede volver a incorporarlo.</p>
-                <div className="modal-actions">
-                    <button type="button" className="secondary" disabled={busy} onClick={() => setDeleting(null)}>Cancelar</button>
-                    <button type="button" disabled={busy} onClick={() => void deleteMovement()}>Eliminar definitivamente</button>
-                </div>
-            </div>
-        </div>}
-        <form className="filters card" onSubmit={submit}>
-            <label>Desde<input type="date" value={filters.from} onChange={e => change('from', e.target.value)}/></label>
-            <label>Hasta<input type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label>
-            <input placeholder="Buscar concepto o comercio" value={filters.text || ''} onChange={e => change('text', e.target.value)}/>
-            <select value={filters.productId || ''} onChange={e => change('productId', e.target.value)}><option value="">Todos los productos</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-            <input placeholder="Categoría" value={filters.category || ''} onChange={e => change('category', e.target.value)}/>
-            <input type="number" step="0.01" placeholder="Importe mín." value={filters.minAmount ?? ''} onChange={e => change('minAmount', e.target.value)}/>
-            <input type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''} onChange={e => change('maxAmount', e.target.value)}/>
-            <select value={filters.status || ''} onChange={e => change('status', e.target.value)}><option value="">Todos los estados</option><option value="BOOKED">Contabilizado</option><option value="PENDING">Pendiente</option></select>
-            <select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}><option value="DATE">Ordenar por fecha</option><option value="AMOUNT">Ordenar por importe</option><option value="MERCHANT">Ordenar por comercio</option><option value="CATEGORY">Ordenar por categoría</option></select>
-            <select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}><option value="DESC">Descendente</option><option value="ASC">Ascendente</option></select>
-            <button type="submit"><Search size={16}/>Buscar</button>
-            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV</button>
-        </form>
-        {message && <div className="classification-message" role="status">{message}</div>}
-        {err && <div className="api-error">{err}</div>}
-        <div className="card classification-list">{busy && !page.items.length ? <div className="loading">Buscando movimientos…</div> : <>
-            {page.items.length ? page.items.map((movement: Movement) => <ClassificationMovementRow key={movement.id}
-                movement={movement} catalog={catalog} canEdit={canEdit} busy={busy || savingClassification} onSaving={setSavingClassification}
-                productName={products.find(product => product.id === movement.productId)?.name}
-                onSaved={onSaved} onDelete={canEdit ? () => setDeleting(movement) : undefined}/>) : <Empty>No hay movimientos con esos filtros.</Empty>}
-            <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
-        </>}</div>
-    </Page>
 }
 
 function CreditLimitEditor({product, onSaved}: {product: Product; onSaved: () => void}) {

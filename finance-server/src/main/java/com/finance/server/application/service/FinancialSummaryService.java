@@ -38,14 +38,14 @@ public class FinancialSummaryService {
     BigDecimal income = FinancialMovementAllocation.total(included,
         FinancialMovementAllocation::income, false);
     BigDecimal expenses = FinancialMovementAllocation.total(included,
-        FinancialMovementAllocation::consumption, true);
+        FinancialMovementAllocation::expense, true);
     BigDecimal investment = FinancialMovementAllocation.total(included,
         FinancialMovementAllocation::saving, true);
     BigDecimal financing = FinancialMovementAllocation.total(included,
         FinancialMovementAllocation::financing, true);
 
     var categories = new TreeMap<String, BigDecimal>();
-    included.stream().filter(FinancialMovementAllocation::consumption)
+    included.stream().filter(FinancialMovementAllocation::expense)
         .forEach(m -> categories.merge(expenseCategory(m),
             FinancialMovementAllocation.paid(m), BigDecimal::add));
 
@@ -61,10 +61,10 @@ public class FinancialSummaryService {
     return new Summary(p, income, expenses, operatingNet, savingsRate, categories,
         included.size(), all.size() - included.size(),
         (int) all.stream().filter(m -> m.status() == Movement.Status.PENDING).count(),
-        "Consumo e intereses financieros incluidos en gastos. Las cuotas sin desglose se "
-            + "imputan a financiación; los intereses identificados no se descuentan dos veces.",
-        investment, financing, operatingNet.subtract(investment).subtract(financing)
-            .add(FinancialMovementAllocation.total(included, FinancialMovementAllocation::financingInterest, true)),
+        "Movimientos contabilizados y computables: abonos como ingresos, cargos como gastos. "
+            + "Los cargos de ahorro, inversión y financiación ya están incluidos en gastos; "
+            + "sus desgloses netos no se descuentan de nuevo. Se excluyen pendientes y no computables.",
+        investment, financing, operatingNet,
         operatingMarginRate);
   }
 

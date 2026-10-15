@@ -62,6 +62,27 @@ class ServerIntegrationTest {
   }
 
   @Test
+  void bulkClassificationRequiresAdminAndValidSelection() throws Exception {
+    String body = "{\"movementIds\":[\"one\"],\"category\":\"UNCLASSIFIED\",\"kind\":\"NORMAL\"}";
+    for (String role : List.of("READER", "IMPORTER")) {
+      mvc.perform(patch("/api/movements/classification").with(user("limited").roles(role))
+          .contentType("application/json").content(body)).andExpect(status().isForbidden());
+    }
+    mvc.perform(patch("/api/movements/classification").with(user("admin").roles("ADMIN"))
+        .contentType("application/json").content(body.replace("[\"one\"]", "[]")))
+        .andExpect(status().isBadRequest());
+    verify(ledger, never()).updateClassifications(anyList());
+    var movement = new Movement("one", "account", "one", java.time.LocalDate.of(2026, 10, 1),
+        new java.math.BigDecimal("-10"), "EUR", "Compra", "Shop", "ALIMENTACION",
+        Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    when(ledger.movement("one")).thenReturn(java.util.Optional.of(movement));
+    when(ledger.updateClassifications(anyList())).thenReturn(1);
+    mvc.perform(patch("/api/movements/classification").with(user("admin").roles("ADMIN"))
+        .contentType("application/json").content(body))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.updated").value(1));
+  }
+
+  @Test
   void readerCannotIngest() throws Exception {
     mvc.perform(
             post("/api/importer/products/a/batches")

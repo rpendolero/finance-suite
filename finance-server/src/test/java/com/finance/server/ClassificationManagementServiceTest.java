@@ -182,6 +182,80 @@ class ClassificationManagementServiceTest {
     assertThat(result.movement().included()).isTrue();
   }
 
+  @Test
+  void bulkClassificationUpdatesOnlyDistinctSelectedIdsAndDoesNotCreateRules() {
+    var selected = unclassified("Compra");
+    var refund = new Movement("refund", "account", "refund", selected.date(), new BigDecimal("10"),
+        "EUR", "Devolución", "Shop", "UNCLASSIFIED", Movement.Kind.REFUND, Movement.Status.BOOKED);
+    when(ledger.movement("id")).thenReturn(Optional.of(selected));
+    when(ledger.movement("refund")).thenReturn(Optional.of(refund));
+    when(ledger.updateClassifications(anyList())).thenAnswer(invocation -> ((List<?>) invocation.getArgument(0)).size());
+
+    assertThat(service.classifySelection(List.of("id", "refund", "id"), "ALIMENTACION", "SUPERMERCADO", Movement.Kind.NORMAL).updated())
+        .isEqualTo(2);
+    @SuppressWarnings("unchecked") ArgumentCaptor<List<Movement>> captor = ArgumentCaptor.forClass(List.class);
+    verify(ledger).updateClassifications(captor.capture());
+    assertThat(captor.getValue()).extracting(Movement::id).containsExactly("id", "refund");
+    assertThat(captor.getValue()).allSatisfy(value -> {
+      assertThat(value.category()).isEqualTo("ALIMENTACION");
+      assertThat(value.subcategory()).isEqualTo("SUPERMERCADO");
+      assertThat(value.classificationSource()).isEqualTo(Movement.ClassificationSource.MANUAL);
+    });
+    assertThat(captor.getValue().get(1).kind()).isEqualTo(Movement.Kind.REFUND);
+    verify(ledger, never()).allMovements();
+    verifyNoInteractions(settings);
+  }
+
+  @Test
+  void missingMovementPreventsEveryBulkWrite() {
+    when(ledger.movement("id")).thenReturn(Optional.of(unclassified("Compra")));
+    when(ledger.movement("missing")).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.classifySelection(List.of("id", "missing"), "ALIMENTACION", "SUPERMERCADO", Movement.Kind.NORMAL))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("missing");
+    verify(ledger, never()).updateClassifications(anyList());
+  }
+
+  @Test
+  void refundOnNegativeMovementPreventsEveryBulkWrite() {
+    var positive = new Movement("positive", "account", "positive", LocalDate.of(2026, 10, 1), new BigDecimal("10"),
+        "EUR", "Abono", "Shop", "UNCLASSIFIED", Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    when(ledger.movement("positive")).thenReturn(Optional.of(positive));
+    when(ledger.movement("id")).thenReturn(Optional.of(unclassified("Cargo")));
+    assertThatThrownBy(() -> service.classifySelection(List.of("positive", "id"), "ALIMENTACION", "SUPERMERCADO", Movement.Kind.REFUND))
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(ledger, never()).updateClassifications(anyList());
+  }
+
+  @Test
+  void invalidBulkCategoryOrSubcategoryCannotSilentlyUnclassifyMovements() {
+    assertThatThrownBy(() -> service.classifySelection(List.of("id"), "DOES_NOT_EXIST", null, Movement.Kind.NORMAL))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> service.classifySelection(List.of("id"), "ALIMENTACION", "DOES_NOT_EXIST", Movement.Kind.NORMAL))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> service.classifySelection(List.of("id"), "NO_COMPUTABLE", null, Movement.Kind.NORMAL))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> service.classifySelection(List.of(), "ALIMENTACION", null, Movement.Kind.NORMAL))
+        .isInstanceOf(IllegalArgumentException.class);
+    verifyNoInteractions(ledger, settings);
+  }
+
+  @Test
+  void bulkSupportsNonComputableAndExplicitUnclassified() {
+    when(ledger.movement("id")).thenReturn(Optional.of(unclassified("Cargo")));
+    service.classifySelection(List.of("id"), "NO_COMPUTABLE", "LIQUIDACION_PAYPAL", Movement.Kind.NORMAL);
+    service.classifySelection(List.of("id"), "UNCLASSIFIED", null, Movement.Kind.NORMAL);
+    @SuppressWarnings("unchecked") ArgumentCaptor<List<Movement>> captor = ArgumentCaptor.forClass(List.class);
+    verify(ledger, times(2)).updateClassifications(captor.capture());
+    var excluded = captor.getAllValues().get(0).get(0);
+    assertThat(excluded.included()).isFalse();
+    assertThat(excluded.kind()).isEqualTo(Movement.Kind.WALLET_SETTLEMENT);
+    var unclassified = captor.getAllValues().get(1).get(0);
+    assertThat(unclassified.category()).isEqualTo("UNCLASSIFIED");
+    assertThat(unclassified.classificationSource()).isEqualTo(Movement.ClassificationSource.UNCLASSIFIED);
+    assertThat(unclassified.classificationConfidence()).isEqualByComparingTo("0");
+    verifyNoInteractions(settings);
+  }
+
   private Movement unclassified(String description) {
     return new Movement(
         "id",

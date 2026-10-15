@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.function.Predicate;
 
 /**
- * Separates household consumption from saving transfers and debt repayments.
+ * Uses the sign of computable booked movements for income and expense totals.
+ * Saving and financing are additional breakdowns, already included in those totals.
  * Never estimates the principal/interest split of an unitemized loan payment.
  */
 public final class FinancialMovementAllocation {
@@ -28,17 +29,14 @@ public final class FinancialMovementAllocation {
   }
 
   public static boolean income(Movement movement) {
-    return movement.included() && !saving(movement) && !financing(movement)
-        && movement.amount().signum() > 0;
+    return movement.included() && movement.amount().signum() > 0;
   }
 
-  public static boolean consumption(Movement movement) {
-    return movement.included() && !saving(movement)
-        && (financingInterest(movement)
-            || (!financing(movement) && movement.amount().signum() < 0));
+  public static boolean expense(Movement movement) {
+    return movement.included() && movement.amount().signum() < 0;
   }
 
-  /** Refunds and reversals are negative expenses; expenses are positive. */
+  /** Expresses debits as positive outflows and credits as negative allocations. */
   public static BigDecimal paid(Movement movement) {
     return movement.amount().negate();
   }

@@ -8,7 +8,6 @@ import java.math.*;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -32,11 +31,9 @@ public class LiquidityForecastService {
             .filter(Product::liquid)
             .map(Product::balance)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-    var accountIds =
-        products().stream().filter(Product::liquid).map(Product::id).collect(Collectors.toSet());
     var flows =
         ledger.movements(p, null).stream()
-            .filter(m -> m.status() == Movement.Status.BOOKED && accountIds.contains(m.productId()))
+            .filter(Movement::included)
             .toList();
     var net =
         sum(flows)
@@ -51,7 +48,9 @@ public class LiquidityForecastService {
         balances,
         net,
         balances.add(net),
-        "Proyección lineal de flujo de cuentas (incluye liquidaciones); no predice vencimientos. No"
-            + " usar como saldo disponible; comprobar actualidad y cobertura de saldos/histórico.");
+        "Proyección lineal basada únicamente en ingresos y gastos computables de todos los productos;"
+            + " excluye pendientes, transferencias y liquidaciones. No predice vencimientos ni el"
+            + " momento de los cobros y pagos. No usar como saldo disponible; comprobar actualidad"
+            + " y cobertura de saldos/histórico.");
   }
 }

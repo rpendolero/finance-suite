@@ -40,7 +40,7 @@ class FinanceServiceTest {
   }
 
   @Test
-  void purchasesAreCountedOnceAndRefundsReduceExpenses() {
+  void purchasesAreCountedOnceAndRefundsCountAsIncome() {
     when(ledger.movements(p, null))
         .thenReturn(
             List.of(
@@ -87,13 +87,13 @@ class FinanceServiceTest {
                     Movement.Kind.NORMAL,
                     Movement.Status.PENDING)));
     var s = service.summary(p, null);
-    assertThat(s.income()).isEqualByComparingTo("3000");
-    assertThat(s.expenses()).isEqualByComparingTo("80");
+    assertThat(s.income()).isEqualByComparingTo("3020");
+    assertThat(s.expenses()).isEqualByComparingTo("100");
     assertThat(s.net()).isEqualByComparingTo("2920");
     assertThat(s.excluded()).isEqualTo(3);
     assertThat(s.pending()).isEqualTo(1);
     assertThat(s.savingsRatePercent()).isEqualByComparingTo("0");
-    assertThat(s.operatingMarginRatePercent()).isEqualByComparingTo("97.33");
+    assertThat(s.operatingMarginRatePercent()).isEqualByComparingTo("96.69");
   }
 
   @Test
@@ -146,7 +146,7 @@ class FinanceServiceTest {
   }
 
   @Test
-  void cashForecastUsesAccountFlowsAndDoesNotSubtractCreditPurchasesTwice() {
+  void forecastUsesComputableCardPurchaseAndExcludesAccountSettlement() {
     when(ledger.products())
         .thenReturn(
             List.of(
@@ -172,7 +172,7 @@ class FinanceServiceTest {
         m(
             "payment",
             "2026-09-10",
-            "-100.00",
+            "-200.00",
             "card",
             Movement.Kind.CARD_SETTLEMENT,
             Movement.Status.BOOKED);

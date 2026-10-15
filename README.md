@@ -1,4 +1,14 @@
-# Finance Suite 0.5.10
+# Finance Suite 0.5.11
+
+## Novedades 0.5.11
+
+- Edición de movimientos en modal y recategorización masiva en búsqueda e Ingresos y gastos.
+- Paginación configurable de 25, 50 o 100 elementos, con selección entre páginas.
+- Totales coherentes de movimientos computables en Inicio, calendario, evolución y detalles.
+- Evolución permanece en Inicio; se elimina su pantalla independiente.
+- Previsión visible y calculada exclusivamente con movimientos computables, incluidas tarjetas.
+
+[Notas de versión 0.5.11](docs/RELEASE-0.5.11.md) · [Edición y criterios de cálculo](docs/MOVEMENT-EDITING.md).
 
 ## Novedades 0.5.10
 

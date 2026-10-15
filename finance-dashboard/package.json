@@ -1,25 +1,27 @@
 {
   "name": "finance-dashboard",
   "private": true,
-  "version": "0.5.10",
+  "version": "0.5.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-classification-editor.cjs"
+    "test": "node scripts/test-classification-editor.cjs",
+    "test:movements": "node scripts/test-movement-search.cjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest",
-    "lucide-react": "latest"
+    "typescript": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "playwright": "^1.62.1"
   }
 }
