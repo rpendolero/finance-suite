@@ -35,6 +35,20 @@ Respuesta: `{"updated":2}`. Valida el catálogo, todos los identificadores y el 
 
 Es necesario desplegar **frontend y servidor de esta rama** para usar la edición masiva. No hay migraciones de base de datos.
 
+## Coherencia de los importes
+
+Calendario, evolución, resumen, ingresos y gastos, categorías, productos y el detalle de movimientos computables usan el mismo criterio:
+
+- Sólo movimientos contabilizados (`BOOKED`), con tratamiento `NORMAL` o `REFUND`, y categoría distinta de `NO_COMPUTABLE`.
+- Los importes negativos son gastos, incluidos los cargos de financiación y ahorro/inversión.
+- Los importes positivos son ingresos, incluidas las devoluciones y los reembolsos de inversión.
+- Balance y flujo disponible = ingresos − gastos. Los desgloses netos de ahorro y financiación son informativos y no se vuelven a restar.
+- Los pendientes, duplicados, transferencias internas y liquidaciones no computables quedan excluidos de importes y contadores.
+
+El listado general de búsqueda puede mostrar también movimientos excluidos para poder revisarlos. El modal **Movimientos computables** aplica los filtros anteriores y recorre todas las páginas de la fecha/producto seleccionado. Sus totales se suman en céntimos.
+
+Caso de regresión: cargos ordinarios de 251,16 € y cuota de vehículo de 203,95 € deben producir **455,11 € de gastos** en todas las vistas. La corrección requiere actualizar tanto servidor como frontend, sin reclasificar ni modificar movimientos existentes.
+
 ## Verificación
 
 ```bash

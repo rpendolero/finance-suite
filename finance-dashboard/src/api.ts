@@ -33,6 +33,7 @@ export type Movement = {
     category?: string;
     subcategory?: string;
     kind: string;
+    status?: 'BOOKED' | 'PENDING';
     classificationSource?: string;
     classificationConfidence?: number
 };

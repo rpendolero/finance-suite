@@ -14,12 +14,38 @@ const test = async (name, run) => { await run(); passed++; console.log(`OK ${nam
         fs.symlinkSync(path.resolve('node_modules'), path.join(temporary, 'node_modules'), 'dir');
         await build({logLevel: 'silent', build: {
             outDir: temporary, emptyOutDir: false,
-            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts'), periods: path.resolve('src/periods.ts'), periodSelector: path.resolve('src/PeriodSelector.tsx'), calendar: path.resolve('src/FinancialCalendar.tsx')},
+            lib: {entry: {editor: path.resolve('src/ClassificationMovementRow.tsx'), importer: path.resolve('src/StatementImport.tsx'), api: path.resolve('src/api.ts'), periods: path.resolve('src/periods.ts'), periodSelector: path.resolve('src/PeriodSelector.tsx'), calendar: path.resolve('src/FinancialCalendar.tsx'), totals: path.resolve('src/movementTotals.ts')},
                 formats: ['cjs'], fileName: (_format, name) => `${name}.cjs`},
             rollupOptions: {external: ['react', 'react/jsx-runtime']}
         }});
         const Row = require(path.join(temporary, 'editor.cjs')).default;
         const {api} = require(path.join(temporary, 'api.cjs'));
+        const {isComputableMovement, movementTotals} = require(path.join(temporary, 'totals.cjs'));
+        const totalMovement = (amount, extra = {}) => ({amount, category: 'ALIMENTACION', kind: 'NORMAL', status: 'BOOKED', ...extra});
+        await test('movement detail includes the vehicle payment in the 455.11 expense total', () => {
+            assert.deepEqual(movementTotals([
+                totalMovement(-251.16), totalMovement(-203.95, {category: 'FINANCIACION'})
+            ]), {income: 0, expenses: 455.11, net: -455.11});
+        });
+        await test('computable totals exclude pending, excluded kinds and no-computable categories', () => {
+            const excluded = [
+                ...['INTERNAL_TRANSFER', 'CARD_SETTLEMENT', 'WALLET_SETTLEMENT', 'NON_COMPUTABLE', 'DUPLICATE'].map(kind => totalMovement(-999, {kind})),
+                totalMovement(-999, {status: 'PENDING'}), totalMovement(999, {status: 'PENDING', kind: 'REFUND'}),
+                totalMovement(-999, {category: 'no_computable'}), totalMovement(999, {category: 'NO_COMPUTABLE', kind: 'REFUND'}),
+                totalMovement(-999, {status: undefined})
+            ];
+            assert.ok(excluded.every(row => !isComputableMovement(row)));
+            assert.deepEqual(movementTotals(excluded), {income: 0, expenses: 0, net: 0});
+        });
+        await test('credits including refunds and investment redemptions are income; totals use cents', () => {
+            assert.deepEqual(movementTotals([
+                totalMovement(-1000.10, {category: 'AHORRO_E_INVERSION'}),
+                totalMovement(200.05, {category: 'AHORRO_E_INVERSION'}), totalMovement(20.01, {kind: 'REFUND'}),
+                totalMovement(3000.25, {category: 'INGRESOS'}), totalMovement(10, {category: 'FINANCIACION'}), totalMovement(0)
+            ]), {income: 3230.31, expenses: 1000.10, net: 2230.21});
+            assert.deepEqual(movementTotals([totalMovement(-0.1), totalMovement(-0.2), totalMovement(0.1), totalMovement(0.2)]),
+                {income: 0.3, expenses: 0.3, net: 0});
+        });
         const {periodRange} = require(path.join(temporary, 'periods.cjs'));
         const {default: FinancialCalendar, calendarCells} = require(path.join(temporary, 'calendar.cjs'));
         const calendarDay = date => ({date, income: 0, expenses: 0, net: 0, operations: 0});

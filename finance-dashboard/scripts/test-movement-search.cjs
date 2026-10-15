@@ -16,10 +16,15 @@ const html = `<!doctype html><html lang="es"><head><meta name="viewport" content
 <body><div id="root" style="padding:16px;max-width:1200px;margin:auto"></div><script type="module">
 import React from 'react'; import {createRoot} from 'react-dom/client';
 import MovementSearch from '/src/MovementSearch.tsx'; import '/src/styles.css';
-createRoot(document.getElementById('root')).render(React.createElement(React.StrictMode, null, React.createElement(MovementSearch, {
+import MovementSummaryModal from '/src/MovementSummaryModal.tsx';
+const screen = location.search.includes('summary') ? React.createElement(MovementSummaryModal, {
+    selection: {date:'2026-10-01', productId:'account'}, from:'2026-10-01', to:'2026-10-31',
+    products: [{id:'account', name:'Cuenta de prueba'}], onClose: () => {}
+}) : React.createElement(MovementSearch, {
     products: [{id:'account', name:'Cuenta de prueba'}], initialFrom:'2026-10-01', initialTo:'2026-10-31',
     canEdit: !location.search.includes('reader'), onClassified: () => {}
-})));
+});
+createRoot(document.getElementById('root')).render(React.createElement(React.StrictMode, null, screen));
 </script></body></html>`;
 
 (async () => {
@@ -40,13 +45,14 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Str
         const page = await browser.newPage({viewport: {width: 1280, height: 900}});
         const browserErrors = [];
         page.on('pageerror', error => browserErrors.push(error.message));
-        let rows = fixture(230), requests = [], failWrite = false;
+        let rows = fixture(230), requests = [], searches = [], failWrite = false;
         await page.route('**/api/**', async route => {
             const req = route.request(), url = new URL(req.url());
             const respond = (data, status = 200) => route.fulfill({status, json: data});
             if (url.pathname === '/api/categories') return respond(catalog);
             if (url.pathname === '/api/movements/search') {
                 const p = url.searchParams, offset = Number(p.get('offset') || 0), limit = Number(p.get('limit') || 25);
+                searches.push(Object.fromEntries(p));
                 let matches = rows.filter(row => (!p.get('category') || row.category === p.get('category'))
                     && (!p.get('text') || (row.merchant + row.description).toLowerCase().includes(p.get('text').toLowerCase())));
                 return respond({items: matches.slice(offset, offset + limit), total: matches.length, offset, limit});
@@ -160,6 +166,26 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Str
             await page.goto(origin + '?reader'); await countRows(25); await ready();
             assert.equal(await page.locator('.movement-result-row input, .movement-result-row button').count(), 0);
             await page.locator('.movement-result-row').first().click(); assert.equal(await dialog().count(), 0);
+        });
+        await test('daily summary loads every page, includes financing and excludes pending and non-computable rows', async () => {
+            rows = [
+                ...fixture(200).map(row => ({...row, status: 'BOOKED', kind: 'NON_COMPUTABLE'})),
+                {...fixture(1)[0], id:'charges', status:'BOOKED', amount:-251.16, merchant:'Otros cargos'},
+                {...fixture(1)[0], id:'vehicle', status:'BOOKED', amount:-203.95, category:'FINANCIACION', merchant:'Stellantis'},
+                {...fixture(1)[0], id:'pending', status:'PENDING', amount:-999, merchant:'Pendiente'},
+                {...fixture(1)[0], id:'excluded', status:'BOOKED', category:'NO_COMPUTABLE', amount:-999, merchant:'Excluido'}
+            ];
+            searches = [];
+            await page.goto(origin + '?summary');
+            await page.waitForFunction(() => document.querySelectorAll('.movement-summary-item').length === 2);
+            const values = await page.locator('.movement-summary-kpis strong').allTextContents();
+            assert.deepEqual(values.map(value => value.replace(/\s/g, '')), ['2', '0,00€', '455,11€', '-455,11€']);
+            assert.equal(await page.getByText('Stellantis', {exact:true}).count(), 1);
+            assert.equal(await page.getByText('Pendiente', {exact:true}).count(), 0);
+            assert.equal(await page.getByText('Excluido', {exact:true}).count(), 0);
+            assert.ok(searches.some(query => query.offset === '200'));
+            assert.ok(searches.every(query => query.status === 'BOOKED' && query.productId === 'account'
+                && query.from === '2026-10-01' && query.to === '2026-10-01'));
         });
         assert.deepEqual(browserErrors, []);
         console.log(`${passed} movement browser checks passed`);

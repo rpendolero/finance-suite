@@ -241,16 +241,16 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
                                                     sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
                         title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Consumo e intereses" value={eur(overview.expenses)}
+                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
                                                  sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
                                                  tone="red"/><Card title="Ahorro e inversión" value={eur(overview.savings)}
-                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados'}
+                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados · cargos incluidos en gastos'}
                                                                    icon={PiggyBank} tone="purple"/>
                         <Card title="Pagos de financiación" value={eur(overview.financingPayments)}
-                              sub={eur(overview.financingUnallocated) + ' sin desglose de capital/intereses'}
+                              sub={eur(overview.financingUnallocated) + ' sin desglose · cargos incluidos en gastos'}
                               icon={Landmark}/>
                         <Card title="Flujo disponible del período" value={eur(overview.availableAfterAllocations)}
-                              sub="Ingresos − consumo − ahorro − financiación; no es el saldo bancario"
+                              sub="Ingresos − gastos; no es el saldo bancario"
                               icon={Wallet} tone="green"/></section>
                     <section className="grid3">
                         <div className="card wide"><Title t="Evolución financiera"/>{trend.length ?

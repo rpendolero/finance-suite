@@ -77,7 +77,7 @@ public class DashboardAnalysisService {
         var included = included(period, productId);
         var movements = switch (direction) {
             case INCOME -> incomeMovements(included);
-            case EXPENSE -> included.stream().filter(m -> FinancialMovementAllocation.consumption(m) || FinancialMovementAllocation.saving(m) || FinancialMovementAllocation.financing(m)).toList();
+            case EXPENSE -> expenseMovements(included);
             case SAVINGS -> included.stream().filter(FinancialMovementAllocation::saving).toList();
             case FINANCING -> included.stream().filter(FinancialMovementAllocation::financing).toList();
         };
@@ -117,7 +117,7 @@ public class DashboardAnalysisService {
         return new DashboardOverview(money(liquid), money(income), money(expenses), money(savings),
                 income.signum() <= 0 ? ZERO : savings.multiply(BigDecimal.valueOf(100)).divide(income, 2, RoundingMode.HALF_UP),
                 expenses.divide(BigDecimal.valueOf(days), 2, RoundingMode.HALF_UP),
-                money(financing), money(income.subtract(expenses).subtract(savings).subtract(financing).add(interest)),
+                money(financing), money(income.subtract(expenses)),
                 money(capital), money(interest), money(financing.subtract(capital).subtract(interest)),
                 categories(period, productId), merchants(period, productId, 10));
     }
@@ -189,7 +189,7 @@ public class DashboardAnalysisService {
     }
 
     private List<Movement> expenseMovements(List<Movement> ms) {
-        return ms.stream().filter(FinancialMovementAllocation::consumption).toList();
+        return ms.stream().filter(FinancialMovementAllocation::expense).toList();
     }
 
     private String expenseFlowCategory(Movement movement) {

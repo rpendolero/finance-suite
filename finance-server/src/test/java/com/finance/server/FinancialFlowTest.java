@@ -27,7 +27,7 @@ class FinancialFlowTest {
   private final Period period = new Period(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
 
   @Test
-  void incomeUsesSignRegardlessOfCategoryAndExcludesRefundsPendingAndTransfers() {
+  void incomeIncludesRefundsAndUsesSignRegardlessOfCategoryExcludingPendingAndTransfers() {
     when(ledger.movements(period, null)).thenReturn(List.of(
         movement("salary", "2000", "INGRESOS", Movement.Kind.NORMAL, Movement.Status.BOOKED),
         movement("credit", "10", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED),
@@ -38,19 +38,19 @@ class FinancialFlowTest {
         movement("zero", "0", "INGRESOS", Movement.Kind.NORMAL, Movement.Status.BOOKED)));
 
     var result = service.flow(period, null, FlowDirection.INCOME, 0, 25);
-    assertThat(result.total()).isEqualByComparingTo("2010");
-    assertThat(result.operations()).isEqualTo(2);
+    assertThat(result.total()).isEqualByComparingTo("2030");
+    assertThat(result.operations()).isEqualTo(3);
     assertThat(result.movements()).extracting(DashboardAnalysisService.FlowMovement::id)
-        .containsExactlyInAnyOrder("salary", "credit");
+        .containsExactlyInAnyOrder("salary", "credit", "refund");
     assertThat(result.categories()).extracting(DashboardAnalysisService.CategoryStat::category)
-        .containsExactly("INGRESOS", "ALIMENTACION");
+        .containsExactly("INGRESOS", "Devoluciones", "ALIMENTACION");
     assertThat(result.categories().getFirst().amount()).isEqualByComparingTo("2000");
     assertThat(result.counterparties().getFirst().merchant()).isEqualTo("salary");
     assertThat(result.counterparties().getFirst().amount()).isEqualByComparingTo("2000");
   }
 
   @Test
-  void refundsReduceExpenseTotalsAndRowsKeepOriginalSignedAmounts() {
+  void refundsAreIncomeAndExpenseRowsKeepOriginalSignedAmounts() {
     when(ledger.movements(period, null)).thenReturn(List.of(
         movement("purchase", "-100", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED),
         movement("refund", "20", "ALIMENTACION", Movement.Kind.REFUND, Movement.Status.BOOKED),
@@ -59,13 +59,15 @@ class FinancialFlowTest {
         movement("pending", "-200", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.PENDING)));
 
     var result = service.flow(period, null, FlowDirection.EXPENSE, 0, 25);
-    assertThat(result.total()).isEqualByComparingTo("80");
-    assertThat(result.operations()).isEqualTo(2);
+    assertThat(result.total()).isEqualByComparingTo("100");
+    assertThat(result.operations()).isEqualTo(1);
     assertThat(result.categories()).hasSize(1);
-    assertThat(result.categories().getFirst().amount()).isEqualByComparingTo("80");
+    assertThat(result.categories().getFirst().amount()).isEqualByComparingTo("100");
     assertThat(result.categories().getFirst().share()).isEqualByComparingTo("100");
     assertThat(result.movements()).extracting(DashboardAnalysisService.FlowMovement::amount)
-        .containsExactlyInAnyOrder(new BigDecimal("-100"), new BigDecimal("20"));
+        .containsExactly(new BigDecimal("-100"));
+    assertThat(service.flow(period, null, FlowDirection.INCOME, 0, 25).total())
+        .isEqualByComparingTo("2020");
   }
 
   @Test
@@ -87,12 +89,13 @@ class FinancialFlowTest {
         movement("b", "20", "ALIMENTACION", Movement.Kind.REFUND, Movement.Status.BOOKED),
         movement("c", "-500", "TRANSPORTE", Movement.Kind.NORMAL, Movement.Status.BOOKED),
         movement("d", "50", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED),
-        movement("e", "-10", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.PENDING)));
+        movement("e", "-10", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.PENDING),
+        movement("f", "-15", "ALIMENTACION", Movement.Kind.NORMAL, Movement.Status.BOOKED)));
 
     var expense = service.flow(period, null, FlowDirection.EXPENSE, "ALIMENTACION", 1, 1);
-    assertThat(expense.total()).isEqualByComparingTo("80");
+    assertThat(expense.total()).isEqualByComparingTo("115");
     assertThat(expense.operations()).isEqualTo(2);
-    assertThat(expense.movements()).extracting(DashboardAnalysisService.FlowMovement::id).containsExactly("b");
+    assertThat(expense.movements()).extracting(DashboardAnalysisService.FlowMovement::id).containsExactly("f");
     assertThat(expense.categories()).extracting(DashboardAnalysisService.CategoryStat::category).containsExactly("ALIMENTACION");
     var income = service.flow(period, null, FlowDirection.INCOME, "ALIMENTACION", 0, 25);
     assertThat(income.total()).isEqualByComparingTo("50");

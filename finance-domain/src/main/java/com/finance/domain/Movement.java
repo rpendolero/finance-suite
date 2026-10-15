@@ -150,7 +150,8 @@ public record Movement(
     }
 
     public boolean included() {
-        return status == Status.BOOKED && (kind == Kind.NORMAL || kind == Kind.REFUND);
+        return status == Status.BOOKED && (kind == Kind.NORMAL || kind == Kind.REFUND)
+                && !"NO_COMPUTABLE".equalsIgnoreCase(category);
     }
 
     private static ClassificationSource defaultClassificationSource(ClassificationSource source, String category) {
