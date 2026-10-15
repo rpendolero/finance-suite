@@ -1,0 +1,57 @@
+# Consulta y edición de movimientos
+
+La pantalla **Movimientos** muestra los resultados en modo de consulta. Un administrador puede pulsar una fila o **Editar** para abrir el modal de la aplicación. El modal permite cambiar categoría, subcategoría y tratamiento, incluyendo **No computable**. **Guardar** modifica ese movimiento; **Cancelar**, Escape o pulsar fuera descartan los cambios pendientes. Durante el guardado no se permite cerrar el modal.
+
+La acción **Aplicar al comercio** conserva su alcance anterior: modifica también el histórico de ese comercio y guarda una regla. **Eliminar** está dentro del modal y mantiene su confirmación independiente. Los usuarios lectores sólo pueden consultar.
+
+## Selección y edición masiva
+
+1. Buscar usando los filtros habituales.
+2. Marcar movimientos individuales o **Seleccionar esta página**.
+3. Si hay más resultados, usar **Seleccionar los N resultados de la búsqueda** para incluir otras páginas. El contador muestra siempre el alcance exacto; se pueden desmarcar movimientos concretos.
+4. Pulsar **Recategorizar seleccionados (N)** y elegir categoría, subcategoría y tratamiento.
+5. Confirmar con **Aplicar a N movimientos**.
+
+La selección se conserva al cambiar de página o de tamaño de página. Cambiar cualquier filtro o ejecutar otra búsqueda limpia la selección. Mientras hay filtros pendientes de aplicar, los resultados anteriores no se pueden seleccionar ni editar.
+
+La selección completa se obtiene recorriendo la búsqueda antes de editar: se envían los identificadores concretos seleccionados, nunca una regla por comercio ni un filtro abierto que pueda incorporar movimientos nuevos durante el guardado. Si el total cambia durante la selección, se solicita repetir la búsqueda. Los errores mantienen el modal y la selección para corregir o reintentar.
+
+El listado ofrece **25, 50 o 100 movimientos por página**, inicialmente 25. La preferencia se recuerda en este navegador. Guardar mantiene filtros, página y posición; si la última página queda vacía por la recategorización, se carga la última página válida.
+
+## API
+
+`PATCH /api/movements/classification` requiere el rol `ADMIN` y la sesión habitual:
+
+```json
+{
+  "movementIds": ["id-1", "id-2"],
+  "category": "RESTAURACION",
+  "subcategory": "RESTAURANTE",
+  "kind": "NORMAL"
+}
+```
+
+Respuesta: `{"updated":2}`. Valida el catálogo, todos los identificadores y el tratamiento antes de escribir. La persistencia del lote usa una única transacción: un error revierte el conjunto. Los identificadores repetidos se procesan una vez. No crea reglas ni modifica movimientos fuera de la selección. Al aplicar `NORMAL`, las devoluciones existentes siguen siendo devoluciones. `REFUND` sólo es válido para importes positivos; `NO_COMPUTABLE` necesita una subcategoría válida.
+
+Es necesario desplegar **frontend y servidor de esta rama** para usar la edición masiva. No hay migraciones de base de datos.
+
+## Verificación
+
+```bash
+cd finance-dashboard
+npm ci
+npm run build
+npm test
+npx playwright install chromium
+npm run test:movements
+```
+
+Las pruebas de navegador usan movimientos ficticios y respuestas HTTP simuladas. Cubren edición individual, cancelación, selección entre páginas, selección de más de 200 resultados, errores de guardado, filtros, tamaño de página, última página vacía, permisos de lectura, teclado y móvil.
+
+```bash
+mvn -pl finance-server -am \
+  -Dtest=ClassificationManagementServiceTest,JpaAdapterTest,ServerIntegrationTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+Las pruebas del servidor verifican el alcance del lote, la validación previa, la preservación de devoluciones, los permisos y la reversión de una actualización parcialmente ejecutada en JPA.

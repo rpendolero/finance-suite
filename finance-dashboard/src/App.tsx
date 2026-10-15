@@ -7,6 +7,7 @@ import StatementImport from './StatementImport';
 import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
 import MovementSummaryModal from './MovementSummaryModal';
+import MovementSearch from './MovementSearch';
 import {periodRange} from './periods';
 import {useEffect, useState, type FormEvent} from 'react';
 import {
@@ -624,90 +625,6 @@ function Page({title, children}: { title: string; children: any }) {
             : <div className="finance-page-hero"><div><span className="products-eyebrow">FINANCE SUITE</span><h2>{title}</h2><p>{descriptions[title] || 'Gestiona y consulta tu información financiera desde un mismo lugar.'}</p></div></div>}
         {children}
     </section>
-}
-
-function MovementSearch({products, initialFrom, initialTo, canEdit, onClassified, selection}: { products: Product[]; initialFrom: string; initialTo: string; canEdit: boolean; onClassified: () => void; selection?: {productId?: string; date?: string} | null }) {
-    const [filters, setFilters] = useState<any>({from: selection?.date || initialFrom, to: selection?.date || initialTo, productId: selection?.productId || '', sortBy: 'DATE', sortDirection: 'DESC', offset: 0, limit: 25});
-    const [page, setPage] = useState<any>({items: [], total: 0, offset: 0, limit: 25});
-    const [catalog, setCatalog] = useState<CategoryDefinition[]>([]);
-    const [deleting, setDeleting] = useState<Movement | null>(null);
-    const [busy, setBusy] = useState(false), [err, setErr] = useState('');
-    const [message, setMessage] = useState('');
-    const [savingClassification, setSavingClassification] = useState(false);
-
-    const load = (next = filters) => {
-        setBusy(true); setErr('');
-        api.searchMovements(next).then(setPage).catch(e => setErr(e instanceof Error ? e.message : 'Error de búsqueda')).finally(() => setBusy(false));
-    };
-    useEffect(() => { load(filters); api.categoriesCatalog().then(setCatalog).catch(() => undefined) }, []);
-    useEffect(() => {
-        const next = {...filters, from: initialFrom, to: initialTo, offset: 0};
-        setFilters(next); load(next);
-    }, [initialFrom, initialTo]);
-
-    useEffect(() => {if (!selection) return; const next = {...filters, from: selection.date || initialFrom, to: selection.date || initialTo, productId: selection.productId || '', offset: 0}; setFilters(next); load(next);}, [selection]);
-    const change = (k: string, v: any) => setFilters((x: any) => ({...x, [k]: v, offset: 0}));
-    const submit = (e: any) => { e.preventDefault(); load(filters) };
-    const move = (offset: number) => { const next = {...filters, offset}; setFilters(next); load(next) };
-    const onSaved = (result: ClassificationResult, appliedToMerchant: boolean) => {
-        setMessage(appliedToMerchant
-            ? `Clasificación guardada. Regla del comercio aplicada a ${result.reclassified} movimientos de este comercio en el histórico.`
-            : 'Clasificación manual guardada.');
-        onClassified();
-        const next = {...filters, offset: 0};
-        setFilters(next); load(next);
-    };
-    const deleteMovement = async () => {
-        if (!deleting) return;
-        setBusy(true); setErr('');
-        try {
-            await api.deleteMovement(deleting.id);
-            setDeleting(null);
-            onClassified();
-            const next = {...filters, offset: page.items.length === 1 ? Math.max(0, page.offset - page.limit) : page.offset};
-            setFilters(next); load(next);
-        } catch (e) {
-            setBusy(false);
-            setErr(e instanceof Error ? e.message : 'No se pudo eliminar el movimiento');
-        }
-    };
-
-    return <Page title="Movimientos">
-        {deleting && <div className="app-modal-backdrop">
-            <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="delete-movement-title">
-                <h3 id="delete-movement-title">Eliminar movimiento</h3>
-                <p>{dateLabel(deleting.date)} · {deleting.merchant || deleting.description} · {eur(deleting.amount)}</p>
-                <p>Se eliminará definitivamente. Una nueva importación o sincronización puede volver a incorporarlo.</p>
-                <div className="modal-actions">
-                    <button type="button" className="secondary" disabled={busy} onClick={() => setDeleting(null)}>Cancelar</button>
-                    <button type="button" disabled={busy} onClick={() => void deleteMovement()}>Eliminar definitivamente</button>
-                </div>
-            </div>
-        </div>}
-        <form className="filters card" onSubmit={submit}>
-            <label>Desde<input type="date" value={filters.from} onChange={e => change('from', e.target.value)}/></label>
-            <label>Hasta<input type="date" value={filters.to} onChange={e => change('to', e.target.value)}/></label>
-            <input placeholder="Buscar concepto o comercio" value={filters.text || ''} onChange={e => change('text', e.target.value)}/>
-            <select value={filters.productId || ''} onChange={e => change('productId', e.target.value)}><option value="">Todos los productos</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-            <input placeholder="Categoría" value={filters.category || ''} onChange={e => change('category', e.target.value)}/>
-            <input type="number" step="0.01" placeholder="Importe mín." value={filters.minAmount ?? ''} onChange={e => change('minAmount', e.target.value)}/>
-            <input type="number" step="0.01" placeholder="Importe máx." value={filters.maxAmount ?? ''} onChange={e => change('maxAmount', e.target.value)}/>
-            <select value={filters.status || ''} onChange={e => change('status', e.target.value)}><option value="">Todos los estados</option><option value="BOOKED">Contabilizado</option><option value="PENDING">Pendiente</option></select>
-            <select value={filters.sortBy} onChange={e => change('sortBy', e.target.value)}><option value="DATE">Ordenar por fecha</option><option value="AMOUNT">Ordenar por importe</option><option value="MERCHANT">Ordenar por comercio</option><option value="CATEGORY">Ordenar por categoría</option></select>
-            <select value={filters.sortDirection} onChange={e => change('sortDirection', e.target.value)}><option value="DESC">Descendente</option><option value="ASC">Ascendente</option></select>
-            <button type="submit"><Search size={16}/>Buscar</button>
-            <button type="button" className="secondary" onClick={() => api.exportMovements(filters)}>Exportar CSV</button>
-        </form>
-        {message && <div className="classification-message" role="status">{message}</div>}
-        {err && <div className="api-error">{err}</div>}
-        <div className="card classification-list">{busy && !page.items.length ? <div className="loading">Buscando movimientos…</div> : <>
-            {page.items.length ? page.items.map((movement: Movement) => <ClassificationMovementRow key={movement.id}
-                movement={movement} catalog={catalog} canEdit={canEdit} busy={busy || savingClassification} onSaving={setSavingClassification}
-                productName={products.find(product => product.id === movement.productId)?.name}
-                onSaved={onSaved} onDelete={canEdit ? () => setDeleting(movement) : undefined}/>) : <Empty>No hay movimientos con esos filtros.</Empty>}
-            <div className="pagination"><span>{page.total} movimientos</span><div><button disabled={page.offset <= 0} onClick={() => move(Math.max(0, page.offset - page.limit))}>Anterior</button><button disabled={page.offset + page.limit >= page.total} onClick={() => move(page.offset + page.limit)}>Siguiente</button></div></div>
-        </>}</div>
-    </Page>
 }
 
 function CreditLimitEditor({product, onSaved}: {product: Product; onSaved: () => void}) {

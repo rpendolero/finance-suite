@@ -61,8 +61,20 @@ jobs:
         with:
           node-version: '22'
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Test dashboard
         run: npm test
       - name: Build dashboard
         run: npm run build
+      - name: Install Chromium for movement interaction tests
+        run: npx playwright install --with-deps chromium
+      - name: Test movement search interactions
+        run: npm run test:movements
+        env:
+          MOVEMENT_SCREENSHOT: ${{ runner.temp }}/movement-modal-mobile.png
+      - name: Upload movement modal preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: movement-modal-mobile
+          path: ${{ runner.temp }}/movement-modal-mobile.png

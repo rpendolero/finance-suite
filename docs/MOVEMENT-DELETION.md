@@ -1,6 +1,6 @@
 # Eliminar movimientos y detectar duplicados
 
-En «Movimientos», un administrador puede pulsar «Eliminar» y confirmar el concepto, fecha e importe en el diálogo de la aplicación. El endpoint `DELETE /api/movements/{id}` devuelve 204. Solo elimina el movimiento elegido; conserva el producto, su saldo registrado y las reglas de clasificación. Los informes que consulten de nuevo los movimientos dejan de incluirlo. No requiere migración.
+En «Movimientos», un administrador abre una fila o pulsa «Editar», elige «Eliminar» dentro del modal y confirma el concepto, fecha e importe en el diálogo de la aplicación. El endpoint `DELETE /api/movements/{id}` devuelve 204. Solo elimina el movimiento elegido; conserva el producto, su saldo registrado y las reglas de clasificación. Los informes que consulten de nuevo los movimientos dejan de incluirlo. No requiere migración.
 
 El borrado es definitivo. Si el banco o un fichero vuelven a enviar ese movimiento, se puede importar de nuevo. Para excluir un duplicado conservando su identidad y evitando que vuelva a computar, existe el tratamiento NO_COMPUTABLE / MOVIMIENTO_DUPLICADO.
 

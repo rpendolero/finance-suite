@@ -16,3 +16,6 @@
 *.csv
 *.log
 /.private/
+
+**/dist/
+**/*.tsbuildinfo

@@ -206,6 +206,8 @@ export const api = {
             applyToSimilar: boolean
         }) => sendJson<ClassificationResult>(`/api/movements/${encodeURIComponent(id)}/classification`, 'PATCH', classification),
     reclassify: () => sendJson<ReclassificationResult>('/api/classification/reclassify', 'POST'),
+    classifyMovements: (movementIds: string[], classification: {category: string; subcategory?: string; kind: string}) =>
+        sendJson<{updated: number}>('/api/movements/classification', 'PATCH', {movementIds, ...classification}),
     movements: (from: string, to: string, productId?: string, limit = 10) => json<Movement[]>(`/api/movements?${q(from, to, productId)}&limit=${limit}`),
     exportMovements: (f: MovementFilters) => {
         const p = new URLSearchParams();

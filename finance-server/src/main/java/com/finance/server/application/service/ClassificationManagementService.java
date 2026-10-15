@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.LinkedHashSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +26,41 @@ public final class ClassificationManagementService {
   public record ManualResult(Movement movement, int reclassified) {}
 
   public record ReclassificationResult(int scanned, int updated, int unclassified) {}
+
+  public record BulkResult(int updated) {}
+
+  public BulkResult classifySelection(
+      List<String> ids, String category, String subcategory, Movement.Kind kind) {
+    if (ids == null || ids.isEmpty() || ids.stream().anyMatch(id -> id == null || id.isBlank())) {
+      throw new IllegalArgumentException("Selecciona al menos un movimiento válido");
+    }
+    if (category == null || category.isBlank() || kind == null) {
+      throw new IllegalArgumentException("Selecciona categoría y tratamiento");
+    }
+    categories.validate(category, subcategory);
+    String canonicalCategory = categories.normalizeCategory(category);
+    boolean unclassified = CategoryCatalogService.UNCLASSIFIED.equals(canonicalCategory);
+    String canonicalSubcategory = unclassified ? null : categories.normalizeSubcategory(canonicalCategory, subcategory);
+    Movement.Kind canonicalKind = categories.classificationKind(canonicalCategory, canonicalSubcategory, kind);
+
+    var changes = new ArrayList<Movement>();
+    for (String id : new LinkedHashSet<>(ids)) {
+      Movement current = ledger.movement(id)
+          .orElseThrow(() -> new IllegalArgumentException("Movimiento inexistente: " + id));
+      // Recategorizing a mixed selection must not turn existing refunds into ordinary income.
+      Movement.Kind selectedKind = canonicalKind == Movement.Kind.NORMAL && current.kind() == Movement.Kind.REFUND
+          ? Movement.Kind.REFUND : canonicalKind;
+      changes.add(Movement.normalizedCopy(current, normalizedMerchant(current)).withClassification(
+          canonicalCategory, canonicalSubcategory, selectedKind,
+          unclassified ? Movement.ClassificationSource.UNCLASSIFIED : Movement.ClassificationSource.MANUAL,
+          unclassified ? BigDecimal.ZERO.setScale(4) : BigDecimal.ONE.setScale(4)));
+    }
+    // Validate the complete selection before the adapter persists it in one transaction.
+    int updated = ledger.updateClassifications(changes);
+    log.info("Movement selection classified: count={}, category={}, subcategory={}, kind={}",
+        updated, canonicalCategory, canonicalSubcategory, canonicalKind);
+    return new BulkResult(updated);
+  }
 
   public List<CategoryCatalogService.CategoryDefinition> categories() {
     return categories.categories();
