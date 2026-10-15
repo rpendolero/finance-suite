@@ -18,6 +18,14 @@ La selección completa se obtiene recorriendo la búsqueda antes de editar: se e
 
 El listado ofrece **25, 50 o 100 movimientos por página**, inicialmente 25. La preferencia se recuerda en este navegador. Guardar mantiene filtros, página y posición; si la última página queda vacía por la recategorización, se carga la última página válida.
 
+## Ingresos y gastos
+
+Los movimientos de cada categoría usan el mismo componente de listado que la búsqueda: filas de consulta, edición mediante modal al pulsar la fila o **Editar**, selección masiva y páginas de **25, 50 o 100**. La preferencia del tamaño de página se comparte entre ambas pantallas. Las acciones de guardar, cancelar, aplicar al comercio y eliminar tienen el mismo comportamiento y permisos.
+
+**Seleccionar los N movimientos de esta categoría** recorre todas sus páginas y se limita a la categoría abierta, al período y a la vista de ingresos o gastos seleccionados. Cambiar de categoría, período o tipo de análisis limpia la selección, incluyendo selecciones aún en carga. Cambiar de página o de tamaño conserva la selección.
+
+Al guardar se actualizan el detalle, las categorías y los totales. Se mantiene la categoría y la página si siguen existiendo; una última página vacía retrocede a la última válida. Si la categoría queda sin movimientos, se cierra y desaparece del resumen, conservando el mensaje de confirmación.
+
 ## API
 
 `PATCH /api/movements/classification` requiere el rol `ADMIN` y la sesión habitual:
@@ -60,7 +68,7 @@ npx playwright install chromium
 npm run test:movements
 ```
 
-Las pruebas de navegador usan movimientos ficticios y respuestas HTTP simuladas. Cubren edición individual, cancelación, selección entre páginas, selección de más de 200 resultados, errores de guardado, filtros, tamaño de página, última página vacía, permisos de lectura, teclado y móvil.
+Las pruebas de navegador usan movimientos ficticios y respuestas HTTP simuladas. Cubren edición individual, cancelación, selección entre páginas, selección de más de 200 resultados, errores de guardado, filtros, tamaño de página, última página vacía, permisos de lectura, teclado y móvil. En Ingresos y gastos verifican además el alcance de la selección por categoría/período/tipo, respuestas tardías tras cambiar de vista, eliminación, actualización de totales y cierre de categorías vacías.
 
 ```bash
 mvn -pl finance-server -am \
