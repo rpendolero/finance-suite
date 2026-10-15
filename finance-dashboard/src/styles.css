@@ -758,7 +758,8 @@ button{touch-action:manipulation}
 .movement-search-note,.movement-edit-note{font-size:12px;line-height:1.5;color:#667085;margin:0}
 .movement-search :focus-visible,.movement-dialog :focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
 .movement-dialog{width:min(660px,100%);max-height:calc(100dvh - 48px);display:flex;flex-direction:column}
-.movement-dialog>.app-modal-body{overflow-y:auto;min-height:0}.movement-dialog>.app-modal-head{flex-shrink:0}
+.movement-dialog>.app-modal-body{overflow-y:auto;min-height:0}.movement-dialog>.app-modal-head{flex-shrink:0;flex-direction:row;align-items:center;margin-bottom:0}
+.movement-dialog .modal-close{flex-shrink:0;min-width:40px;min-height:40px}
 .movement-dialog .classification-row{grid-template-columns:1fr 1fr;padding:0;border:0;align-items:start}
 .movement-dialog .classification-movement,.movement-dialog .classification-field:nth-child(2),.movement-dialog .classification-actions{grid-column:1/-1}
 .movement-dialog .classification-movement b,.movement-dialog .classification-movement span{white-space:normal;overflow-wrap:anywhere}
