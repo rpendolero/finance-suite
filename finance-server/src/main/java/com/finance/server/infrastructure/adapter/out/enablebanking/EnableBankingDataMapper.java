@@ -24,7 +24,13 @@ public final class EnableBankingDataMapper {
       if (iban != null && iban.length() >= 4) name = "Cuenta · " + iban.substring(iban.length() - 4);
     }
     log.debug("Enable Banking account mapped: currency={}, accountType={}", diagnostic(details.getCurrency()), diagnostic(details.getCashAccountType()));
-    return new Account(id, name == null ? id : name, required(details.getCurrency(), "account currency"), details.getCashAccountType());
+    return new Account(id, name == null ? id : name, required(details.getCurrency(), "account currency"), details.getCashAccountType(), details.getAccountId() == null ? null : normalizeIban(details.getAccountId().getIban()));
+  }
+
+  private String normalizeIban(String iban) {
+    if (iban == null || iban.isBlank()) return null;
+    String normalized = iban.replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
+    return normalized.matches("[A-Z]{2}[0-9A-Z]{13,32}") ? normalized : null;
   }
 
   public Balance balance(BalanceDto value) {
