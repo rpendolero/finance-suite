@@ -115,7 +115,16 @@ public final class BankingSyncService {
             .filter(x -> x.externalAccountId().equals(account.id()))
             .findFirst();
         Optional<ExternalBankAccount> known = exact;
-        if (known.isEmpty()) {
+        if (known.isEmpty() && account.iban() != null) {
+          var ibanMatches = existing.stream()
+              .filter(x -> !claimed.contains(x.id()))
+              .filter(x -> account.iban().equals(x.iban()))
+              .toList();
+          if (ibanMatches.size() == 1) known = Optional.of(ibanMatches.get(0));
+          else if (ibanMatches.size() > 1)
+            log.warn("Ambiguous IBAN reconciliation: connectionId={}", connectionId);
+        }
+        if (known.isEmpty() && account.iban() == null) {
           // Reuse an existing account only when its identity is unambiguous.
           var candidates = existing.stream()
               .filter(x -> !claimed.contains(x.id()))
@@ -136,7 +145,7 @@ public final class BankingSyncService {
         String productId = known.map(ExternalBankAccount::productId).orElse(null);
         result.add(connections.saveAccount(new ExternalBankAccount(
             id, connectionId, account.id(), productId,
-            account.name(), account.currency(), account.cashAccountType())));
+            account.name(), account.currency(), account.cashAccountType(), account.iban())));
       }
       return List.copyOf(result);
     } catch (IllegalStateException exception) {
@@ -150,7 +159,7 @@ public final class BankingSyncService {
     var account = connections.accounts(connectionId).stream().filter(a -> a.externalAccountId().equals(externalAccountId)).findFirst()
         .orElseThrow(() -> new IllegalArgumentException("External account not found"));
     validateProduct(account, product);
-    return connections.saveAccount(new ExternalBankAccount(account.id(), account.connectionId(), account.externalAccountId(), productId, account.name(), account.currency(), account.cashAccountType()));
+    return connections.saveAccount(new ExternalBankAccount(account.id(), account.connectionId(), account.externalAccountId(), productId, account.name(), account.currency(), account.cashAccountType(), account.iban()));
   }
 
   private void validateProduct(ExternalBankAccount account, Product product) {
