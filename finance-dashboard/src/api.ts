@@ -179,6 +179,7 @@ export const api = {
     banks: () => json<string[]>('/api/v1/banking/enable-banking/banks'),
     bankConnections: () => json<BankConnection[]>('/api/v1/banking/connections'),
     authorizeBank: (bankName: string) => sendJson<{connectionId: string; authorizationUrl: string}>('/api/v1/banking/enable-banking/authorizations', 'POST', {bankName}),
+    reauthorizeBank: (id: string) => sendJson<{connectionId: string; authorizationUrl: string}>(`/api/v1/banking/enable-banking/connections/${encodeURIComponent(id)}/reauthorize`, 'POST'),
     bankAccounts: (id: string) => json<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts`),
     discoverBankAccounts: (id: string) => sendJson<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/discover`, 'POST'),
     linkBankAccount: (id: string, externalAccountId: string, productId: string) => sendJson<BankAccount>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts/link`, 'POST', {externalAccountId, productId}),
