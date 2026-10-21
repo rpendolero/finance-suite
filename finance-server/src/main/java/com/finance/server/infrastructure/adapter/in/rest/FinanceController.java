@@ -10,6 +10,7 @@ import com.finance.server.infrastructure.adapter.in.dto.ProductDto;
 import com.finance.server.infrastructure.adapter.in.dto.StatementFormatDto;
 import com.finance.statements.StatementFormat;
 import java.util.List;
+import java.util.UUID;
 import java.util.Locale;
 import com.finance.server.infrastructure.adapter.in.mapper.ProductMapper;
 import jakarta.validation.Valid;
@@ -48,6 +49,16 @@ public class FinanceController {
   @GetMapping("/products")
   public Object products() {
     return queries.products().stream().map(mapper::toDto).toList();
+  }
+
+  @PostMapping("/products")
+  public Object createProduct(@Valid @RequestBody ProductDto dto) {
+    if (dto.getId() != null && !dto.getId().isBlank())
+      throw new IllegalArgumentException("El ID del nuevo producto lo genera el servidor");
+    String id = UUID.randomUUID().toString();
+    dto.setId(id);
+    ledger.saveProduct(mapper.toDomain(dto));
+    return mapper.toDto(ledger.product(id).orElseThrow());
   }
 
   @PutMapping("/products/{id}")
