@@ -132,7 +132,7 @@ public final class BankingSyncService {
           log.warn("Duplicate bank account returned by provider: connectionId={}", connectionId);
           continue;
         }
-        String id = known.map(ExternalBankAccount::id).orElseGet(() -> UUID.randomUUID().toString());
+        String id = known.isPresent() ? known.get().id() : UUID.randomUUID().toString();
         String productId = known.map(ExternalBankAccount::productId).orElse(null);
         result.add(connections.saveAccount(new ExternalBankAccount(
             id, connectionId, account.id(), productId,
