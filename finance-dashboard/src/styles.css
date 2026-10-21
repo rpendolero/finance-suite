@@ -794,3 +794,11 @@ button{touch-action:manipulation}
 .bank-connection-status {display:flex;align-items:center;gap:7px}
 .bank-connection-status span {color:#16a34a;font-size:17px}
 @media(max-width:640px){.banking-detail-modal .banking-product-field{flex-basis:100%}.banking-detail-modal .banking-account > button{flex:1}}
+
+/* Centered progress indicator for banking operations. */
+.banking-loading-overlay{position:fixed;inset:0;z-index:2100;background:rgba(15,23,42,.30);display:flex;align-items:center;justify-content:center;padding:24px}
+.banking-loading-panel{background:var(--surface,#fff);color:#17233d;box-shadow:0 18px 60px rgba(15,23,42,.24);border-radius:16px;padding:32px 38px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:min(380px,100%);width:100%}
+.banking-loading-panel small{color:#64748b}
+.banking-loading-spinner{width:48px;height:48px;border:5px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:banking-loading-spin .85s linear infinite}
+@keyframes banking-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.banking-loading-spinner{animation-duration:2.5s}}
