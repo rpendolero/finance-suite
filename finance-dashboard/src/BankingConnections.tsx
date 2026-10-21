@@ -54,6 +54,12 @@ export default function BankingConnections({products, onProductCreated}: {produc
         if (url.protocol !== 'https:') throw new Error('La autorización bancaria requiere una URL HTTPS.');
         window.location.assign(url.href);
     });
+    const reauthorize = (id: string) => run(async () => {
+        const authorization = await api.reauthorizeBank(id);
+        const url = new URL(authorization.authorizationUrl);
+        if (url.protocol !== 'https:') throw new Error('La autorización bancaria requiere una URL HTTPS.');
+        window.location.assign(url.href);
+    });
     const discover = () => run(async () => {
         const values = await api.discoverBankAccounts(selected);
         setAccounts(values); setLinks(Object.fromEntries(values.map(a => [a.externalAccountId, a.productId || ''])));
@@ -92,7 +98,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
                 <option value="">Selecciona conexión</option>{connections.map(c => <option value={c.id} key={c.id}>{c.bankName} · {active(c) ? 'Activa' : 'Pendiente / requiere autorización'}</option>)}
             </select></label>
             {connection && <span>Consentimiento hasta {timestamp(connection.validUntil)} · Última sincronización {timestamp(connection.lastSyncAt)}</span>}
-            {connection && !authorized && <button disabled={busy} onClick={() => void connect(connection.bankName)}>Volver a autorizar</button>}
+            {connection && !authorized && <button disabled={busy} onClick={() => void reauthorize(connection.id)}>Reautorizar conexión</button>}
             <button disabled={busy || !authorized} onClick={() => void discover()}>Descubrir cuentas</button>
         </div>
         {authorized && <div className="card">
