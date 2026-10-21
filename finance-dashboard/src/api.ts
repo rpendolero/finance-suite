@@ -195,7 +195,7 @@ export const api = {
         return json<ImportResult>(`/api/products/${encodeURIComponent(productId)}/imports`, {method: 'POST', body});
     },
     products: () => json<Product[]>('/api/products'),
-    saveProduct: (product: ProductInput) => sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product),
+    saveProduct: (product: ProductInput) => product.id ? sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product) : sendJson<Product>('/api/products', 'POST', product),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
     adminCategories: () => json<AdminCategory[]>('/api/admin/categories'),
     createCategory: (item: CatalogItemInput) => sendJson<AdminCategory>('/api/admin/categories', 'POST', item),
