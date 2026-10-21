@@ -17,7 +17,8 @@ export type Product = {
     linkedAccountId?: string;
     externalId?: string;
 };
-export type ProductInput = Product & {
+export type ProductInput = Omit<Product, 'id'> & {
+    id?: string;
     balanceAt: string;
     linkedAccountId?: string;
     creditLimit?: number;
