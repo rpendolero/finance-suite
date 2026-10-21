@@ -2,120 +2,145 @@ import {useEffect, useState} from 'react';
 import ProductCreate from './ProductCreate';
 import {api, BankAccount, BankConnection, BankSyncResult, Product} from './api';
 
-const compatibleProduct = (account: BankAccount, product: Product) => {
-    if (account.currency !== 'XXX' && product.currency !== account.currency) return false;
-    if (account.cashAccountType === 'CARD') return ['CREDIT_CARD', 'DEBIT_CARD'].includes(product.type);
-    if (['CACC', 'SVGS'].includes(account.cashAccountType || '')) return product.type === 'ACCOUNT';
-    return true;
+const domains: Record<string, string> = {
+  kutxabank: 'kutxabank.es', ing: 'ing.es', santander: 'bancosantander.es',
+  bbva: 'bbva.es', caixabank: 'caixabank.es', sabadell: 'bancsabadell.com',
+  bankinter: 'bankinter.com', unicaja: 'unicajabanco.es', abanca: 'abanca.com',
+  openbank: 'openbank.es', revolut: 'revolut.com', n26: 'n26.com',
+  paypal: 'paypal.com', ibercaja: 'ibercaja.es', cajamar: 'grupocooperativocajamar.es'
 };
-const accountTypeLabel = (type?: string) => type === 'CARD' ? 'Tarjeta' : type === 'CACC' ? 'Cuenta corriente' : type === 'SVGS' ? 'Cuenta de ahorro' : type ? `Tipo: ${type}` : 'Tipo no informado';
+const normalize = (name: string) => name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+function BankLogo({name}: {name: string}) {
+  const [failed, setFailed] = useState(false);
+  const key = normalize(name);
+  const domain = Object.entries(domains).find(([alias]) => key.includes(alias))?.[1];
+  useEffect(() => setFailed(false), [name]);
+  return <span className="bank-logo" aria-hidden="true" style={{width: 48, height: 48, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, background: 'var(--surface-secondary, #f1f5f9)', overflow: 'hidden'}}>
+    {domain && !failed ? <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`} alt="" width="38" height="38" onError={() => setFailed(true)}/> : <span style={{fontSize: 23}}>🏦</span>}
+  </span>;
+}
 const active = (c: BankConnection) => c.status === 'ACTIVE' && !!c.validUntil && new Date(c.validUntil).getTime() > Date.now();
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-ES') : '—';
+const compatible = (a: BankAccount, p: Product) => (a.currency === 'XXX' || a.currency === p.currency) &&
+  (a.cashAccountType === 'CARD' ? ['CREDIT_CARD','DEBIT_CARD'].includes(p.type) : ['CACC','SVGS'].includes(a.cashAccountType || '') ? p.type === 'ACCOUNT' : true);
+const statusLabel = (c: BankConnection) => active(c) ? 'Conectado' : c.status === 'AUTHORIZING' ? 'Autorización pendiente' : 'Requiere autorización';
 
 export default function BankingConnections({products, onProductCreated}: {products: Product[]; onProductCreated: () => void}) {
-    const [creatingFor, setCreatingFor] = useState<BankAccount | null>(null);
-    const [availableProducts, setAvailableProducts] = useState<Product[]>(products);
-    const [banks, setBanks] = useState<string[]>([]), [bank, setBank] = useState('');
-    const [connections, setConnections] = useState<BankConnection[]>([]), [selected, setSelected] = useState('');
-    const [accounts, setAccounts] = useState<BankAccount[]>([]), [links, setLinks] = useState<Record<string, string>>({});
-    const [busy, setBusy] = useState(false), [error, setError] = useState('');
-    const [result, setResult] = useState<BankSyncResult | null>(null);
-    const connection = connections.find(c => c.id === selected);
-    const authorized = connection && active(connection);
-
-    const failure = (e: unknown) => setError(e instanceof Error && e.message.includes('404')
-        ? 'Enable Banking no está habilitado en el servidor. Activa la integración y configura sus credenciales.'
-        : e instanceof Error ? e.message : 'No se pudo completar la operación.');
-    const run = async (action: () => Promise<void>) => {
-        setBusy(true); setError('');
-        try { await action(); } catch (e) { failure(e); } finally { setBusy(false); }
-    };
-    const refresh = async () => {
-        const values = await api.bankConnections();
-        setConnections(values);
-        setSelected(current => values.some(c => c.id === current) ? current : values.find(active)?.id || values[0]?.id || '');
-    };
-    useEffect(() => { void run(async () => {
-        const [names, productList] = await Promise.all([api.banks(), api.products(), refresh()]);
-        setAvailableProducts(productList);
-        setBanks(names); setBank(names[0] || '');
-    }); }, []);
-    useEffect(() => {
-        let current = true;
-        setAccounts([]); setLinks({}); setResult(null);
-        if (authorized) api.bankAccounts(selected).then(values => {
-            if (current) { setAccounts(values); setLinks(Object.fromEntries(values.map(a => [a.externalAccountId, a.productId || '']))); }
-        }).catch(e => { if (current) failure(e); });
-        return () => { current = false; };
-    }, [selected, authorized]);
-    const connect = (name: string) => run(async () => {
-        const authorization = await api.authorizeBank(name);
-        const url = new URL(authorization.authorizationUrl);
-        if (url.protocol !== 'https:') throw new Error('La autorización bancaria requiere una URL HTTPS.');
-        window.location.assign(url.href);
-    });
-    const reauthorize = (id: string) => run(async () => {
-        const authorization = await api.reauthorizeBank(id);
-        const url = new URL(authorization.authorizationUrl);
-        if (url.protocol !== 'https:') throw new Error('La autorización bancaria requiere una URL HTTPS.');
-        window.location.assign(url.href);
-    });
-    const discover = () => run(async () => {
-        const values = await api.discoverBankAccounts(selected);
-        setAccounts(values); setLinks(Object.fromEntries(values.map(a => [a.externalAccountId, a.productId || ''])));
-    });
-    const link = (account: BankAccount) => run(async () => {
-        const updated = await api.linkBankAccount(selected, account.externalAccountId, links[account.externalAccountId]);
-        setAccounts(current => current.map(a => a.id === updated.id ? updated : a));
-    });
-    const sync = () => run(async () => {
-        setResult(null);
-        setResult(await api.syncBank(selected));
-        await refresh();
-        setAvailableProducts(await api.products());
-        onProductCreated();
-    });
-    return <section className="banking-page">
-        {creatingFor && <ProductCreate products={availableProducts} initialName={creatingFor.name} initialProvider={connection?.bankName} cashAccountType={creatingFor.cashAccountType}
-            onCancel={() => setCreatingFor(null)} onCreated={product => {
-                setAvailableProducts(current => [...current, product]);
-                setLinks(current => ({...current, [creatingFor.externalAccountId]: product.id}));
-                setCreatingFor(null); onProductCreated();
-            }}/>}
-        <div className="finance-page-hero"><div><span className="products-eyebrow">CONEXIONES SEGURAS</span><h2>Bancos · Enable Banking</h2><p>Conecta tu banco, vincula cada cuenta con un producto y sincroniza sus movimientos.</p></div></div>
-        {new URLSearchParams(window.location.search).get('banking') === 'connected' && <p role="status">Autorización completada. Descubre las cuentas para vincularlas.</p>}
-        {new URLSearchParams(window.location.search).get('banking') === 'cancelled' && <p role="alert">La autorización se ha cancelado o el banco la ha rechazado. Puedes volver a conectar.</p>}
-        {error && <div className="api-error" role="alert">{error}</div>}
-        <div className="card banking-actions">
-            <label>Banco<select value={bank} disabled={busy} onChange={e => setBank(e.target.value)}>
-                <option value="">Selecciona banco</option>{banks.map(name => <option key={name}>{name}</option>)}
-            </select></label>
-            <button disabled={busy || !bank} onClick={() => void connect(bank)}>Conectar banco</button>
-            <button disabled={busy} onClick={() => void run(refresh)}>Actualizar conexiones</button>
+  const [banks, setBanks] = useState<string[]>([]);
+  const [bank, setBank] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [connections, setConnections] = useState<BankConnection[]>([]);
+  const [selected, setSelected] = useState('');
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [links, setLinks] = useState<Record<string,string>>({});
+  const [availableProducts, setAvailableProducts] = useState<Product[]>(products);
+  const [creatingFor, setCreatingFor] = useState<BankAccount | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<BankSyncResult | null>(null);
+  const connection = connections.find(c => c.id === selected);
+  const authorized = !!connection && active(connection);
+  const failure = (e: unknown) => setError(e instanceof Error ? e.message : 'No se pudo completar la operación.');
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true); setError('');
+    try { await action(); } catch (e) { failure(e); } finally { setBusy(false); }
+  };
+  const refresh = async () => setConnections(await api.bankConnections());
+  useEffect(() => { void run(async () => {
+    const [names, productsLoaded, connectionsLoaded] = await Promise.all([api.banks(), api.products(), api.bankConnections()]);
+    setBanks(names); setBank(names[0] || ''); setAvailableProducts(productsLoaded); setConnections(connectionsLoaded);
+  }); }, []);
+  useEffect(() => {
+    if (!selected || !authorized) { setAccounts([]); setLinks({}); return; }
+    let mounted = true;
+    api.bankAccounts(selected).then(items => {
+      if (mounted) { setAccounts(items); setLinks(Object.fromEntries(items.map(a => [a.externalAccountId, a.productId || '']))); }
+    }).catch(e => { if (mounted) failure(e); });
+    return () => { mounted = false; };
+  }, [selected, authorized]);
+  const redirect = (url: string) => {
+    const destination = new URL(url);
+    if (destination.protocol !== 'https:') throw new Error('La autorización requiere una dirección HTTPS.');
+    window.location.assign(destination.href);
+  };
+  const connect = () => run(async () => redirect((await api.authorizeBank(bank)).authorizationUrl));
+  const reauthorize = (id: string) => run(async () => redirect((await api.reauthorizeBank(id)).authorizationUrl));
+  const discover = () => run(async () => {
+    const items = await api.discoverBankAccounts(selected);
+    setAccounts(items); setLinks(Object.fromEntries(items.map(a => [a.externalAccountId, a.productId || ''])));
+  });
+  const link = (a: BankAccount) => run(async () => {
+    const updated = await api.linkBankAccount(selected, a.externalAccountId, links[a.externalAccountId]);
+    setAccounts(items => items.map(item => item.id === updated.id ? updated : item));
+  });
+  const sync = () => run(async () => {
+    setResult(null);
+    try {
+      setResult(await api.syncBank(selected));
+      await refresh(); setAvailableProducts(await api.products()); onProductCreated();
+    } catch (e) {
+      await refresh();
+      throw e;
+    }
+  });
+  const linkedCount = accounts.filter(a => !!a.productId).length;
+  return <section className="banking-page">
+    {creatingFor && <ProductCreate products={availableProducts} initialName={creatingFor.name} initialProvider={connection?.bankName}
+      cashAccountType={creatingFor.cashAccountType} onCancel={() => setCreatingFor(null)} onCreated={p => {
+        setAvailableProducts(items => [...items, p]); setLinks(items => ({...items, [creatingFor.externalAccountId]: p.id}));
+        setCreatingFor(null); onProductCreated();
+      }}/>}
+    <div className="finance-page-hero"><div><span className="products-eyebrow">CONEXIONES SEGURAS</span><h2>Bancos y cuentas</h2><p>Consulta el estado de tus bancos y sincroniza tus movimientos.</p></div></div>
+    {new URLSearchParams(window.location.search).get('banking') === 'connected' && <p role="status">Autorización completada. Abre el banco y actualiza sus cuentas.</p>}
+    {new URLSearchParams(window.location.search).get('banking') === 'cancelled' && <p role="alert">La autorización fue cancelada. Puedes intentarlo de nuevo.</p>}
+    {error && <div className="api-error" role="alert">{error}</div>}
+    {!connection ? <>
+      <div className="card banking-actions" style={{display:'flex',gap:16,flexWrap:'wrap',alignItems:'center'}}>
+        <div><strong>{connections.length}</strong><small style={{display:'block'}}>Conexiones</small></div>
+        <div><strong>{connections.filter(active).length}</strong><small style={{display:'block'}}>Activas</small></div>
+        <div><strong>{connections.filter(c => !active(c)).length}</strong><small style={{display:'block'}}>Requieren atención</small></div>
+        <button disabled={busy} onClick={() => setAdding(v => !v)}>+ Añadir banco</button>
+        <button disabled={busy} onClick={() => void run(refresh)}>Actualizar</button>
+      </div>
+      {adding && <div className="card banking-actions"><label>Seleccionar entidad
+        <select value={bank} onChange={e => setBank(e.target.value)}><option value="">Selecciona un banco</option>
+          {banks.map(name => <option key={name} value={name}>{name}</option>)}</select></label>
+        <button disabled={busy || !bank} onClick={() => void connect()}>Conectar banco</button></div>}
+      <div style={{display:'grid',gap:12}}>
+        {connections.map(c => <div className="card" key={c.id} style={{display:'flex',alignItems:'center',gap:16,cursor:'pointer'}} onClick={() => setSelected(c.id)}>
+          <BankLogo name={c.bankName}/><div style={{flex:1}}><strong>{c.bankName}</strong><small style={{display:'block'}}>{statusLabel(c)} · Última sincronización: {timestamp(c.lastSyncAt)}</small></div>
+          <span aria-hidden="true">›</span></div>)}
+        {!connections.length && <div className="card">Todavía no hay bancos conectados. Pulsa «Añadir banco» para empezar.</div>}
+      </div>
+    </> : <>
+      <div className="banking-actions" style={{display:'flex',gap:12,alignItems:'center',marginBottom:16}}>
+        <button disabled={busy} onClick={() => {setSelected(''); setResult(null); setError('');}}>← Mis bancos</button>
+        <BankLogo name={connection.bankName}/><h3>{connection.bankName}</h3>
+      </div>
+      <div className="card">
+        <h3>Estado de conexión</h3><p>{statusLabel(connection)}</p>
+        <p>Autorización hasta: {timestamp(connection.validUntil)} · Última sincronización: {timestamp(connection.lastSyncAt)}</p>
+        {!authorized && <p>Necesitas renovar el acceso para recuperar la sincronización.</p>}
+        <div className="banking-actions">
+          <button disabled={busy} onClick={() => void reauthorize(connection.id)}>{busy ? 'Procesando…' : 'Renovar acceso bancario'}</button>
+          {authorized && <button disabled={busy} onClick={() => void discover()}>Actualizar cuentas</button>}
+          {authorized && <button disabled={busy || linkedCount === 0} onClick={() => void sync()}>Sincronizar ahora</button>}
         </div>
-        <div className="card banking-actions">
-            <label>Conexión<select value={selected} disabled={busy} onChange={e => setSelected(e.target.value)}>
-                <option value="">Selecciona conexión</option>{connections.map(c => <option value={c.id} key={c.id}>{c.bankName} · {active(c) ? 'Activa' : 'Pendiente / requiere autorización'}</option>)}
-            </select></label>
-            {connection && <span>Consentimiento hasta {timestamp(connection.validUntil)} · Última sincronización {timestamp(connection.lastSyncAt)}</span>}
-            {connection && !authorized && <button disabled={busy} onClick={() => void reauthorize(connection.id)}>Reautorizar conexión</button>}
-            <button disabled={busy || !authorized} onClick={() => void discover()}>Descubrir cuentas</button>
-        </div>
-        {authorized && <div className="card">
-            <h3>Cuentas y productos</h3>
-            {!accounts.length && <p>Pulsa «Descubrir cuentas» para obtener las cuentas autorizadas.</p>}
-            {accounts.map(a => <div className="banking-account" key={a.id}>
-                <div><b>{a.name}</b><small>{accountTypeLabel(a.cashAccountType)} · {a.currency === 'XXX' ? 'Moneda no especificada por el banco' : a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
-                <label>Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks({...links, [a.externalAccountId]: e.target.value})}>
-                    <option value="">Selecciona producto</option>{availableProducts.filter(p => compatibleProduct(a, p)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select></label>
-                {!availableProducts.some(p => compatibleProduct(a, p)) && <small>No hay productos compatibles. Crea un producto para vincularlo.</small>}
-                <button disabled={busy} onClick={() => setCreatingFor(a)}>Nuevo producto</button>
-                <button disabled={busy || !links[a.externalAccountId] || links[a.externalAccountId] === a.productId || !availableProducts.some(p => p.id === links[a.externalAccountId] && compatibleProduct(a, p))} onClick={() => void link(a)}>Guardar vínculo</button>
-            </div>)}
-            <p>Solo se sincronizan las cuentas con un vínculo guardado. Puedes seguir importando ficheros.</p>
-            <button disabled={busy || !accounts.some(a => a.productId)} onClick={() => void sync()}>{busy ? 'Procesando…' : 'Sincronizar movimientos'}</button>
-            {result && <p role="status">Leídos: {result.read} · Insertados: {result.inserted} · Duplicados: {result.duplicates} · Saldos actualizados: {result.balancesUpdated} · Sin saldo compatible: {result.balancesSkipped}</p>}
-        </div>}
-    </section>;
+      </div>
+      {authorized && <div className="card">
+        <h3>Cuentas y productos</h3>
+        <p>{accounts.length} cuentas · {linkedCount} vinculadas</p>
+        {!accounts.length && <p>Selecciona «Actualizar cuentas» para descubrir las cuentas autorizadas.</p>}
+        {accounts.map(a => <div className="banking-account" key={a.id}>
+          <div><b>{a.name}</b><small>{a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
+          <label>Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks(v => ({...v,[a.externalAccountId]:e.target.value}))}>
+            <option value="">Selecciona producto</option>{availableProducts.filter(p => compatible(a,p)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></label>
+          <button disabled={busy} onClick={() => setCreatingFor(a)}>Nuevo producto</button>
+          <button disabled={busy || !links[a.externalAccountId] || links[a.externalAccountId] === a.productId} onClick={() => void link(a)}>Guardar vínculo</button>
+        </div>)}
+        {result && <p role="status">Leídos: {result.read} · Nuevos: {result.inserted} · Duplicados: {result.duplicates} · Saldos actualizados: {result.balancesUpdated}</p>}
+      </div>}
+    </>}
+  </section>;
 }
