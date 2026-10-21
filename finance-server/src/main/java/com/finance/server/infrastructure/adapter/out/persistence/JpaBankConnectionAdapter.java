@@ -40,12 +40,12 @@ public class JpaBankConnectionAdapter implements BankConnectionPort {
   public ExternalBankAccount saveAccount(ExternalBankAccount a) {
     var e = new ExternalBankAccountEntity();
     e.setId(a.id()); e.setConnectionId(a.connectionId()); e.setExternalAccountId(a.externalAccountId());
-    e.setProductId(a.productId()); e.setName(a.name()); e.setCurrency(a.currency()); e.setCashAccountType(a.cashAccountType());
+    e.setProductId(a.productId()); e.setName(a.name()); e.setCurrency(a.currency()); e.setCashAccountType(a.cashAccountType()); e.setIban(a.iban());
     accounts.saveAndFlush(e); return a;
   }
   @Override public List<ExternalBankAccount> accounts(String connectionId) {
     return accounts.findByConnectionIdOrderByNameAsc(connectionId).stream()
-        .map(e -> new ExternalBankAccount(e.getId(), e.getConnectionId(), e.getExternalAccountId(), e.getProductId(), e.getName(), e.getCurrency(), e.getCashAccountType())).toList();
+        .map(e -> new ExternalBankAccount(e.getId(), e.getConnectionId(), e.getExternalAccountId(), e.getProductId(), e.getName(), e.getCurrency(), e.getCashAccountType(), e.getIban())).toList();
   }
   private BankConnection domain(BankConnectionEntity e) {
     return new BankConnection(e.getId(), e.getProvider(), e.getBankName(), e.getCountry(), e.getExternalSessionId(), e.getAuthorizationState(), e.getValidUntil(), e.getStatus(), e.getLastSyncAt());
