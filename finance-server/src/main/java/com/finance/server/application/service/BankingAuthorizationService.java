@@ -29,8 +29,6 @@ public final class BankingAuthorizationService {
   public AuthorizationStart reauthorize(String connectionId, int consentDays) {
     var connection = connections.find(connectionId)
         .orElseThrow(() -> new IllegalArgumentException("Bank connection not found: " + connectionId));
-    if (connection.status() == BankConnection.Status.AUTHORIZING)
-      throw new IllegalStateException("Authorization already in progress");
     String state = UUID.randomUUID().toString();
     Instant validUntil = clock.instant().plus(Duration.ofDays(consentDays));
     var authorization = authorizationPort.start(connection.bankName(), connection.country(), state,
