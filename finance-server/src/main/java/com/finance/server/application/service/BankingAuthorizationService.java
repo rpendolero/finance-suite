@@ -26,6 +26,22 @@ public final class BankingAuthorizationService {
     return new AuthorizationStart(id, authorization.url(), state);
   }
 
+  public AuthorizationStart reauthorize(String connectionId, int consentDays) {
+    var connection = connections.find(connectionId)
+        .orElseThrow(() -> new IllegalArgumentException("Bank connection not found: " + connectionId));
+    if (connection.status() == BankConnection.Status.AUTHORIZING)
+      throw new IllegalStateException("Authorization already in progress");
+    String state = UUID.randomUUID().toString();
+    Instant validUntil = clock.instant().plus(Duration.ofDays(consentDays));
+    var authorization = authorizationPort.start(connection.bankName(), connection.country(), state,
+        OffsetDateTime.ofInstant(validUntil, ZoneOffset.UTC));
+    connections.save(new BankConnection(connection.id(), connection.provider(), connection.bankName(),
+        connection.country(), connection.externalSessionId(), state, validUntil,
+        BankConnection.Status.AUTHORIZING, connection.lastSyncAt()));
+    log.info("Enable Banking reauthorization started: connectionId={}", connectionId);
+    return new AuthorizationStart(connectionId, authorization.url(), state);
+  }
+
   public BankConnection complete(String code, String state) {
     if (state == null || state.isBlank()) throw new IllegalArgumentException("Authorization state is required");
     var connection = connections.findByState(state).orElseThrow(() -> new IllegalArgumentException("Unknown authorization state"));
