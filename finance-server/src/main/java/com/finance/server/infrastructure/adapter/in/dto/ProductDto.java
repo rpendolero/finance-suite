@@ -12,7 +12,7 @@ public class ProductDto {
   private com.finance.domain.Product.Provider provider =
       com.finance.domain.Product.Provider.KUTXABANK;
 
-  @NotBlank
+  // Optional on POST /api/products; required by the legacy PUT endpoint.
   @Pattern(regexp = "[a-zA-Z0-9_-]{1,64}")
   private String id;
 
