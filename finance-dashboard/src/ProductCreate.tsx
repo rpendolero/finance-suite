@@ -19,7 +19,7 @@ export default function ProductCreate({products, initialName = '', initialProvid
         if (!provider || !name.trim()) { setError('Indica el nombre y la entidad.'); return; }
         setBusy(true);
         try {
-            const input: ProductInput = {id: crypto.randomUUID(), name: name.trim(), provider, type, currency: 'EUR', balance: Number(balance), balanceAt: new Date(`${balanceAt}T12:00:00`).toISOString(),
+            const input: ProductInput = {name: name.trim(), provider, type, currency: 'EUR', balance: Number(balance), balanceAt: new Date(`${balanceAt}T12:00:00`).toISOString(),
                 ...(card && linkedAccountId ? {linkedAccountId} : {}),
                 ...(type === 'CREDIT_CARD' && creditLimit !== '' ? {creditLimit: Number(creditLimit)} : {}),
                 ...(card && lastDigits ? {maskedPan: `**** ${lastDigits}`} : {})};
