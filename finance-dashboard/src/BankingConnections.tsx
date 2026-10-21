@@ -29,6 +29,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
   const [banks, setBanks] = useState<string[]>([]);
   const [bank, setBank] = useState('');
   const [adding, setAdding] = useState(false);
+  const closeDetails = () => { setSelected(''); setResult(null); setError(''); };
   const [connections, setConnections] = useState<BankConnection[]>([]);
   const [selected, setSelected] = useState('');
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
@@ -94,28 +95,33 @@ export default function BankingConnections({products, onProductCreated}: {produc
     {new URLSearchParams(window.location.search).get('banking') === 'connected' && <p role="status">Autorización completada. Abre el banco y actualiza sus cuentas.</p>}
     {new URLSearchParams(window.location.search).get('banking') === 'cancelled' && <p role="alert">La autorización fue cancelada. Puedes intentarlo de nuevo.</p>}
     {error && <div className="api-error" role="alert">{error}</div>}
-    {!connection ? <>
+    <>
       <div className="card banking-actions" style={{display:'flex',gap:16,flexWrap:'wrap',alignItems:'center'}}>
         <div><strong>{connections.length}</strong><small style={{display:'block'}}>Conexiones</small></div>
         <div><strong>{connections.filter(active).length}</strong><small style={{display:'block'}}>Activas</small></div>
         <div><strong>{connections.filter(c => !active(c)).length}</strong><small style={{display:'block'}}>Requieren atención</small></div>
-        <button disabled={busy} onClick={() => setAdding(v => !v)}>+ Añadir banco</button>
+        <button disabled={busy} onClick={() => setAdding(true)}>+ Añadir banco</button>
         <button disabled={busy} onClick={() => void run(refresh)}>Actualizar</button>
       </div>
-      {adding && <div className="card banking-actions"><label>Seleccionar entidad
-        <select value={bank} onChange={e => setBank(e.target.value)}><option value="">Selecciona un banco</option>
-          {banks.map(name => <option key={name} value={name}>{name}</option>)}</select></label>
-        <button disabled={busy || !bank} onClick={() => void connect()}>Conectar banco</button></div>}
       <div style={{display:'grid',gap:12}}>
         {connections.map(c => <div className="card" key={c.id} style={{display:'flex',alignItems:'center',gap:16,cursor:'pointer'}} onClick={() => setSelected(c.id)}>
           <BankLogo name={c.bankName}/><div style={{flex:1}}><strong>{c.bankName}</strong><small style={{display:'block'}}>{statusLabel(c)} · Última sincronización: {timestamp(c.lastSyncAt)}</small></div>
           <span aria-hidden="true">›</span></div>)}
         {!connections.length && <div className="card">Todavía no hay bancos conectados. Pulsa «Añadir banco» para empezar.</div>}
       </div>
-    </> : <>
+    </>
+    {adding && <div className="app-modal-backdrop" onMouseDown={e => {if (e.target === e.currentTarget && !busy) setAdding(false);}}>
+      <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="add-bank-title" style={{maxWidth:520,width:'100%'}}>
+        <div className="app-modal-head"><h3 id="add-bank-title">Añadir banco</h3><button type="button" className="secondary" disabled={busy} onClick={() => setAdding(false)} aria-label="Cerrar">✕</button></div>
+        <div className="app-modal-body"><p>Selecciona la entidad que quieres conectar mediante Enable Banking.</p><label>Entidad bancaria<select value={bank} onChange={e => setBank(e.target.value)}><option value="">Selecciona un banco</option>{banks.map(name => <option key={name} value={name}>{name}</option>)}</select></label>{error && <p className="api-error" role="alert">{error}</p>}</div>
+        <div className="app-modal-actions"><button type="button" className="secondary" disabled={busy} onClick={() => setAdding(false)}>Cancelar</button><button type="button" disabled={busy || !bank} onClick={() => void connect()}>{busy ? 'Conectando…' : 'Conectar banco'}</button></div>
+      </div>
+    </div>}
+    {connection && <div className="app-modal-backdrop" onMouseDown={e => {if (e.target === e.currentTarget && !busy && !creatingFor) closeDetails();}}>
+      <div className="app-modal banking-detail-modal" role="dialog" aria-modal="true" aria-labelledby="bank-detail-title" style={{width:'min(960px, 96vw)',maxWidth:'960px',maxHeight:'90vh',overflowY:'auto'}}>
       <div className="banking-actions" style={{display:'flex',gap:12,alignItems:'center',marginBottom:16}}>
-        <button disabled={busy} onClick={() => {setSelected(''); setResult(null); setError('');}}>← Mis bancos</button>
-        <BankLogo name={connection.bankName}/><h3>{connection.bankName}</h3>
+        <button disabled={busy} onClick={closeDetails} aria-label="Cerrar detalles del banco">✕ Cerrar</button>
+        <BankLogo name={connection.bankName}/><h3 id="bank-detail-title">{connection.bankName}</h3>
       </div>
       <div className="card">
         <h3>Estado de conexión</h3><p>{statusLabel(connection)}</p>
@@ -141,6 +147,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
         </div>)}
         {result && <p role="status">Leídos: {result.read} · Nuevos: {result.inserted} · Duplicados: {result.duplicates} · Saldos actualizados: {result.balancesUpdated}</p>}
       </div>}
-    </>}
+      </div>
+    </div>}
   </section>;
 }
