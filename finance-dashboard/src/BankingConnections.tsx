@@ -37,14 +37,15 @@ export default function BankingConnections({products, onProductCreated}: {produc
   const [availableProducts, setAvailableProducts] = useState<Product[]>(products);
   const [creatingFor, setCreatingFor] = useState<BankAccount | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
   const [result, setResult] = useState<BankSyncResult | null>(null);
   const connection = connections.find(c => c.id === selected);
   const authorized = !!connection && active(connection);
   const failure = (e: unknown) => setError(e instanceof Error ? e.message : 'No se pudo completar la operación.');
-  const run = async (action: () => Promise<void>) => {
-    setBusy(true); setError('');
-    try { await action(); } catch (e) { failure(e); } finally { setBusy(false); }
+  const run = async (action: () => Promise<void>, message = '') => {
+    setBusy(true); setLoadingMessage(message); setError('');
+    try { await action(); } catch (e) { failure(e); } finally { setBusy(false); setLoadingMessage(''); }
   };
   const refresh = async () => setConnections(await api.bankConnections());
   useEffect(() => { void run(async () => {
@@ -69,7 +70,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
   const discover = () => run(async () => {
     const items = await api.discoverBankAccounts(selected);
     setAccounts(items); setLinks(Object.fromEntries(items.map(a => [a.externalAccountId, a.productId || ''])));
-  });
+  }, 'Actualizando cuentas bancarias…');
   const link = (a: BankAccount) => run(async () => {
     const updated = await api.linkBankAccount(selected, a.externalAccountId, links[a.externalAccountId]);
     setAccounts(items => items.map(item => item.id === updated.id ? updated : item));
@@ -83,9 +84,10 @@ export default function BankingConnections({products, onProductCreated}: {produc
       await refresh();
       throw e;
     }
-  });
+  }, 'Sincronizando movimientos…');
   const linkedCount = accounts.filter(a => !!a.productId).length;
   return <section className="banking-page">
+    {loadingMessage && <div className="banking-loading-overlay" role="status" aria-live="polite" aria-label={loadingMessage}><div className="banking-loading-panel"><span className="banking-loading-spinner" aria-hidden="true"/><strong>{loadingMessage}</strong><small>Espera mientras recuperamos los datos.</small></div></div>}
     {creatingFor && <ProductCreate products={availableProducts} initialName={creatingFor.name} initialProvider={connection?.bankName}
       cashAccountType={creatingFor.cashAccountType} onCancel={() => setCreatingFor(null)} onCreated={p => {
         setAvailableProducts(items => [...items, p]); setLinks(items => ({...items, [creatingFor.externalAccountId]: p.id}));
@@ -128,7 +130,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
         <p>Autorización hasta: {timestamp(connection.validUntil)} · Última sincronización: {timestamp(connection.lastSyncAt)}</p>
         {!authorized && <p>Necesitas renovar el acceso para recuperar la sincronización.</p>}
         <div className="banking-actions">
-          <button disabled={busy} onClick={() => void reauthorize(connection.id)}><><span aria-hidden="true">↻</span> {busy ? 'Procesando…' : 'Renovar acceso bancario'}</></button>
+          <button disabled={busy} onClick={() => void reauthorize(connection.id)}><><span aria-hidden="true">↻</span> Renovar acceso bancario</></button>
           {authorized && <button disabled={busy} onClick={() => void discover()}><span aria-hidden="true">⟳</span> Actualizar cuentas</button>}
           {authorized && <button disabled={busy || linkedCount === 0} onClick={() => void sync()}><span aria-hidden="true">⇄</span> Sincronizar ahora</button>}
         </div>
