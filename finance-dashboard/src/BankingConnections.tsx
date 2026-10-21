@@ -124,13 +124,13 @@ export default function BankingConnections({products, onProductCreated}: {produc
         <BankLogo name={connection.bankName}/><h3 id="bank-detail-title">{connection.bankName}</h3>
       </div>
       <div className="card">
-        <h3>Estado de conexión</h3><p>{statusLabel(connection)}</p>
+        <h3>Estado de conexión</h3><p className="bank-connection-status"><span aria-hidden="true">{authorized ? "●" : connection.status === "AUTHORIZING" ? "◷" : "⚠"}</span> {statusLabel(connection)}</p>
         <p>Autorización hasta: {timestamp(connection.validUntil)} · Última sincronización: {timestamp(connection.lastSyncAt)}</p>
         {!authorized && <p>Necesitas renovar el acceso para recuperar la sincronización.</p>}
         <div className="banking-actions">
-          <button disabled={busy} onClick={() => void reauthorize(connection.id)}>{busy ? 'Procesando…' : 'Renovar acceso bancario'}</button>
-          {authorized && <button disabled={busy} onClick={() => void discover()}>Actualizar cuentas</button>}
-          {authorized && <button disabled={busy || linkedCount === 0} onClick={() => void sync()}>Sincronizar ahora</button>}
+          <button disabled={busy} onClick={() => void reauthorize(connection.id)}><><span aria-hidden="true">↻</span> {busy ? 'Procesando…' : 'Renovar acceso bancario'}</></button>
+          {authorized && <button disabled={busy} onClick={() => void discover()}><span aria-hidden="true">⟳</span> Actualizar cuentas</button>}
+          {authorized && <button disabled={busy || linkedCount === 0} onClick={() => void sync()}><span aria-hidden="true">⇄</span> Sincronizar ahora</button>}
         </div>
       </div>
       {authorized && <div className="card">
@@ -139,7 +139,7 @@ export default function BankingConnections({products, onProductCreated}: {produc
         {!accounts.length && <p>Selecciona «Actualizar cuentas» para descubrir las cuentas autorizadas.</p>}
         {accounts.map(a => <div className="banking-account" key={a.id}>
           <div><b>{a.name}</b><small>{a.currency} · {a.productId ? 'Vinculada' : 'Pendiente de vincular'}</small></div>
-          <label>Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks(v => ({...v,[a.externalAccountId]:e.target.value}))}>
+          <label className="banking-product-field">Producto<select disabled={busy} value={links[a.externalAccountId] || ''} onChange={e => setLinks(v => ({...v,[a.externalAccountId]:e.target.value}))}>
             <option value="">Selecciona producto</option>{availableProducts.filter(p => compatible(a,p)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select></label>
           <button disabled={busy} onClick={() => setCreatingFor(a)}>Nuevo producto</button>
