@@ -107,13 +107,38 @@ public final class BankingSyncService {
     var connection = requireConnection(connectionId);
     var existing = connections.accounts(connectionId);
     try {
-    return banking.accounts(connection.externalSessionId()).stream().map(a -> {
-      var known = existing.stream().filter(x -> x.externalAccountId().equals(a.id())).findFirst();
-      return connections.saveAccount(new ExternalBankAccount(
-          known.map(ExternalBankAccount::id).orElseGet(() -> UUID.randomUUID().toString()),
-          connectionId, a.id(), known.map(ExternalBankAccount::productId).orElse(null),
-          a.name(), a.currency(), a.cashAccountType()));
-    }).toList();
+      var discovered = banking.accounts(connection.externalSessionId());
+      var claimed = new HashSet<String>();
+      var result = new ArrayList<ExternalBankAccount>();
+      for (var account : discovered) {
+        var exact = existing.stream()
+            .filter(x -> x.externalAccountId().equals(account.id()))
+            .findFirst();
+        Optional<ExternalBankAccount> known = exact;
+        if (known.isEmpty()) {
+          // Reuse an existing account only when its identity is unambiguous.
+          var candidates = existing.stream()
+              .filter(x -> !claimed.contains(x.id()))
+              .filter(x -> normalize(x.name()).equals(normalize(account.name())))
+              .filter(x -> Objects.equals(x.currency(), account.currency()))
+              .filter(x -> Objects.equals(x.cashAccountType(), account.cashAccountType()))
+              .toList();
+          if (candidates.size() == 1) known = Optional.of(candidates.get(0));
+          else if (candidates.size() > 1)
+            log.warn("Ambiguous bank account reconciliation: connectionId={}, accountName={}",
+                connectionId, account.name());
+        }
+        if (known.isPresent() && !claimed.add(known.get().id())) {
+          log.warn("Duplicate bank account returned by provider: connectionId={}", connectionId);
+          continue;
+        }
+        String id = known.map(ExternalBankAccount::id).orElseGet(() -> UUID.randomUUID().toString());
+        String productId = known.map(ExternalBankAccount::productId).orElse(null);
+        result.add(connections.saveAccount(new ExternalBankAccount(
+            id, connectionId, account.id(), productId,
+            account.name(), account.currency(), account.cashAccountType())));
+      }
+      return List.copyOf(result);
     } catch (IllegalStateException exception) {
       markExpired(connection, exception);
       throw exception;
