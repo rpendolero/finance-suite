@@ -20,4 +20,5 @@ public class ExternalBankAccountEntity {
   @Column(nullable = false, length = 100) private String name;
   @Column(nullable = false, length = 3) private String currency;
   @Column(name = "cash_account_type", length = 16) private String cashAccountType;
+  @Column(name = "iban", length = 34) private String iban;
 }
