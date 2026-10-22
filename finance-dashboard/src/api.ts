@@ -17,7 +17,8 @@ export type Product = {
     linkedAccountId?: string;
     externalId?: string;
 };
-export type ProductInput = Product & {
+export type ProductInput = Omit<Product, 'id'> & {
+    id?: string;
     balanceAt: string;
     linkedAccountId?: string;
     creditLimit?: number;
@@ -179,6 +180,7 @@ export const api = {
     banks: () => json<string[]>('/api/v1/banking/enable-banking/banks'),
     bankConnections: () => json<BankConnection[]>('/api/v1/banking/connections'),
     authorizeBank: (bankName: string) => sendJson<{connectionId: string; authorizationUrl: string}>('/api/v1/banking/enable-banking/authorizations', 'POST', {bankName}),
+    reauthorizeBank: (id: string) => sendJson<{connectionId: string; authorizationUrl: string}>(`/api/v1/banking/enable-banking/connections/${encodeURIComponent(id)}/reauthorize`, 'POST'),
     bankAccounts: (id: string) => json<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts`),
     discoverBankAccounts: (id: string) => sendJson<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/discover`, 'POST'),
     linkBankAccount: (id: string, externalAccountId: string, productId: string) => sendJson<BankAccount>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts/link`, 'POST', {externalAccountId, productId}),
@@ -194,7 +196,7 @@ export const api = {
         return json<ImportResult>(`/api/products/${encodeURIComponent(productId)}/imports`, {method: 'POST', body});
     },
     products: () => json<Product[]>('/api/products'),
-    saveProduct: (product: ProductInput) => sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product),
+    saveProduct: (product: ProductInput) => product.id ? sendJson<Product>(`/api/products/${encodeURIComponent(product.id)}`, 'PUT', product) : sendJson<Product>('/api/products', 'POST', product),
     categoriesCatalog: () => json<CategoryDefinition[]>('/api/categories'),
     adminCategories: () => json<AdminCategory[]>('/api/admin/categories'),
     createCategory: (item: CatalogItemInput) => sendJson<AdminCategory>('/api/admin/categories', 'POST', item),

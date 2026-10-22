@@ -43,6 +43,7 @@ public final class BankingSyncService {
   public SyncResult sync(String connectionId) {
     var connection = requireConnection(connectionId);
 
+    try {
     int read = 0, inserted = 0, balancesUpdated = 0, balancesSkipped = 0;
     for (var link : connections.accounts(connectionId)) {
       if (link.productId() == null || link.productId().isBlank()) continue;
@@ -59,6 +60,18 @@ public final class BankingSyncService {
     connections.save(new BankConnection(connection.id(), connection.provider(), connection.bankName(), connection.country(), connection.externalSessionId(), connection.authorizationState(), connection.validUntil(), connection.status(), clock.instant()));
     log.info("Enable Banking synchronization completed: connectionId={}, read={}, inserted={}, duplicates={}, balancesUpdated={}, balancesSkipped={}", connectionId, read, inserted, read - inserted, balancesUpdated, balancesSkipped);
     return new SyncResult(read, inserted, read - inserted, balancesUpdated, balancesSkipped);
+    } catch (IllegalStateException exception) {
+      markExpired(connection, exception);
+      throw exception;
+    }
+  }
+
+  private void markExpired(BankConnection connection, IllegalStateException exception) {
+    if (exception.getMessage() == null || !exception.getMessage().contains("code=EXPIRED_SESSION")) return;
+    connections.save(new BankConnection(connection.id(), connection.provider(), connection.bankName(),
+        connection.country(), connection.externalSessionId(), connection.authorizationState(),
+        connection.validUntil(), BankConnection.Status.REAUTH_REQUIRED, connection.lastSyncAt()));
+    log.warn("Bank session expired; reauthorization required: connectionId={}", connection.id());
   }
 
   private java.util.Optional<BankingDataPort.Balance> selectBestBalance(String externalAccountId, Product product) {
@@ -93,13 +106,52 @@ public final class BankingSyncService {
   public List<ExternalBankAccount> discoverAccounts(String connectionId) {
     var connection = requireConnection(connectionId);
     var existing = connections.accounts(connectionId);
-    return banking.accounts(connection.externalSessionId()).stream().map(a -> {
-      var known = existing.stream().filter(x -> x.externalAccountId().equals(a.id())).findFirst();
-      return connections.saveAccount(new ExternalBankAccount(
-          known.map(ExternalBankAccount::id).orElseGet(() -> UUID.randomUUID().toString()),
-          connectionId, a.id(), known.map(ExternalBankAccount::productId).orElse(null),
-          a.name(), a.currency(), a.cashAccountType()));
-    }).toList();
+    try {
+      var discovered = banking.accounts(connection.externalSessionId());
+      var claimed = new HashSet<String>();
+      var result = new ArrayList<ExternalBankAccount>();
+      for (var account : discovered) {
+        var exact = existing.stream()
+            .filter(x -> x.externalAccountId().equals(account.id()))
+            .findFirst();
+        Optional<ExternalBankAccount> known = exact;
+        if (known.isEmpty() && account.iban() != null) {
+          var ibanMatches = existing.stream()
+              .filter(x -> !claimed.contains(x.id()))
+              .filter(x -> account.iban().equals(x.iban()))
+              .toList();
+          if (ibanMatches.size() == 1) known = Optional.of(ibanMatches.get(0));
+          else if (ibanMatches.size() > 1)
+            log.warn("Ambiguous IBAN reconciliation: connectionId={}", connectionId);
+        }
+        if (known.isEmpty() && account.iban() == null) {
+          // Reuse an existing account only when its identity is unambiguous.
+          var candidates = existing.stream()
+              .filter(x -> !claimed.contains(x.id()))
+              .filter(x -> normalize(x.name()).equals(normalize(account.name())))
+              .filter(x -> Objects.equals(x.currency(), account.currency()))
+              .filter(x -> Objects.equals(x.cashAccountType(), account.cashAccountType()))
+              .toList();
+          if (candidates.size() == 1) known = Optional.of(candidates.get(0));
+          else if (candidates.size() > 1)
+            log.warn("Ambiguous bank account reconciliation: connectionId={}, accountName={}",
+                connectionId, account.name());
+        }
+        if (known.isPresent() && !claimed.add(known.get().id())) {
+          log.warn("Duplicate bank account returned by provider: connectionId={}", connectionId);
+          continue;
+        }
+        String id = known.isPresent() ? known.get().id() : UUID.randomUUID().toString();
+        String productId = known.map(ExternalBankAccount::productId).orElse(null);
+        result.add(connections.saveAccount(new ExternalBankAccount(
+            id, connectionId, account.id(), productId,
+            account.name(), account.currency(), account.cashAccountType(), account.iban())));
+      }
+      return List.copyOf(result);
+    } catch (IllegalStateException exception) {
+      markExpired(connection, exception);
+      throw exception;
+    }
   }
 
   public ExternalBankAccount link(String connectionId, String externalAccountId, String productId) {
@@ -107,7 +159,7 @@ public final class BankingSyncService {
     var account = connections.accounts(connectionId).stream().filter(a -> a.externalAccountId().equals(externalAccountId)).findFirst()
         .orElseThrow(() -> new IllegalArgumentException("External account not found"));
     validateProduct(account, product);
-    return connections.saveAccount(new ExternalBankAccount(account.id(), account.connectionId(), account.externalAccountId(), productId, account.name(), account.currency(), account.cashAccountType()));
+    return connections.saveAccount(new ExternalBankAccount(account.id(), account.connectionId(), account.externalAccountId(), productId, account.name(), account.currency(), account.cashAccountType(), account.iban()));
   }
 
   private void validateProduct(ExternalBankAccount account, Product product) {

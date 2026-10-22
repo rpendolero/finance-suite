@@ -34,6 +34,12 @@ public class EnableBankingController {
                 .body(new AuthorizationResponse(result.connectionId(), result.authorizationUrl(), result.state()));
     }
 
+    @PostMapping("/connections/{connectionId}/reauthorize")
+    public ResponseEntity<AuthorizationResponse> reauthorize(@PathVariable String connectionId) {
+        var result = authorizations.reauthorize(connectionId, properties.getConsentDays());
+        return ResponseEntity.ok(new AuthorizationResponse(result.connectionId(), result.authorizationUrl(), result.state()));
+    }
+
     @GetMapping("/callback")
     public ResponseEntity<Void> callback(@RequestParam(required = false) String code,
                                          @RequestParam(required = false) String state, @RequestParam(required = false) String error) {

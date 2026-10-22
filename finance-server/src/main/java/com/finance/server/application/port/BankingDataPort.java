@@ -12,7 +12,8 @@ public interface BankingDataPort {
 
   record Balance(BigDecimal amount, String currency, String type, Instant at) {}
 
-  record Account(String id, String name, String currency, String cashAccountType) {
+  record Account(String id, String name, String currency, String cashAccountType, String iban) {
+    public Account(String id, String name, String currency, String cashAccountType) { this(id, name, currency, cashAccountType, null); }
     public Account(String id, String name, String currency) { this(id, name, currency, null); }
   }
   record Transaction(String id, LocalDate bookingDate, BigDecimal amount, String currency, String description, String merchant, boolean pending) {}

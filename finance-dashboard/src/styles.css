@@ -784,3 +784,21 @@ button{touch-action:manipulation}
 .movement-summary-list{overflow-y:auto;padding:0 28px 24px}.movement-summary-item{display:grid;grid-template-columns:95px minmax(0,1fr) auto;gap:14px;align-items:center;border-top:1px solid #e7edf5;padding:13px 0}
 .movement-summary-item time,.movement-summary-item small{color:#73829b;font-size:12px}.movement-summary-item div{display:grid;gap:4px;min-width:0}.movement-summary-item strong{overflow-wrap:anywhere}.movement-summary-item b{white-space:nowrap}
 @media(max-width:600px){.movement-summary-backdrop{padding:8px}.movement-summary-header{padding:18px}.movement-summary-kpis{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 18px}.movement-summary-list{padding:0 18px 18px}.movement-summary-item{grid-template-columns:1fr auto;gap:5px}.movement-summary-item time{grid-column:1/-1}}
+
+/* Align product selection with its action buttons in bank details. */
+.banking-detail-modal .banking-account {align-items:flex-end}
+.banking-detail-modal .banking-product-field {flex:1 1 220px;min-width:200px;margin:0}
+.banking-detail-modal .banking-product-field select {display:block;width:100%;height:42px;min-height:42px;box-sizing:border-box;margin:0}
+.banking-detail-modal .banking-account > button {min-height:42px;box-sizing:border-box;white-space:nowrap}
+.banking-detail-modal .banking-actions button {display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.bank-connection-status {display:flex;align-items:center;gap:7px}
+.bank-connection-status span {color:#16a34a;font-size:17px}
+@media(max-width:640px){.banking-detail-modal .banking-product-field{flex-basis:100%}.banking-detail-modal .banking-account > button{flex:1}}
+
+/* Centered progress indicator for banking operations. */
+.banking-loading-overlay{position:fixed;inset:0;z-index:2100;background:rgba(15,23,42,.30);display:flex;align-items:center;justify-content:center;padding:24px}
+.banking-loading-panel{background:var(--surface,#fff);color:#17233d;box-shadow:0 18px 60px rgba(15,23,42,.24);border-radius:16px;padding:32px 38px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:min(380px,100%);width:100%}
+.banking-loading-panel small{color:#64748b}
+.banking-loading-spinner{width:48px;height:48px;border:5px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:banking-loading-spin .85s linear infinite}
+@keyframes banking-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.banking-loading-spinner{animation-duration:2.5s}}
