@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class BankingSyncService {
   private final BankingDataPort banking;
+  private final BankBalanceSelector balanceSelector;
   private final BankConnectionPort connections;
   private final LedgerPort ledger;
   private final SettingsPort settings;
@@ -49,7 +50,7 @@ public final class BankingSyncService {
       if (link.productId() == null || link.productId().isBlank()) continue;
       Product product = ledger.product(link.productId()).orElseThrow(() -> new IllegalArgumentException("Product not found: " + link.productId()));
       BankProductCompatibility.validateProduct(link, product);
-      var balance = selectBestBalance(link.externalAccountId(), product);
+      var balance = balanceSelector.selectBestBalance(link.externalAccountId(), product);
       var movements = fetchAndClassifyMovements(link.externalAccountId(), link.productId());
       read += movements.size();
       inserted += ledger.insert(movements);
@@ -75,15 +76,6 @@ public final class BankingSyncService {
     } else {
       log.info("Ignoring expiration of superseded bank session: connectionId={}", connection.id());
     }
-  }
-
-  private java.util.Optional<BankingDataPort.Balance> selectBestBalance(String externalAccountId, Product product) {
-    boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
-    List<String> balanceTypes = card ? List.of("ITBD", "CLBD") : List.of("ITAV", "CLAV", "ITBD", "CLBD");
-    return banking.balanceSnapshots(externalAccountId).stream()
-        .filter(b -> product.currency().equals(b.currency()) && b.type() != null && balanceTypes.contains(b.type()))
-        .min(Comparator.comparingInt((BankingDataPort.Balance b) -> balanceTypes.indexOf(b.type()))
-            .thenComparing(BankingDataPort.Balance::at, Comparator.nullsLast(Comparator.reverseOrder())));
   }
 
   private List<Movement> fetchAndClassifyMovements(String externalAccountId, String productId) {
