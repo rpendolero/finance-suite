@@ -6,22 +6,15 @@ import com.finance.server.application.port.LedgerPort;
 import com.finance.server.application.port.MovementSearchPort;
 import java.math.BigDecimal;
 import com.finance.server.application.service.*;
-import com.finance.server.infrastructure.adapter.in.dto.ProductDto;
-import com.finance.server.infrastructure.adapter.in.dto.StatementFormatDto;
-import com.finance.statements.StatementFormat;
 import java.util.List;
-import java.util.UUID;
-import java.util.Locale;
 import com.finance.server.infrastructure.adapter.in.mapper.ProductMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api")
@@ -35,68 +28,12 @@ public class FinanceController {
     return queries.providerSummary(period(from, to), provider);
   }
 
-  private final ImportService imports;
-  private final LedgerPort ledger;
   private final MovementSearchPort movementSearch;
   private final MovementExportService movementExport;
   private final ClassificationManagementService classification;
-  private final ProductMapper mapper;
 
   private Period period(String from, String to) {
     return new Period(LocalDate.parse(from), LocalDate.parse(to));
-  }
-
-  @GetMapping("/products")
-  public Object products() {
-    return queries.products().stream().map(mapper::toDto).toList();
-  }
-
-  @PostMapping("/products")
-  public Object createProduct(@Valid @RequestBody ProductDto dto) {
-    if (dto.getId() != null && !dto.getId().isBlank())
-      throw new IllegalArgumentException("El ID del nuevo producto lo genera el servidor");
-    String id = UUID.randomUUID().toString();
-    dto.setId(id);
-    ledger.saveProduct(mapper.toDomain(dto));
-    return mapper.toDto(ledger.product(id).orElseThrow());
-  }
-
-  @PutMapping("/products/{id}")
-  public Object product(@PathVariable String id, @Valid @RequestBody ProductDto dto) {
-    if (!id.equals(dto.getId()))
-      throw new IllegalArgumentException("id URL y cuerpo deben coincidir");
-    ledger.saveProduct(mapper.toDomain(dto));
-    return mapper.toDto(ledger.product(id).orElseThrow());
-  }
-
-  @DeleteMapping("/products/{id}")
-  public void deleteProduct(@PathVariable String id) {
-    ledger.deleteProduct(id);
-  }
-
-  @GetMapping("/products/{id}/import-formats")
-  public List<StatementFormatDto> importFormats(@PathVariable String id) {
-    return imports.availableFormats(id).stream().map(StatementFormatDto::from).toList();
-  }
-
-  @PostMapping(value = "/products/{id}/imports", consumes = "multipart/form-data")
-  public ImportService.Result importStatement(
-      @PathVariable String id, @RequestPart MultipartFile file,
-      @RequestParam(defaultValue = "CSV") String format) throws IOException {
-    StatementFormat selected;
-    try {
-      selected = StatementFormat.valueOf(format);
-    } catch (IllegalArgumentException failure) {
-      throw new IllegalArgumentException("Formato de importación desconocido");
-    }
-    if (file.isEmpty()) throw new IllegalArgumentException("El fichero está vacío");
-    if (file.getSize() > 10L * 1024 * 1024) throw new IllegalArgumentException("Máximo 10 MB por fichero");
-    String name = file.getOriginalFilename();
-    if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(selected.extension()))
-      throw new IllegalArgumentException("Selecciona un fichero " + selected.extension() + " para este formato");
-    try (var input = file.getInputStream()) {
-      return imports.importStatement(input, id, selected);
-    }
   }
 
   @GetMapping("/movements")
