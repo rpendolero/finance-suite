@@ -5,7 +5,9 @@ import com.finance.server.application.port.BankingDataPort;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
+@Component
 @RequiredArgsConstructor
 final class BankBalanceSelector {
   private final BankingDataPort banking;
