@@ -48,7 +48,7 @@ public final class BankingSyncService {
     for (var link : connections.accounts(connectionId)) {
       if (link.productId() == null || link.productId().isBlank()) continue;
       Product product = ledger.product(link.productId()).orElseThrow(() -> new IllegalArgumentException("Product not found: " + link.productId()));
-      validateProduct(link, product);
+      BankProductCompatibility.validateProduct(link, product);
       var balance = selectBestBalance(link.externalAccountId(), product);
       var movements = fetchAndClassifyMovements(link.externalAccountId(), link.productId());
       read += movements.size();
@@ -161,19 +161,8 @@ public final class BankingSyncService {
     Product product = ledger.product(productId).orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
     var account = connections.accounts(connectionId).stream().filter(a -> a.externalAccountId().equals(externalAccountId)).findFirst()
         .orElseThrow(() -> new IllegalArgumentException("External account not found"));
-    validateProduct(account, product);
+    BankProductCompatibility.validateProduct(account, product);
     return connections.saveAccount(new ExternalBankAccount(account.id(), account.connectionId(), account.externalAccountId(), productId, account.name(), account.currency(), account.cashAccountType(), account.iban()));
-  }
-
-  private void validateProduct(ExternalBankAccount account, Product product) {
-    if (!"XXX".equals(account.currency()) && !account.currency().equals(product.currency()))
-      throw new IllegalArgumentException("La moneda de la cuenta y el producto debe coincidir");
-    boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
-    if ("CARD".equals(account.cashAccountType()) && !card)
-      throw new IllegalArgumentException("Vincula esta cuenta CARD a un producto de tarjeta");
-    if (("CACC".equals(account.cashAccountType()) || "SVGS".equals(account.cashAccountType()))
-        && product.type() != Product.ProductType.ACCOUNT)
-      throw new IllegalArgumentException("Vincula esta cuenta bancaria a un producto de cuenta");
   }
 
   private Movement toMovement(String productId, BankingDataPort.Transaction tx) {
