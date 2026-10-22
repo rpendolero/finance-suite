@@ -40,8 +40,8 @@ export default function MovementSearch({products, initialFrom, initialTo, canEdi
         event.preventDefault(); setApplied(filters); setRevision(current => current + 1); setMessage('');
     };
 
-    return <section className="page movement-search">
-        <div className="section-head"><h2>Movimientos</h2></div>
+    return <section className="page movement-search finance-page">
+        <div className="finance-page-hero"><div><span className="products-eyebrow">CONSULTA DE OPERACIONES</span><h2>Movimientos</h2><p>Busca, filtra y consulta los movimientos de tus cuentas y tarjetas.</p></div></div>
         <form className="filters card" onSubmit={submit}>
             <label>Desde<input type="date" required value={filters.from} onChange={e => change('from', e.target.value)}/></label>
             <label>Hasta<input type="date" required min={filters.from} value={filters.to} onChange={e => change('to', e.target.value)}/></label>

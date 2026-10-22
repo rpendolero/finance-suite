@@ -802,3 +802,42 @@ button{touch-action:manipulation}
 .banking-loading-spinner{width:48px;height:48px;border:5px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:banking-loading-spin .85s linear infinite}
 @keyframes banking-loading-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.banking-loading-spinner{animation-duration:2.5s}}
+
+
+/* Full-width, consistent layouts for Imports and Movements. */
+.finance-import-page,
+.movement-search.finance-page {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+.finance-import-page > .card,
+.movement-search.finance-page > .card,
+.movement-search.finance-page > .movement-results {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.finance-import-page .statement-import-form {
+  width: 100%;
+  max-width: 760px;
+}
+.finance-import-page .statement-import-form label {
+  min-width: 0;
+}
+.finance-import-page .title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.movement-search.finance-page .filters {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 720px) {
+  .finance-import-page .statement-import-form {max-width: 100%;}
+  .finance-import-page .title > button {width: 100%;}
+  .movement-search.finance-page .filters > * {min-width: 0;}
+}
