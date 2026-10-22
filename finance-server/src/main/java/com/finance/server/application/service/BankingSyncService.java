@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class BankingSyncService {
   private final BankingDataPort banking;
-  private final BankBalanceSelector balanceSelector;
   private final BankConnectionPort connections;
   private final LedgerPort ledger;
   private final SettingsPort settings;
@@ -50,7 +49,7 @@ public final class BankingSyncService {
       if (link.productId() == null || link.productId().isBlank()) continue;
       Product product = ledger.product(link.productId()).orElseThrow(() -> new IllegalArgumentException("Product not found: " + link.productId()));
       BankProductCompatibility.validateProduct(link, product);
-      var balance = balanceSelector.selectBestBalance(link.externalAccountId(), product);
+      var balance = BankBalanceSelector.selectBestBalance(banking, link.externalAccountId(), product);
       var movements = fetchAndClassifyMovements(link.externalAccountId(), link.productId());
       read += movements.size();
       inserted += ledger.insert(movements);
