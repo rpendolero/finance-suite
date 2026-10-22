@@ -2,6 +2,7 @@ package com.finance.server.application.service;
 
 import com.finance.domain.*;
 import com.finance.domain.Analysis.Forecast;
+import com.finance.domain.Period;
 import com.finance.server.application.port.LedgerPort;
 import java.math.*;
 import java.time.*;
