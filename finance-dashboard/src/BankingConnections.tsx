@@ -12,12 +12,20 @@ const domains: Record<string, string> = {
 };
 const normalize = (name: string) => name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 function BankLogo({name}: {name: string}) {
-  const [failed, setFailed] = useState(false);
+  const [sourceIndex, setSourceIndex] = useState(0);
   const key = normalize(name);
   const domain = Object.entries(domains).find(([alias]) => key.includes(alias))?.[1];
-  useEffect(() => setFailed(false), [name]);
+  // A failed third-party favicon request must not permanently hide the bank logo.
+  const sources = domain ? [
+    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`,
+    `https://${domain}/favicon.ico`
+  ] : [];
+  useEffect(() => setSourceIndex(0), [name]);
   return <span className="bank-logo" aria-hidden="true" style={{width: 48, height: 48, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, background: 'var(--surface-secondary, #f1f5f9)', overflow: 'hidden'}}>
-    {domain && !failed ? <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`} alt="" width="38" height="38" onError={() => setFailed(true)}/> : <span style={{fontSize: 23}}>🏦</span>}
+    {sourceIndex < sources.length
+      ? <img key={sources[sourceIndex]} src={sources[sourceIndex]} alt="" width="38" height="38"
+          onError={() => setSourceIndex(index => index + 1)}/>
+      : <span style={{fontSize: 15, fontWeight: 700}} title={name}>{name.slice(0, 2).toUpperCase()}</span>}
   </span>;
 }
 const active = (c: BankConnection) => c.status === 'ACTIVE' && !!c.validUntil && new Date(c.validUntil).getTime() > Date.now();
