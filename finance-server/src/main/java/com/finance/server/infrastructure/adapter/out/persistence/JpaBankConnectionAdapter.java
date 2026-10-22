@@ -47,6 +47,17 @@ public class JpaBankConnectionAdapter implements BankConnectionPort {
     return accounts.findByConnectionIdOrderByNameAsc(connectionId).stream()
         .map(e -> new ExternalBankAccount(e.getId(), e.getConnectionId(), e.getExternalAccountId(), e.getProductId(), e.getName(), e.getCurrency(), e.getCashAccountType(), e.getIban())).toList();
   }
+  @Override @Transactional
+  public boolean updateLastSyncIfActive(String id, String sessionId, java.time.Instant at) {
+    return connections.updateLastSyncIfActive(id, sessionId, at, BankConnection.Status.ACTIVE) == 1;
+  }
+
+  @Override @Transactional
+  public boolean requireReauthorizationIfSessionMatches(String id, String sessionId) {
+    return connections.requireReauthorizationIfSessionMatches(id, sessionId,
+        BankConnection.Status.ACTIVE, BankConnection.Status.REAUTH_REQUIRED) == 1;
+  }
+
   private BankConnection domain(BankConnectionEntity e) {
     return new BankConnection(e.getId(), e.getProvider(), e.getBankName(), e.getCountry(), e.getExternalSessionId(), e.getAuthorizationState(), e.getValidUntil(), e.getStatus(), e.getLastSyncAt());
   }

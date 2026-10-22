@@ -50,8 +50,8 @@ public final class BankingSyncService {
     for (var link : discoverAccounts(connectionId)) {
       if (link.productId() == null || link.productId().isBlank()) continue;
       Product product = ledger.product(link.productId()).orElseThrow(() -> new IllegalArgumentException("Product not found: " + link.productId()));
-      validateProduct(link, product);
-      var balance = selectBestBalance(link.externalAccountId(), product);
+      BankProductCompatibility.validateProduct(link, product);
+      var balance = BankBalanceSelector.selectBestBalance(banking, link.externalAccountId(), product);
       var movements = fetchAndClassifyMovements(link.externalAccountId(), link.productId());
       read += movements.size();
       inserted += ledger.insert(movements);
@@ -59,7 +59,9 @@ public final class BankingSyncService {
       balancesUpdated += balanceResult.updated();
       balancesSkipped += balanceResult.skipped();
     }
-    connections.save(new BankConnection(connection.id(), connection.provider(), connection.bankName(), connection.country(), connection.externalSessionId(), connection.authorizationState(), connection.validUntil(), connection.status(), clock.instant()));
+    if (!connections.updateLastSyncIfActive(connection.id(), connection.externalSessionId(), clock.instant())) {
+      log.warn("Bank connection changed during synchronization: connectionId={}", connectionId);
+    }
     log.info("Enable Banking synchronization completed: connectionId={}, read={}, inserted={}, duplicates={}, balancesUpdated={}, balancesSkipped={}", connectionId, read, inserted, read - inserted, balancesUpdated, balancesSkipped);
     return new SyncResult(read, inserted, read - inserted, balancesUpdated, balancesSkipped);
     } catch (IllegalStateException exception) {
@@ -70,19 +72,11 @@ public final class BankingSyncService {
 
   private void markExpired(BankConnection connection, IllegalStateException exception) {
     if (exception.getMessage() == null || !exception.getMessage().contains("code=EXPIRED_SESSION")) return;
-    connections.save(new BankConnection(connection.id(), connection.provider(), connection.bankName(),
-        connection.country(), connection.externalSessionId(), connection.authorizationState(),
-        connection.validUntil(), BankConnection.Status.REAUTH_REQUIRED, connection.lastSyncAt()));
-    log.warn("Bank session expired; reauthorization required: connectionId={}", connection.id());
-  }
-
-  private java.util.Optional<BankingDataPort.Balance> selectBestBalance(String externalAccountId, Product product) {
-    boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
-    List<String> balanceTypes = card ? List.of("ITBD", "CLBD") : List.of("ITAV", "CLAV", "ITBD", "CLBD");
-    return banking.balanceSnapshots(externalAccountId).stream()
-        .filter(b -> product.currency().equals(b.currency()) && b.type() != null && balanceTypes.contains(b.type()))
-        .min(Comparator.comparingInt((BankingDataPort.Balance b) -> balanceTypes.indexOf(b.type()))
-            .thenComparing(BankingDataPort.Balance::at, Comparator.nullsLast(Comparator.reverseOrder())));
+    if (connections.requireReauthorizationIfSessionMatches(connection.id(), connection.externalSessionId())) {
+      log.warn("Bank session expired; reauthorization required: connectionId={}", connection.id());
+    } else {
+      log.info("Ignoring expiration of superseded bank session: connectionId={}", connection.id());
+    }
   }
 
   private List<Movement> fetchAndClassifyMovements(String externalAccountId, String productId) {
@@ -160,19 +154,8 @@ public final class BankingSyncService {
     Product product = ledger.product(productId).orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
     var account = connections.accounts(connectionId).stream().filter(a -> a.externalAccountId().equals(externalAccountId)).findFirst()
         .orElseThrow(() -> new IllegalArgumentException("External account not found"));
-    validateProduct(account, product);
+    BankProductCompatibility.validateProduct(account, product);
     return connections.saveAccount(new ExternalBankAccount(account.id(), account.connectionId(), account.externalAccountId(), productId, account.name(), account.currency(), account.cashAccountType(), account.iban()));
-  }
-
-  private void validateProduct(ExternalBankAccount account, Product product) {
-    if (!"XXX".equals(account.currency()) && !account.currency().equals(product.currency()))
-      throw new IllegalArgumentException("La moneda de la cuenta y el producto debe coincidir");
-    boolean card = product.type() == Product.ProductType.CREDIT_CARD || product.type() == Product.ProductType.DEBIT_CARD;
-    if ("CARD".equals(account.cashAccountType()) && !card)
-      throw new IllegalArgumentException("Vincula esta cuenta CARD a un producto de tarjeta");
-    if (("CACC".equals(account.cashAccountType()) || "SVGS".equals(account.cashAccountType()))
-        && product.type() != Product.ProductType.ACCOUNT)
-      throw new IllegalArgumentException("Vincula esta cuenta bancaria a un producto de cuenta");
   }
 
   private Movement toMovement(String productId, BankingDataPort.Transaction tx) {
@@ -184,12 +167,12 @@ public final class BankingSyncService {
     }
     try {
       return new Movement(UUID.randomUUID().toString(), productId, externalId, tx.bookingDate(), tx.amount().setScale(2), tx.currency(),
-              tx.description() == null ? "" : tx.description(), tx.merchant(), "UNCLASSIFIED", Movement.Kind.NORMAL, tx.pending() ? Movement.Status.PENDING : Movement.Status.BOOKED);
-
-    } catch (Exception e) {
-      log.error("Enable Banking transaction {} [{}] [{}] mapping failed: errorType={}", tx.id(), tx.bookingDate(), tx.description(), e.getClass().getSimpleName(), e);
+          tx.description() == null ? "" : tx.description(), tx.merchant(), "UNCLASSIFIED",
+          Movement.Kind.NORMAL, tx.pending() ? Movement.Status.PENDING : Movement.Status.BOOKED);
+    } catch (RuntimeException failure) {
+      throw new IllegalArgumentException(
+          "Unable to map bank transaction: productId=" + productId + ", transactionId=" + tx.id(), failure);
     }
-    return null;
   }
 
   private String normalize(String value) { return value == null ? "" : value.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT); }
