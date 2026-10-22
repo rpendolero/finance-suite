@@ -45,7 +45,9 @@ public final class BankingSyncService {
 
     try {
     int read = 0, inserted = 0, balancesUpdated = 0, balancesSkipped = 0;
-    for (var link : connections.accounts(connectionId)) {
+    // Account IDs belong to the authorized session and may change after renewal.
+    // Rediscover and reconcile accounts before requesting balances or transactions.
+    for (var link : discoverAccounts(connectionId)) {
       if (link.productId() == null || link.productId().isBlank()) continue;
       Product product = ledger.product(link.productId()).orElseThrow(() -> new IllegalArgumentException("Product not found: " + link.productId()));
       validateProduct(link, product);

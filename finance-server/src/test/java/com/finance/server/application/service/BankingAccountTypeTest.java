@@ -62,7 +62,32 @@ class BankingAccountTypeTest {
   private void prepareSync(String type, Product.ProductType productType) {
     prepare(type, productType);
     when(connections.find("connection")).thenReturn(Optional.of(new BankConnection("connection", "ENABLE_BANKING", "Bank", "ES", "session", null, now.plusSeconds(3600), BankConnection.Status.ACTIVE, null)));
+    when(banking.accounts("session")).thenReturn(List.of(
+        new BankingDataPort.Account("external", "Account", "EUR", type)));
     when(banking.transactions("external")).thenReturn(List.of());
+  }
+
+  @Test void synchronizationUsesRefreshedAccountIdAfterRenewal() {
+    when(connections.find("connection")).thenReturn(Optional.of(
+        new BankConnection("connection", "ENABLE_BANKING", "Bank", "ES", "new-session",
+            null, now.plusSeconds(3600), BankConnection.Status.ACTIVE, null)));
+    when(connections.accounts("connection")).thenReturn(List.of(
+        new ExternalBankAccount("local", "connection", "old-account", "product",
+            "Account", "EUR", "CACC", "ES1234567890")));
+    when(banking.accounts("new-session")).thenReturn(List.of(
+        new BankingDataPort.Account("new-account", "Account", "EUR", "CACC", "ES1234567890")));
+    when(connections.saveAccount(any())).thenAnswer(call -> call.getArgument(0));
+    when(ledger.product("product")).thenReturn(Optional.of(new Product(
+        "product", "Product", Product.ProductType.ACCOUNT, "EUR",
+        BigDecimal.ZERO, now, null, null)));
+    when(banking.balanceSnapshots("new-account")).thenReturn(List.of());
+    when(banking.transactions("new-account")).thenReturn(List.of());
+
+    service.sync("connection");
+
+    verify(banking).balanceSnapshots("new-account");
+    verify(banking).transactions("new-account");
+    verify(banking, never()).transactions("old-account");
   }
 
   @Test void rediscoveryRefreshesTypeWithoutLosingProductOrId() {
