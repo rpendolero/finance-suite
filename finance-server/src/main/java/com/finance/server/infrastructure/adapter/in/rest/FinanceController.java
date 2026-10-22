@@ -21,8 +21,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class FinanceController {
   private final FinanceQueries queries;
-
-  private final FinanceQueries queries;
   private final MovementSearchPort movementSearch;
   private final MovementExportService movementExport;
   private final ClassificationManagementService classification;
