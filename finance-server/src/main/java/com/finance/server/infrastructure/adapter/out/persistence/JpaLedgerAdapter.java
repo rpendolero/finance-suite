@@ -110,7 +110,7 @@ public class JpaLedgerAdapter implements LedgerPort, MovementSearchPort {
   public MovementSearchPort.Page search(MovementSearchPort.Criteria criteria) {
     int limit = Math.max(1, Math.min(criteria.limit(), 200));
     int offset = Math.max(0, criteria.offset());
-    int page = offset / limit;
+    int page = offset / limit; // Spring Data uses page-based offsets; retain the existing API contract.
 
     Specification<MovementEntity> spec =
         (root, query, cb) -> {
