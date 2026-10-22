@@ -1,6 +1,6 @@
-# Finance Suite 0.5.12
+# Finance Suite 0.5.13
 
-## Novedades 0.5.12
+## Novedades 0.5.13
 
 - Gestión bancaria en modales, iconos y progreso centralizado en operaciones de sincronización.
 - Alta de productos con UUID generado por el servidor.
@@ -10,7 +10,7 @@
 
 
 
-## Novedades 0.5.12
+## Novedades 0.5.13
 
 - Edición de movimientos en modal y recategorización masiva en búsqueda e Ingresos y gastos.
 - Paginación configurable de 25, 50 o 100 elementos, con selección entre páginas.
@@ -18,7 +18,7 @@
 - Evolución permanece en Inicio; se elimina su pantalla independiente.
 - Previsión visible y calculada exclusivamente con movimientos computables, incluidas tarjetas.
 
-[Notas de versión 0.5.12](docs/RELEASE-0.5.12.md) · [Edición y criterios de cálculo](docs/MOVEMENT-EDITING.md).
+[Notas de versión 0.5.13](docs/RELEASE-0.5.13.md) · [Edición y criterios de cálculo](docs/MOVEMENT-EDITING.md).
 
 ## Novedades 0.5.10
 
