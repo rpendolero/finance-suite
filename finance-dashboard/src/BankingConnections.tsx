@@ -7,7 +7,8 @@ const domains: Record<string, string> = {
   bbva: 'bbva.es', caixabank: 'caixabank.es', sabadell: 'bancsabadell.com',
   bankinter: 'bankinter.com', unicaja: 'unicajabanco.es', abanca: 'abanca.com',
   openbank: 'openbank.es', revolut: 'revolut.com', n26: 'n26.com',
-  paypal: 'paypal.com', ibercaja: 'ibercaja.es', cajamar: 'grupocooperativocajamar.es'
+  paypal: 'paypal.com', traderepublic: 'traderepublic.com',
+  ibercaja: 'ibercaja.es', cajamar: 'grupocooperativocajamar.es'
 };
 const normalize = (name: string) => name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 function BankLogo({name}: {name: string}) {
