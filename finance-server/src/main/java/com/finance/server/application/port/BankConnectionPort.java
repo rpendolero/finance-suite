@@ -10,4 +10,6 @@ public interface BankConnectionPort {
   List<BankConnection> findAll();
   ExternalBankAccount saveAccount(ExternalBankAccount account);
   List<ExternalBankAccount> accounts(String connectionId);
+  boolean updateLastSyncIfActive(String id, String sessionId, java.time.Instant lastSyncAt);
+  boolean requireReauthorizationIfSessionMatches(String id, String sessionId);
 }
