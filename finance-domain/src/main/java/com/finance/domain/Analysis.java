@@ -55,7 +55,18 @@ public final class Analysis {
       BigDecimal accountBalances,
       BigDecimal estimatedNetFlow,
       BigDecimal estimatedAccountBalance,
-      String limitations) {}
+      String limitations,
+      BigDecimal estimatedIncome,
+      BigDecimal estimatedExpenses,
+      BigDecimal recurringIncome,
+      BigDecimal recurringExpenses,
+      int recurringPatterns) {
+    public Forecast(LocalDate asOf, int days, BigDecimal accountBalances,
+        BigDecimal estimatedNetFlow, BigDecimal estimatedAccountBalance, String limitations) {
+      this(asOf, days, accountBalances, estimatedNetFlow, estimatedAccountBalance,
+          limitations, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0);
+    }
+  }
 
   public record Quality(
       int products,
