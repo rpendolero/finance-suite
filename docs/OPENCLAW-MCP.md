@@ -96,3 +96,9 @@ El repositorio contiene `finance-server/scripts/openclaw-bridge.mjs` y `finance-
 El dashboard publica el puerto 8080 y actúa como proxy hacia `finance-server:8081`. Además de `/api/`, la plantilla `finance-dashboard/nginx/default.conf.template` debe incluir un bloque `location = /mcp` que reenvíe la ruta sin modificarla, permita POST y desactive `proxy_buffering` para Streamable HTTP/SSE. El encabezado `X-API-Key` se transmite al backend; el cliente envía la clave original, no su hash.
 
 Si `POST https://finances.myaihome.es/mcp` devuelve `405` con HTML, verifica que se haya desplegado la imagen actualizada del dashboard y que el proxy enrute `/mcp` al backend. Tras publicar la nueva imagen, recrea el contenedor frontend y vuelve a probar `openclaw mcp probe finance-suite`. Un registro correcto del servidor en OpenClaw no garantiza conectividad hasta superar esta prueba.
+
+## Corrección HTTP 403 en inicialización MCP (2026-10-23)
+
+Spring Security debe excluir `/mcp` y `/mcp/**` de la validación CSRF, además de `/api/**`, porque MCP Streamable HTTP inicializa sesiones mediante POST sin token CSRF de navegador. La ruta sigue protegida por `ROLE_READER` y por el filtro `X-API-Key` que valida SHA-256; no se deshabilita CSRF globalmente.
+
+Tras desplegar una imagen actualizada de `finance-server`, ejecutar `openclaw mcp probe finance-suite`. Si falla, verificar código HTTP y registros del backend. El cambio de código por sí solo no acredita una prueba extremo a extremo.
