@@ -37,7 +37,8 @@ public class LiquidityForecastService {
         .filter(m -> !patternKey(m).isBlank())
         .collect(Collectors.groupingBy(LiquidityForecastService::patternKey));
     Set<String> recurringIds = new HashSet<>();
-    BigDecimal scheduled = ZERO;
+    BigDecimal recurringIncome = ZERO;
+    BigDecimal recurringExpenses = ZERO;
     int recurringGroups = 0;
     for (List<Movement> group : groups.values()) {
       List<Movement> ordered = group.stream()
@@ -51,24 +52,35 @@ public class LiquidityForecastService {
           .divide(BigDecimal.valueOf(ordered.size()), 2, RoundingMode.HALF_UP);
       LocalDate next = ordered.getLast().date().plusMonths(1);
       while (!next.isAfter(until)) {
-        if (next.isAfter(today)) scheduled = scheduled.add(average);
+        if (next.isAfter(today)) {
+          if (average.signum() >= 0) recurringIncome = recurringIncome.add(average);
+          else recurringExpenses = recurringExpenses.add(average.negate());
+        }
         next = next.plusMonths(1);
       }
     }
 
-    BigDecimal variable = history.stream().filter(m -> !recurringIds.contains(m.id()))
-        .map(Movement::amount).reduce(ZERO, BigDecimal::add);
+    List<Movement> variable = history.stream()
+        .filter(m -> !recurringIds.contains(m.id())).toList();
     long historicalDays = ChronoUnit.DAYS.between(period.from(), period.to()) + 1;
-    BigDecimal estimatedVariable = variable.multiply(BigDecimal.valueOf(days))
-        .divide(BigDecimal.valueOf(historicalDays), 2, RoundingMode.HALF_UP);
-    BigDecimal net = scheduled.add(estimatedVariable);
+    BigDecimal factor = BigDecimal.valueOf(days);
+    BigDecimal variableIncome = variable.stream().map(Movement::amount)
+        .filter(a -> a.signum() > 0).reduce(ZERO, BigDecimal::add)
+        .multiply(factor).divide(BigDecimal.valueOf(historicalDays), 2, RoundingMode.HALF_UP);
+    BigDecimal variableExpenses = variable.stream().map(Movement::amount)
+        .filter(a -> a.signum() < 0).map(BigDecimal::negate).reduce(ZERO, BigDecimal::add)
+        .multiply(factor).divide(BigDecimal.valueOf(historicalDays), 2, RoundingMode.HALF_UP);
+    BigDecimal income = recurringIncome.add(variableIncome);
+    BigDecimal expenses = recurringExpenses.add(variableExpenses);
+    BigDecimal net = income.subtract(expenses);
     return new Forecast(today, days, balance, net, balance.add(net),
         "Estimación híbrida: " + recurringGroups
         + " patrones mensuales de ingresos/gastos detectados (mínimo 3 operaciones, intervalos de 25 a 35 días)"
         + " más proyección lineal de movimientos variables computables en EUR."
         + " Los patrones son heurísticos, no cobros confirmados. Excluye movimientos pendientes,"
         + " transferencias y liquidaciones. No incluye vencimientos manuales ni garantiza"
-        + " liquidez; los saldos y movimientos de tarjetas pueden distorsionar la estimación.");
+        + " liquidez; los saldos y movimientos de tarjetas pueden distorsionar la estimación.",
+        income, expenses, recurringIncome, recurringExpenses, recurringGroups);
   }
 
   private static String patternKey(Movement m) {
