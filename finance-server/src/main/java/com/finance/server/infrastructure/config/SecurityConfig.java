@@ -62,7 +62,7 @@ public class SecurityConfig {
         .addFilterBefore(
             new OriginFilter(trustedOrigins),
             org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)
-        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/mcp", "/mcp/**"))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             a ->
