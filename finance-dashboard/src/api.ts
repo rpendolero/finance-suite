@@ -107,6 +107,11 @@ export type Forecast = {
     accountBalances: number;
     estimatedNetFlow: number;
     estimatedAccountBalance: number;
+    estimatedIncome?: number;
+    estimatedExpenses?: number;
+    recurringIncome?: number;
+    recurringExpenses?: number;
+    recurringPatterns?: number;
     limitations: string;
 };
 export type Recurring = {
