@@ -1,6 +1,13 @@
-# Finance Suite 0.5.13
+# Finance Suite 0.5.14
 
-## Novedades 0.5.13
+## Novedades 0.5.14
+
+- Previsión de saldo: ingresos y gastos previstos separados, además del balance neto.
+- Desglose de ingresos y gastos recurrentes detectados.
+- Corrección del texto literal `\\n` en el panel de previsión.
+- [Notas de versión 0.5.14](docs/RELEASE-0.5.14.md).
+
+## Novedades anteriores (0.5.13)
 
 - Gestión bancaria en modales, iconos y progreso centralizado en operaciones de sincronización.
 - Alta de productos con UUID generado por el servidor.
@@ -10,7 +17,7 @@
 
 
 
-## Novedades 0.5.13
+## Mejoras anteriores de movimientos
 
 - Edición de movimientos en modal y recategorización masiva en búsqueda e Ingresos y gastos.
 - Paginación configurable de 25, 50 o 100 elementos, con selección entre páginas.
