@@ -281,10 +281,12 @@ Con la sesión `admin`, abre **Importar**, elige el producto (cuenta o tarjeta),
 | ING / cuenta | Excel `.xls`, hoja `Movimientos` |
 | ING / tarjeta de crédito | Excel `.xls`, hoja `Tarjetas`, operaciones liquidadas |
 | Kutxabank / cuenta | Excel `.xls`, hoja `Listado` con columna `saldo` |
-| Kutxabank / tarjeta de crédito o débito | Excel `.xls`, hoja `Listado` con columna `importe de la operación` |
+| Kutxabank / tarjeta de crédito o débito | Excel `.xls`, hoja `Listado`: movimientos con `importe de la operación` o Consulta de extractos con `fecha de proceso` y `tarjeta` |
 | Cualquier producto, incluido PayPal | CSV normalizado UTF-8, separado por `;` |
 
 Los límites son 10 MB y 50.000 movimientos por fichero. No se admite `.xlsx` ni formatos nativos distintos de los anteriores. El resultado muestra leídos, importados y duplicados omitidos. Los movimientos se categorizan con las reglas existentes; puedes completar los pendientes en **Revisar**. Se conserva el signo del importe: ingresos positivos y gastos negativos. El fichero importa movimientos; no sustituye el saldo registrado del producto.
+
+En **Consulta de extractos** de tarjeta Kutxabank se omiten `saldo anterior`, `total dispuesto` y `total disponible` cuando son filas de resumen sin fechas ni tarjeta. `PAGO RECIBO` se importa como liquidación de tarjeta no computable, no como ingreso. Las compras a plazos conservan el concepto y la fecha original de operación que contiene el fichero, aunque pertenezca a un mes anterior al extracto.
 
 Se mantienen los identificadores estables del importador automático. Reimportar el mismo extracto en el mismo producto omite los identificadores ya existentes y conserva las clasificaciones manuales. Las operaciones idénticas repetidas dentro del extracto se conservan mediante un ordinal. La deduplicación utiliza `(productId, externalId)`; una importación manual y una sincronización de Enable Banking pueden proporcionar identificadores distintos para el mismo movimiento y requieren revisión. En CSV debes mantener el mismo `external_id` en futuras importaciones.
 

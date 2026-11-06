@@ -43,7 +43,8 @@ public final class NativeXlsStatementPreparationAdapter {
                         new IngAccountStatementFormat(),
                         new IngCreditCardStatementFormat(),
                         new KutxabankAccountStatementFormat(),
-                        new KutxabankCardStatementFormat()),
+                        new KutxabankCardStatementFormat(),
+                        new KutxabankCardExtractStatementFormat()),
                 new CanonicalCsvValidator());
     }
 
@@ -196,6 +197,7 @@ public final class NativeXlsStatementPreparationAdapter {
             for (int i = header + 1; i <= sheet.getLastRowNum(); i++) {
                 var row = sheet.getRow(i);
                 if (isBlank(row, format.headers().size(), formatter)) continue;
+                if (format.isSummaryRow(row, formatter)) continue;
                 if (++count > 50000) throw new IllegalArgumentException("Máximo 50000 movimientos");
                 try {
                     var movement = readMovement(row, format, formatter);
@@ -207,7 +209,7 @@ public final class NativeXlsStatementPreparationAdapter {
                             movement.description(),
                             "",
                             movement.category(),
-                            "NORMAL",
+                            movement.kind(),
                             movement.status());
                 } catch (Exception failure) {
                     throw new IllegalArgumentException(
@@ -247,7 +249,9 @@ public final class NativeXlsStatementPreparationAdapter {
                 balance,
                 description,
                 category.isBlank() ? "UNCLASSIFIED" : category,
-                format.movementStatus(row, formatter));
+                format.movementStatus(row, formatter),
+                format.movementKind(row, formatter),
+                format.identifierContext(row, formatter));
     }
 
     private LocalDate readDate(Cell cell, NativeStatementFormat format) {
@@ -279,6 +283,8 @@ public final class NativeXlsStatementPreparationAdapter {
                         + "\u001f"
                         + (movement.balance() == null ? "" : movement.balance() + "\u001f")
                         + movement.description();
+        if (!movement.identifierContext().isEmpty())
+            identity += "\u001f" + movement.identifierContext();
         String hash =
                 HexFormat.of()
                         .formatHex(
@@ -302,6 +308,8 @@ public final class NativeXlsStatementPreparationAdapter {
             BigDecimal balance,
             String description,
             String category,
-            String status) {
+            String status,
+            String kind,
+            String identifierContext) {
     }
 }
