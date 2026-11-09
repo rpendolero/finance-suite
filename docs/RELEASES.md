@@ -4,6 +4,8 @@ Los documentos `RELEASE-x.y.z.md` registran cambios de una versión; **un merge 
 
 ## Versiones recientes
 
+- [0.5.15](RELEASE-0.5.15.md) — importación de extractos de tarjeta Kutxabank y versiones unificadas.
+
 - [0.5.14](RELEASE-0.5.14.md) — desglose de ingresos y gastos previstos, corrección visual del panel.
 
 - [0.5.13](RELEASE-0.5.13.md) — previsión híbrida de ingresos y gastos recurrentes.
