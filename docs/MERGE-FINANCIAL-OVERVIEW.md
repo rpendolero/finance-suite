@@ -26,6 +26,10 @@ Durante el desarrollo se registraron:
 
 Sigue pendiente la inspección visual completa a 390/1440 px y E2E de todas las pantallas. El navegador del entorno local estaba bloqueado. El render estático, la paleta y una suite de movimientos no equivalen a esa inspección. No se declara acreditado el objetivo estético Awwwards.
 
+## Ajuste de prueba al integrar
+
+La primera CI de esta PR pasó el backend, las 35 comprobaciones de frontend y el build. Las primeras 15 comprobaciones de navegador pasaron; el caso de Inicio se detuvo esperando el título anterior «Evolución financiera». Se actualizan las dos esperas para comprobar que el gráfico real `.overview-history .recharts-wrapper` está visible, también tras un error de previsión. No se omite ni se relaja la comprobación del gráfico y no se modifica el código de la aplicación por este ajuste. La suite completa se vuelve a ejecutar en la CI antes de fusionar.
+
 ## Compatibilidad y alcance de la integración
 
 Se conserva la versión 0.5.15: la orden actual autoriza fusionar, no crear una versión o etiqueta. No hay migraciones ni cambios de columnas o de los contratos JSON Java. El tipado opcional `Movement.currency` refleja el campo ya devuelto por la API. Una consulta monetariamente inválida puede devolver 400 con detalle explicable. Se conservan las reglas de Devoluciones y No computable.

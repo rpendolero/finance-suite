@@ -383,7 +383,7 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Str
             await page.setViewportSize({width:1280, height:900});
             forecastBalance = 900; failForecast = false;
             await page.goto(origin + '?home');
-            await page.getByRole('heading', {name:'Evolución financiera', exact:true}).waitFor();
+            await page.locator('.overview-history .recharts-wrapper').waitFor();
             assert.equal(await page.locator('nav').getByRole('button', {name:'Evolución', exact:true}).count(), 0);
             await page.locator('.forecast > strong').waitFor();
             assert.equal((await page.locator('.forecast > strong').textContent()).replace(/\s/g, ''), '900,00€');
@@ -396,7 +396,7 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Str
         await test('a forecast API error stays in its panel and does not hide the home summary', async () => {
             failForecast = true; await page.reload();
             await page.locator('.forecast').getByRole('alert').filter({hasText:'Previsión temporalmente no disponible'}).waitFor();
-            await page.getByRole('heading', {name:'Evolución financiera', exact:true}).waitFor();
+            await page.locator('.overview-history .recharts-wrapper').waitFor();
             assert.equal(await page.locator('.forecast > strong').count(), 0);
             assert.equal(await page.getByText('No se han podido cargar los datos.', {exact:true}).count(), 0);
             failForecast = false;
