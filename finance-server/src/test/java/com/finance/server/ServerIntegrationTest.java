@@ -31,6 +31,22 @@ class ServerIntegrationTest {
   @MockitoBean JpaLedgerAdapter ledger;
 
   @Test
+  void currencyMismatchReturnsAnActionableProblemWithoutModifyingData() throws Exception {
+    var foreign = new Movement("foreign", "account", "foreign", java.time.LocalDate.of(2026, 10, 1),
+        new java.math.BigDecimal("-100"), "USD", "Synthetic purchase", "Synthetic shop", "UNCLASSIFIED",
+        Movement.Kind.NORMAL, Movement.Status.BOOKED);
+    when(ledger.movements(any(Period.class), isNull())).thenReturn(List.of(foreign));
+    when(ledger.products()).thenReturn(List.of());
+    for (String endpoint : List.of("/api/dashboard/overview", "/api/dashboard/flows", "/api/analysis/summary", "/api/analysis/forecast")) {
+      mvc.perform(get(endpoint).param("from", "2026-10-01").param("to", "2026-10-31")
+          .with(user("reader").roles("READER")))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Datos inválidos"))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("EUR sin conversión")));
+    }
+    verify(ledger, never()).updateClassifications(anyList());
+  }
+
+  @Test
   void requiresAuthentication() throws Exception {
     mvc.perform(get("/api/products")).andExpect(status().isForbidden());
   }

@@ -8,9 +8,10 @@ export default function ForecastCard({forecast, from, to, error}: {
 }) {
     const valid = forecast && Number.isInteger(forecast.days) && forecast.days > 0
         && [forecast.accountBalances, forecast.estimatedNetFlow, forecast.estimatedAccountBalance].every(Number.isFinite);
+    const historyTo = forecast && forecast.asOf < to ? forecast.asOf : to;
     return <section className="card forecast" aria-label="Previsión de saldo">
         <div className="title"><h2>Previsión de saldo</h2></div>
-        <p>Estimación de ingresos y gastos recurrentes, junto con el flujo variable del histórico.</p>
+        <p>Proyección orientativa del flujo computable sobre el saldo registrado. No es un saldo bancario confirmado.</p>
         {error ? <p role="alert">No se pudo cargar la previsión: {error}</p> : !forecast || !valid ?
             <div className="empty">No hay una previsión de saldo disponible para este período.</div> : <>
             <span className="forecast-label">Saldo estimado dentro de {forecast.days} días</span>
@@ -21,9 +22,9 @@ export default function ForecastCard({forecast, from, to, error}: {
                 {forecast.estimatedExpenses != null && <div><dt>Gastos previstos (estimados)</dt><dd className="neg">−{eur(forecast.estimatedExpenses)}</dd></div>}
                 <div><dt>Balance neto previsto</dt><dd className={forecast.estimatedNetFlow < 0 ? 'neg' : 'pos'}>{eur(forecast.estimatedNetFlow)}</dd></div>
             </dl>
-            <p>Histórico utilizado: {dateLabel(from)} — {dateLabel(to)}.<br/>Calculada el {dateLabel(forecast.asOf)}.</p>
+            <p>Histórico utilizado: {dateLabel(from)} — {dateLabel(historyTo)}.<br/>Calculada el {dateLabel(forecast.asOf)}.</p>
             {forecast.recurringPatterns != null && <p>Patrones recurrentes identificados: {forecast.recurringPatterns}. Ingresos recurrentes: {eur(forecast.recurringIncome ?? 0)}; gastos recurrentes: {eur(forecast.recurringExpenses ?? 0)}.</p>}
-            <p>{forecast.limitations}</p>
+            <details><summary>Hipótesis y límites de la estimación</summary><p>{forecast.limitations}</p></details>
         </>}
     </section>;
 }

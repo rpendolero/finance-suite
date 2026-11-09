@@ -8,9 +8,9 @@ import PeriodSelector from './PeriodSelector';
 import FinancialCalendar from './FinancialCalendar';
 import MovementSummaryModal from './MovementSummaryModal';
 import MovementSearch from './MovementSearch';
-import ForecastCard from './ForecastCard';
+import FinancialOverview from './FinancialOverview';
 import {periodRange} from './periods';
-import {useEffect, useState, type FormEvent} from 'react';
+import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {
     CalendarDays,
     CreditCard,
@@ -19,19 +19,16 @@ import {
     Landmark,
     LayoutDashboard,
     Lightbulb,
-    PiggyBank,
     ReceiptText,
     RefreshCw,
     Search,
     TrendingDown,
-    TrendingUp,
     TriangleAlert,
     Wallet,
     Tags,
     Upload,
     LogOut
 } from 'lucide-react';
-import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {
     AdminCategory,
     Anomaly,
@@ -51,40 +48,6 @@ import {
 } from './api';
 
 const eur = (n: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(Number(n || 0));
-
-const CATEGORY_COLORS = [
-    '#2563eb',
-    '#16a34a',
-    '#f59e0b',
-    '#dc2626',
-    '#7c3aed',
-    '#0891b2',
-    '#db2777',
-    '#65a30d',
-    '#ea580c',
-    '#4f46e5'
-];
-const dateLabel = (d: string) => new Intl.DateTimeFormat('es-ES', {
-    day: '2-digit',
-    month: 'short'
-}).format(new Date(d + 'T00:00:00'));
-
-function Card({title, value, sub, icon: Icon, tone = 'blue'}: {
-    title: string;
-    value: string;
-    sub: string;
-    icon: any;
-    tone?: string
-}) {
-    return <div className="card kpi">
-        <div className={'icon ' + tone}><Icon size={21}/></div>
-        <div><span className="muted">{title}</span><strong>{value}</strong><small>{sub}</small></div>
-    </div>
-}
-
-function Title({t}: { t: string }) {
-    return <div className="title"><h2>{t}</h2></div>
-}
 
 function Empty({children}: { children: string }) {
     return <div className="empty">{children}</div>
@@ -164,7 +127,13 @@ function Login({onLogin}: {onLogin: (session: any) => void}) {
 
 function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
     const [now] = useState(new Date()), [view, setView] = useState<View>(new URLSearchParams(window.location.search).has('banking') && session.roles?.includes('ADMIN') ? 'banking' : 'overview'), [overview, setOverview] = useState<Overview | null>(null), [trend, setTrend] = useState<TrendPoint[]>([]), [categories, setCategories] = useState<CategoryStat[]>([]), [products, setProducts] = useState<Product[]>([]), [movements, setMovements] = useState<Movement[]>([]), [insights, setInsights] = useState<Insight[]>([]), [forecast, setForecast] = useState<Forecast | null>(null), [productStats, setProductStats] = useState<ProductStat[]>([]), [calendar, setCalendar] = useState<CalendarDay[]>([]), [recurring, setRecurring] = useState<Recurring[]>([]), [anomalies, setAnomalies] = useState<Anomaly[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
+    const headingRef = useRef<HTMLHeadingElement>(null);
+    useEffect(() => {headingRef.current?.focus();}, [view]);
     const [forecastError, setForecastError] = useState('');
+    const [reload, setReload] = useState(0);
+    const [loadedContext, setLoadedContext] = useState('');
+    const [flowDirection, setFlowDirection] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
+    const openFlow = (direction: 'INCOME' | 'EXPENSE') => {setFlowDirection(direction); setView('expenses');};
     const initialPeriod = periodRange('THIS_MONTH', now);
     const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
     const [periodYear, setPeriodYear] = useState(now.getFullYear());
@@ -183,9 +152,11 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
             setTo(range.to);
         }
     };
+    const requestContext = `${from}:${to}:${classificationRevision}:${reload}`;
     useEffect(() => {
         let active = true;
         setLoading(true);
+        setOverview(null);
         setError('');
         setForecastError('');
         setForecast(null);
@@ -195,6 +166,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         });
         Promise.all([api.overview(from, to), api.trend(from, to, undefined, 'DAY'), api.categories(from, to), api.products(), api.movements(from, to, undefined, 10), api.insights(from, to), forecastRequest, api.productStats(from, to), api.calendar(from, to), api.recurring(from, to), api.anomalies(from, to)]).then(([o, t, c, p, m, i, f, ps, cal, rec, ano]) => {
             if (!active) return;
+            setLoadedContext(requestContext);
             setOverview(o);
             setTrend(t);
             setCategories(c);
@@ -212,7 +184,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         return () => {
             active = false
         }
-    }, [from, to, classificationRevision]);
+    }, [from, to, classificationRevision, reload]);
     const onProductCreated = () => {
         api.products().then(setProducts).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los productos'));
         api.productStats(from, to).then(setProductStats).catch(e => setError(e instanceof Error ? e.message : 'No se pudieron actualizar los saldos'));
@@ -222,7 +194,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         {movementSelection && <MovementSummaryModal selection={movementSelection} from={from} to={to} products={products} onClose={() => setMovementSelection(null)}/>}
         <aside>
             <div className="brand"><img className="brand-logo" src="/favicon.svg" alt="" /><span>Finance Suite</span></div>
-            <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''}
+            <nav>{menu.filter(([id]) => (id !== 'categoryAdmin' && id !== 'banking' && id !== 'imports') || session.roles?.includes('ADMIN')).map(([id, label, Icon]) => <button key={id} aria-current={view === id ? 'page' : undefined} className={view === id ? 'active' : ''}
                                                           onClick={() => setView(id)}><Icon/>{label}</button>)}</nav>
             <div className="version"><span
                 className={error ? 'dot' : 'dot live'}></span>{loading ? 'Cargando API' : error ? 'API no disponible' : 'API conectada'}<small>v{appVersion}</small>
@@ -230,7 +202,7 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
         </aside>
         <main>
             <header>
-                <div><h1>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
+                <div><h1 tabIndex={-1} ref={headingRef}>{menu.find(m => m[0] === view)?.[1]}</h1><p>Información financiera basada en los datos
                     importados</p></div>
                 <div className="header-actions">
                     <PeriodSelector preset={periodPreset} year={periodYear} currentYear={now.getFullYear()} from={from} to={to}
@@ -239,66 +211,14 @@ function Dashboard({session,onLogout}:{session:any;onLogout:()=>void}) {
                     <button type="button" className="logout" onClick={onLogout} title="Cerrar sesión"><LogOut size={17} aria-hidden="true"/><span>{session.username} · Salir</span></button>
                 </div>
             </header>
-            {error && <div className="api-error"><b>No se han podido cargar los datos.</b><span>{error}</span></div>}
+            {error && <div className="api-error" role="alert"><b>No se han podido cargar los datos.</b><span>{error}</span><button type="button" onClick={() => setReload(value => value + 1)}>Reintentar carga</button></div>}
             {view === 'imports' && session.roles?.includes('ADMIN') ? <StatementImport products={products} onImported={onClassified} onProductCreated={onProductCreated}/> : view === 'banking' && session.roles?.includes('ADMIN') ? <BankingConnections products={products} onProductCreated={onProductCreated}/> : view === 'expenses' ?
-                <FinancialFlowView from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
-                <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified} movementSelection={movementSelection}/> : loading ?
-                <div className="loading">Cargando información financiera…</div> : overview && view === 'overview' ? <>
-                    <div className="finance-page-hero finance-overview-hero"><div><span className="products-eyebrow">RESUMEN DE TU ECONOMÍA</span><h2>Tu situación financiera, de un vistazo</h2><p>Consulta los indicadores clave, la evolución de tus movimientos y el estado de tus finanzas en el período seleccionado.</p></div></div>
-                    <section className="kpis"><Card title="Saldo total" value={eur(overview.totalBalance)}
-                                                    sub="Disponible en cuentas y monederos" icon={Wallet} tone="green"/><Card
-                        title="Ingresos del período" value={eur(overview.income)} sub="Movimientos contabilizados"
-                        icon={TrendingUp}/><Card title="Gastos del período" value={eur(overview.expenses)}
-                                                 sub={eur(overview.averageDailyExpense) + ' / día'} icon={TrendingDown}
-                                                 tone="red"/><Card title="Ahorro e inversión" value={eur(overview.savings)}
-                                                                   sub={Number(overview.savingsRate).toFixed(1) + ' % de los ingresos aportados · cargos incluidos en gastos'}
-                                                                   icon={PiggyBank} tone="purple"/>
-                        <Card title="Pagos de financiación" value={eur(overview.financingPayments)}
-                              sub={eur(overview.financingUnallocated) + ' sin desglose · cargos incluidos en gastos'}
-                              icon={Landmark}/>
-                        <Card title="Flujo disponible del período" value={eur(overview.availableAfterAllocations)}
-                              sub="Ingresos − gastos; no es el saldo bancario"
-                              icon={Wallet} tone="green"/></section>
-                    <section className="grid3">
-                        <div className="card wide"><Title t="Evolución financiera"/>{trend.length ?
-                            <ResponsiveContainer width="100%" height={245}><BarChart data={trend}><CartesianGrid
-                                strokeDasharray="3 3" vertical={false}/><XAxis dataKey="date"
-                                                                               tickFormatter={dateLabel}/><YAxis/><Tooltip
-                                labelFormatter={(v) => dateLabel(String(v))} formatter={(v) => eur(Number(v))}/><Bar
-                                dataKey="income" name="Ingresos" fill="#42c997" radius={[5, 5, 0, 0]}/><Bar
-                                dataKey="expenses" name="Gastos" fill="#ff7474"
-                                radius={[5, 5, 0, 0]}/></BarChart></ResponsiveContainer> :
-                            <Empty>Sin movimientos en el período.</Empty>}</div>
-                        <div className="card"><Title t="Gastos por categoría"/>{categories.length ?
-                            <div className="pie"><ResponsiveContainer width="48%" height={220}><PieChart><Pie
-                                data={categories.filter(category => category.amount > 0)} dataKey="amount" nameKey="category" innerRadius={55}
-                                outerRadius={82}>{categories.filter(category => category.amount > 0).map((_, i) => <Cell key={i}
-                                fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}/>)}</Pie><Tooltip
-                                formatter={(v) => eur(Number(v))}/></PieChart></ResponsiveContainer>
-                                <div className="legend">{categories.filter(category => category.amount > 0).slice(0, 7).map((c, i) => <div key={c.category}>
-                                    <span className="legend-label"><i
-                                        style={{backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length]}}></i>{c.category}</span><b>{eur(c.amount)}</b></div>)}</div>
-                            </div> : <Empty>Sin gastos clasificados.</Empty>}<p className="flow-note">Las devoluciones positivas se incluyen en ingresos.</p></div>
-                        <ForecastCard forecast={forecast} from={from} to={to} error={forecastError}/>
-                    </section>
-                    <section className="bottom">
-                        <div className="card"><Title t="Movimientos recientes"/>{movements.length ?
-                            <div className="rows">{movements.slice(0, 5).map(m => <div className="row" key={m.id}>
-                                <span>{dateLabel(m.date)}</span><b>{m.merchant || m.description}</b><em
-                                className={Number(m.amount) > 0 ? 'pos' : 'neg'}>{eur(m.amount)}</em><small>{m.category || 'Sin categoría'}</small>
-                            </div>)}</div> : <Empty>Sin movimientos recientes.</Empty>}</div>
-                        <div className="card"><Title t="Financial Insights"/>{insights.length ? insights.map(i => <div
-                            key={i.code}
-                            className={'insight ' + (i.severity === 'POSITIVE' ? 'good' : i.severity === 'WARNING' ? 'warn' : '')}>
-                            <b>{i.title}</b><br/>{i.detail}</div>) : <Empty>No hay insights para este período.</Empty>}
-                        </div>
-                        <div className="card"><Title
-                            t="Productos financieros"/>{products.length ? products.slice(0, 5).map(p => <div
-                            className="product" key={p.id}>
-                            <Landmark/><span><b>{p.name}</b><small>{p.provider} · {p.type}{p.maskedPan ? ' · ' + p.maskedPan : ''}</small></span><strong>{eur(p.balance)}</strong>
-                        </div>) : <Empty>No hay productos registrados.</Empty>}</div>
-                    </section>
-                </> : !loading && overview ?
+                <FinancialFlowView key={flowDirection} initialDirection={flowDirection} from={from} to={to} products={products} canEdit={session.roles?.includes('ADMIN')} onClassified={onClassified}/> : (view === 'review' || view === 'movements') ?
+                <SectionView view={view} products={products} session={session} from={from} to={to} onClassified={onClassified} movementSelection={movementSelection}/> : (loading || loadedContext !== requestContext) && !error ?
+                <div className="loading" role="status">Cargando información financiera…</div> : overview && !error && loadedContext === requestContext && view === 'overview' ? <FinancialOverview overview={overview} trend={trend} categories={categories}
+                    products={products} movements={movements} forecast={forecast} forecastError={forecastError} from={from} to={to}
+                    onIncome={() => openFlow('INCOME')} onExpenses={() => openFlow('EXPENSE')}
+                    onProducts={() => setView('products')} onMovements={() => setView('movements')}/> : !loading && !error && overview ?
                     <SectionView view={view}
                                  productStats={productStats} products={products}
                                  recurring={recurring} calendar={calendar} insights={insights}

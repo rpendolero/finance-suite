@@ -21,15 +21,17 @@ public class LiquidityForecastService {
   public Forecast forecast(Period period, int days) {
     if (days < 1 || days > 90) throw new IllegalArgumentException("Horizonte entre 1 y 90 días");
     LocalDate today = LocalDate.now(clock);
+    LocalDate historyUntil = period.to().isAfter(today) ? today : period.to();
+    if (period.from().isAfter(historyUntil))
+      throw new IllegalArgumentException("No hay histórico transcurrido para calcular la previsión.");
     LocalDate until = today.plusDays(days);
     BigDecimal balance = ledger.products().stream()
         .filter(Product::liquid).map(Product::balance).reduce(ZERO, BigDecimal::add);
 
-    List<Movement> history = ledger.movements(period, null).stream()
+    List<Movement> history = FinancialMovementAllocation.requireEuroMovements(ledger.movements(period, null).stream()
         .filter(Movement::included)
         .filter(m -> !m.date().isAfter(today))
-        .filter(m -> "EUR".equalsIgnoreCase(m.currency()))
-        .toList();
+        .toList());
 
     // Forecast recurring income and expenses explicitly; extrapolate only the residual
     // variable flow so that monthly items are never counted twice.
@@ -62,7 +64,7 @@ public class LiquidityForecastService {
 
     List<Movement> variable = history.stream()
         .filter(m -> !recurringIds.contains(m.id())).toList();
-    long historicalDays = ChronoUnit.DAYS.between(period.from(), period.to()) + 1;
+    long historicalDays = ChronoUnit.DAYS.between(period.from(), historyUntil) + 1;
     BigDecimal factor = BigDecimal.valueOf(days);
     BigDecimal variableIncome = variable.stream().map(Movement::amount)
         .filter(a -> a.signum() > 0).reduce(ZERO, BigDecimal::add)
@@ -74,7 +76,8 @@ public class LiquidityForecastService {
     BigDecimal expenses = recurringExpenses.add(variableExpenses);
     BigDecimal net = income.subtract(expenses);
     return new Forecast(today, days, balance, net, balance.add(net),
-        "Estimación híbrida: " + recurringGroups
+        "Histórico efectivo: " + period.from() + " — " + historyUntil + " (" + historicalDays + " días). "
+        + "Estimación híbrida: " + recurringGroups
         + " patrones mensuales de ingresos/gastos detectados (mínimo 3 operaciones, intervalos de 25 a 35 días)"
         + " más proyección lineal de movimientos variables computables en EUR."
         + " Los patrones son heurísticos, no cobros confirmados. Excluye movimientos pendientes,"

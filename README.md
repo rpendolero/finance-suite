@@ -1,5 +1,9 @@
 # Finance Suite 0.5.15
 
+## Trabajo en rama: resumen financiero
+
+Cambios y límites de validación en [la auditoría del resumen](docs/FINANCIAL-OVERVIEW-AUDIT.md). Implementación en revisión, sin nueva versión; el objetivo visual y E2E permanece pendiente.
+
 ## Novedades 0.5.15
 
 - Importación de «Consulta de extractos» de tarjeta Kutxabank en Excel `.xls`.

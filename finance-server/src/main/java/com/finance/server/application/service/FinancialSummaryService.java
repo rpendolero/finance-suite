@@ -34,7 +34,8 @@ public class FinancialSummaryService {
   }
 
   private Summary summarize(Period p, List<Movement> all) {
-    var included = all.stream().filter(Movement::included).toList();
+    var included = FinancialMovementAllocation.requireEuroMovements(
+        all.stream().filter(Movement::included).toList());
     BigDecimal income = FinancialMovementAllocation.total(included,
         FinancialMovementAllocation::income, false);
     BigDecimal expenses = FinancialMovementAllocation.total(included,

@@ -14,6 +14,15 @@ public final class FinancialMovementAllocation {
 
   private FinancialMovementAllocation() {}
 
+  /** Fail explicitly instead of summing unlike units or silently dropping money. */
+  public static List<Movement> requireEuroMovements(List<Movement> movements) {
+    if (movements.stream().anyMatch(m -> !"EUR".equalsIgnoreCase(m.currency())))
+      throw new IllegalArgumentException(
+          "No se pueden agregar movimientos en monedas distintas de EUR sin conversión. "
+              + "Revisa la moneda de los movimientos del período; no se ha modificado ningún dato.");
+    return movements;
+  }
+
   public static boolean saving(Movement movement) {
     return movement.included() && isCategory(movement, "AHORRO_E_INVERSION", "AHORRO_INVERSION", "AHORRO_Y_INVERSION");
   }

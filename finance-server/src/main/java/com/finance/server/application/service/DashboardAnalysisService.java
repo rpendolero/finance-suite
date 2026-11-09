@@ -185,7 +185,8 @@ public class DashboardAnalysisService {
     }
 
     private List<Movement> included(Period p, String id) {
-        return ledger.movements(p, id).stream().filter(Movement::included).toList();
+        return FinancialMovementAllocation.requireEuroMovements(
+                ledger.movements(p, id).stream().filter(Movement::included).toList());
     }
 
     private List<Movement> expenseMovements(List<Movement> ms) {
