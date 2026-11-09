@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-classification-editor.cjs",
-    "test:movements": "node scripts/test-movement-search.cjs"
+    "test": "node scripts/test-classification-editor.cjs && node scripts/test-overview-render.cjs && node scripts/test-design-system.cjs",
+    "test:movements": "node scripts/test-movement-search.cjs",
+    "test:overview": "node scripts/test-overview.cjs",
+    "test:design": "node scripts/test-design-system.cjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

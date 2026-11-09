@@ -1,0 +1,21 @@
+Finance Suite — 2026-11-09
+Base master 18a3e89, branch improve/financial-overview
+
+Backend final: mvn -B -DargLine=-javaagent:/home/agent/.m2/repository/org/mockito/mockito-core/5.17.0/mockito-core-5.17.0.jar verify
+BUILD SUCCESS
+finance-server: {'tests': 138, 'failures': 0, 'errors': 0, 'skipped': 2}
+finance-importer: {'tests': 40, 'failures': 0, 'errors': 0, 'skipped': 5}
+Total: {'tests': 178, 'failures': 0, 'errors': 0, 'skipped': 7}
+Passed: 171
+Skipped: 1 Docker/MySQL test; 6 tests requiring private bank sample files.
+
+Before: same FinancialOverviewRegressionTest on master: 6 tests, 3 failures (currency / future history / divisor), 0 errors.
+After: 6 tests, 0 failures/errors; REST ProblemDetail test also passes.
+
+Frontend: npm test — 26 existing + 5 new render/palette checks passed.
+Frontend: npm run build — passed; pre-existing warning chunk >500 kB.
+git diff --check — passed.
+
+NOT VERIFIED: Playwright interactions, keyboard, 390/1440 layout, before/after screenshots, visual quality.
+Chromium: socket() Operation not permitted; remote browser: local server unreachable; official headless-shell download returned Site Unavailable HTML.
+API fixtures are synthetic; no bank connection or production environment used.

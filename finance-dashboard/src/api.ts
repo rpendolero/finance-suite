@@ -28,6 +28,7 @@ export type Movement = {
     productId: string;
     date: string;
     amount: number;
+    currency?: string;
     description: string;
     merchant?: string;
     normalizedMerchant?: string;

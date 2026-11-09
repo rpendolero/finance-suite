@@ -1,5 +1,15 @@
 # Finance Suite 0.5.15
 
+## Resumen financiero y previsión
+
+Cambios y límites de validación en [la auditoría del resumen](docs/FINANCIAL-OVERVIEW-AUDIT.md). Cambios incorporados sin incrementar la versión. La inspección visual completa y las pruebas E2E de todas las pantallas permanecen pendientes.
+
+## Sistema visual compartido
+
+Todas las pantallas utilizan la misma tipografía, paleta y componentes visuales. [Alcance, pruebas y validación visual pendiente](docs/VISUAL-SYSTEM.md).
+
+[Registro de integración del resumen y sistema visual](docs/MERGE-FINANCIAL-OVERVIEW.md).
+
 ## Novedades 0.5.15
 
 - Importación de «Consulta de extractos» de tarjeta Kutxabank en Excel `.xls`.
