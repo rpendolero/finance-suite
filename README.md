@@ -1,12 +1,14 @@
 # Finance Suite 0.5.15
 
-## Trabajo en rama: resumen financiero
+## Resumen financiero y previsión
 
-Cambios y límites de validación en [la auditoría del resumen](docs/FINANCIAL-OVERVIEW-AUDIT.md). Implementación en revisión, sin nueva versión; el objetivo visual y E2E permanece pendiente.
+Cambios y límites de validación en [la auditoría del resumen](docs/FINANCIAL-OVERVIEW-AUDIT.md). Cambios incorporados sin incrementar la versión. La inspección visual completa y las pruebas E2E de todas las pantallas permanecen pendientes.
 
-## Sistema visual compartido en revisión
+## Sistema visual compartido
 
 Todas las pantallas utilizan la misma tipografía, paleta y componentes visuales. [Alcance, pruebas y validación visual pendiente](docs/VISUAL-SYSTEM.md).
+
+[Registro de integración del resumen y sistema visual](docs/MERGE-FINANCIAL-OVERVIEW.md).
 
 ## Novedades 0.5.15
 
