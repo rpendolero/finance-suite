@@ -1,6 +1,14 @@
-# Finance Suite 0.5.14
+# Finance Suite 0.5.15
 
-## Novedades 0.5.14
+## Novedades 0.5.15
+
+- Importación de «Consulta de extractos» de tarjeta Kutxabank en Excel `.xls`.
+- Conservación de fechas, signos, cuotas y operaciones idénticas repetidas; reimportación sin duplicar identificadores existentes.
+- Liquidaciones `PAGO RECIBO` identificadas como no computables, sujetas a las reglas de clasificación existentes.
+- Versiones Maven, dashboard, puente MCP y scripts de arranque unificados en `0.5.15`.
+- [Notas de versión 0.5.15](docs/RELEASE-0.5.15.md).
+
+## Novedades anteriores (0.5.14)
 
 - Previsión de saldo: ingresos y gastos previstos separados, además del balance neto.
 - Desglose de ingresos y gastos recurrentes detectados.
@@ -123,8 +131,8 @@ mvn clean install
 
 Genera dos ejecutables independientes:
 
-- `finance-server/target/finance-server-0.5.6.jar`
-- `finance-importer/target/finance-importer-0.5.6.jar`
+- `finance-server/target/finance-server-0.5.15.jar`
+- `finance-importer/target/finance-importer-0.5.15.jar`
 
 La biblioteca de dominio queda dentro de cada JAR; no es necesario desplegar otro proceso. Los binarios generados no se incluyen en el ZIP. Docker puede compilar y ejecutar el servidor sin instalar JDK en esa máquina.
 
@@ -133,12 +141,12 @@ La biblioteca de dominio queda dentro de cada JAR; no es necesario desplegar otr
 Con Docker instalado y arrancado, utiliza el código de la versión que quieras publicar:
 
 ```bash
-./scripts/publish-docker.sh 0.5.6 TU_USUARIO_DOCKERHUB
+./scripts/publish-docker.sh 0.5.15 TU_USUARIO_DOCKERHUB
 ```
 
-El script comprueba que la versión coincide con el código, inicia sesión, construye el API y el frontend y publica `TU_USUARIO_DOCKERHUB/finance-server:0.5.6` y `TU_USUARIO_DOCKERHUB/finance-dashboard:0.5.6`. Construye ambas imágenes antes de iniciar las subidas y se detiene si falla un comando. Usa la raíz del proyecto como contexto del API y `finance-dashboard` como contexto del frontend, aunque se ejecute desde otro directorio.
+El script comprueba que la versión coincide con el código, inicia sesión, construye el API y el frontend y publica `TU_USUARIO_DOCKERHUB/finance-server:0.5.15` y `TU_USUARIO_DOCKERHUB/finance-dashboard:0.5.15`. Construye ambas imágenes antes de iniciar las subidas y se detiene si falla un comando. Usa la raíz del proyecto como contexto del API y `finance-dashboard` como contexto del frontend, aunque se ejecute desde otro directorio.
 
-Puedes añadir `server` o `frontend` como tercer argumento para publicar solo uno. Para otra versión, actualiza el código y sustituye `0.5.6` por la versión correspondiente. El script también funciona si lo guardas en la raíz y ejecutas `./publish-docker.sh`: detecta la raíz del proyecto buscando el POM y sus módulos. `./scripts/publish-docker.sh --help` muestra los ejemplos.
+Puedes añadir `server` o `frontend` como tercer argumento para publicar solo uno. Para otra versión, actualiza el código y sustituye `0.5.15` por la versión correspondiente. El script también funciona si lo guardas en la raíz y ejecutas `./publish-docker.sh`: detecta la raíz del proyecto buscando el POM y sus módulos. `./scripts/publish-docker.sh --help` muestra los ejemplos.
 
 ## 1. Servidor
 
@@ -281,10 +289,12 @@ Con la sesión `admin`, abre **Importar**, elige el producto (cuenta o tarjeta),
 | ING / cuenta | Excel `.xls`, hoja `Movimientos` |
 | ING / tarjeta de crédito | Excel `.xls`, hoja `Tarjetas`, operaciones liquidadas |
 | Kutxabank / cuenta | Excel `.xls`, hoja `Listado` con columna `saldo` |
-| Kutxabank / tarjeta de crédito o débito | Excel `.xls`, hoja `Listado` con columna `importe de la operación` |
+| Kutxabank / tarjeta de crédito o débito | Excel `.xls`, hoja `Listado`: movimientos con `importe de la operación` o Consulta de extractos con `fecha de proceso` y `tarjeta` |
 | Cualquier producto, incluido PayPal | CSV normalizado UTF-8, separado por `;` |
 
 Los límites son 10 MB y 50.000 movimientos por fichero. No se admite `.xlsx` ni formatos nativos distintos de los anteriores. El resultado muestra leídos, importados y duplicados omitidos. Los movimientos se categorizan con las reglas existentes; puedes completar los pendientes en **Revisar**. Se conserva el signo del importe: ingresos positivos y gastos negativos. El fichero importa movimientos; no sustituye el saldo registrado del producto.
+
+En **Consulta de extractos** de tarjeta Kutxabank se omiten `saldo anterior`, `total dispuesto` y `total disponible` cuando son filas de resumen sin fechas ni tarjeta. `PAGO RECIBO` se importa como liquidación de tarjeta no computable, no como ingreso. Las compras a plazos conservan el concepto y la fecha original de operación que contiene el fichero, aunque pertenezca a un mes anterior al extracto.
 
 Se mantienen los identificadores estables del importador automático. Reimportar el mismo extracto en el mismo producto omite los identificadores ya existentes y conserva las clasificaciones manuales. Las operaciones idénticas repetidas dentro del extracto se conservan mediante un ordinal. La deduplicación utiliza `(productId, externalId)`; una importación manual y una sincronización de Enable Banking pueden proporcionar identificadores distintos para el mismo movimiento y requieren revisión. En CSV debes mantener el mismo `external_id` en futuras importaciones.
 

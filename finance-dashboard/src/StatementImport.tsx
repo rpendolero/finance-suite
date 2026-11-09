@@ -88,6 +88,7 @@ export default function StatementImport({products, onImported, onProductCreated}
                 <button className="action" type="submit" disabled={busy || loadingFormats || !file || !selectedFormat || !productId}><Upload size={17}/>{busy ? 'Importando…' : 'Importar movimientos'}</button>
             </form>
             <p className="muted">Se aplican tus reglas de categorización y se omiten los movimientos cuyo identificador ya existe en este producto.</p>
+            {formatId === 'KUTXABANK_CARD_XLS' && <p className="muted">También admite Consulta de extractos de Kutxabank. Se omiten saldos y totales; PAGO RECIBO se registra como liquidación de tarjeta no computable. Se conserva la fecha de operación, incluidas las compras a plazos.</p>}
             {formatId === 'CSV' && <details className="statement-csv-help"><summary>Cómo preparar el CSV normalizado</summary>
                 <p>Usa UTF-8 y separa las columnas con punto y coma. Mantén el mismo external_id al repetir una importación. Los ingresos llevan importe positivo y los gastos negativo.</p>
                 <pre>external_id;date;amount;currency;description;merchant;category;kind;status{'\n'}compra-001;2026-10-09;-12.50;EUR;Compra;Comercio;UNCLASSIFIED;NORMAL;BOOKED</pre>

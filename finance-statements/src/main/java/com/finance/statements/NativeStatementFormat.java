@@ -44,6 +44,18 @@ public interface NativeStatementFormat {
 
   default void validateTitle(Sheet sheet, DataFormatter formatter) {}
 
+  default boolean isSummaryRow(Row row, DataFormatter formatter) {
+    return false;
+  }
+
+  default String identifierContext(Row row, DataFormatter formatter) {
+    return "";
+  }
+
+  default String movementKind(Row row, DataFormatter formatter) {
+    return "NORMAL";
+  }
+
   default String movementStatus(Row row, DataFormatter formatter) {
     return "BOOKED";
   }

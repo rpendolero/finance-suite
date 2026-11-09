@@ -16,4 +16,4 @@ La prueba MySQL/Testcontainers se adaptó al nuevo adaptador JPA y arranque con 
 
 Importador: contratos HTTP, conservación y limpieza de archivos, formatos ING y Kutxabank, selección de estrategia por cabecera, validación de fechas y una sola descarga de tarjeta Kutxabank. Se convirtieron las cuatro muestras reales sin incluirlas en el ZIP. La navegación bancaria sigue pendiente de comprobación en sesiones autenticadas reales.
 
-Para reproducir: `mvn clean verify`. Las cuatro pruebas opcionales de muestras se omiten sin `-Ding.sample`, `-Ding.card.sample`, `-Dkutxabank.sample` y `-Dkutxabank.card.sample`; los escenarios sintéticos permanecen activos.
+Para reproducir: `mvn clean verify`. Las pruebas opcionales de muestras se omiten sin `-Ding.sample`, `-Ding.card.sample`, `-Dkutxabank.sample`, `-Dkutxabank.card.sample` y `-Dkutxabank.card.extract.sample`; los escenarios sintéticos permanecen activos. La última propiedad valida tanto la conversión de Consulta de extractos como la carga idempotente por la API, sin incorporar el archivo privado al repositorio.

@@ -40,3 +40,21 @@ El XLS de tarjeta también usa la hoja Listado, pero sus cabeceras son `fecha`, 
 El formato no aporta estado ni tipo de operación: la conversión asigna BOOKED y NORMAL por defecto. Un importe positivo no se clasifica automáticamente como devolución. Tampoco demuestra que sea una tarjeta de crédito o débito; eso lo determina el producto. La deduplicación sin saldo usa fecha, importe, concepto y ocurrencia, con las limitaciones descritas anteriormente.
 
 Para verificar una muestra privada añade `-Dkutxabank.card.sample=/ruta/privada/tarjeta.xls`. No se incluyen los extractos en el ZIP. La navegación está pendiente de validación en sesión bancaria real.
+
+### Consulta de extractos de tarjeta
+
+También se reconoce el XLS de **Consulta de extractos**, hoja `Listado`, con cabecera `fecha de operación`, `fecha de proceso`, `concepto`, `importe`, `tarjeta`. En el frontend utiliza la misma opción **Kutxabank · tarjeta (Excel)** sobre el producto de tarjeta correspondiente. El importador automático detecta esta variante al preparar un XLS de Kutxabank; el recorrido de descarga sigue siendo el de movimientos descrito arriba.
+
+Se conservan fecha de operación, concepto e importe con su signo. `saldo anterior`, `total dispuesto` y `total disponible` se excluyen únicamente si las dos fechas y la tarjeta están vacías. Otras filas incompletas o fechas inválidas rechazan el fichero completo. Los resúmenes no alteran el saldo ni el crédito disponible del producto.
+
+`PAGO RECIBO` se identifica como `CARD_SETTLEMENT`; la clasificación del servidor lo asigna a `NO_COMPUTABLE / LIQUIDACION_TARJETA` salvo una regla explícita del usuario. Los demás movimientos se importan como `NORMAL` y pasan por las reglas habituales. Las cuotas conservan su texto y la fecha original de compra; no se deduce una fecha de liquidación mensual que el fichero no proporciona.
+
+Los identificadores de esta variante incluyen fecha de operación, importe, concepto, fecha de proceso, tarjeta y ocurrencia. La tarjeta solo participa en el hash, sin añadirse al concepto ni al CSV resultante. Reimportar el mismo extracto es idempotente y conserva operaciones idénticas repetidas. Las estrategias anteriores mantienen sus identificadores. Exportaciones con distinto formato o datos diferentes pueden generar identificadores distintos para una misma operación, y deben revisarse si se mezclan.
+
+La prueba opcional de la muestra de extractos verifica 75 movimientos y una segunda carga sin nuevas inserciones a través de la API:
+
+```bash
+mvn -B verify -Dkutxabank.card.extract.sample=/ruta/privada/extractos.xls
+```
+
+El archivo privado se usa solo en la ejecución local y no se incorpora al repositorio.
