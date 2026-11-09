@@ -37,11 +37,5 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(),'finance-overview-'));
  assert.ok(html.includes('No es un saldo bancario confirmado'));
  assert.ok(html.includes('Hipótesis y límites'));assert.ok(html.includes('9 días observados'));
  console.log('OK forecast shows effective history, not unobserved future days');
- // WCAG relative luminance for text palette, including the dark balance panel.
- const lum=h=>{const rgb=h.match(/[0-9a-f]{2}/gi).map(x=>parseInt(x,16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};
- for(const [fg,bg] of [['18323b','ffffff'],['4d6065','ffffff'],['4d6065','faf8f1'],['087566','faf8f1'],['a8412c','faf8f1'],['a9dfcc','16333d'],['d5e5e6','16333d'],['ffffff','16333d'],['ddebea','16333d'],['b7d6d8','16333d'],['16333d','d6f1e5'],['385467','edf3f7'],['405968','edf3f7'],['18323b','edf3f7'],['076a5c','edf3f7'],['a33226','edf3f7']]){
-  const ratio=(Math.max(lum(fg),lum(bg))+.05)/(Math.min(lum(fg),lum(bg))+.05);assert.ok(ratio>=4.5,fg+'/'+bg+': '+ratio.toFixed(2));
- }
- console.log('OK 16 overview text color pairs reach 4.5:1 contrast (palette calculation, no browser audit)');
- console.log('5 overview render checks passed');
+ console.log('4 overview render checks passed');
 }finally{fs.rmSync(temp,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exit(1)});

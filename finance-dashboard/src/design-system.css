@@ -1,0 +1,91 @@
+/* Canonical visual language for every Finance Suite screen and dialog. */
+:root {
+    --fs-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --fs-font-code: ui-monospace, SFMono-Regular, Consolas, monospace;
+    --fs-text-xs: 0.75rem;
+    --fs-text-sm: 0.8125rem;
+    --fs-text-base: 0.875rem;
+    --fs-text-lg: 1rem;
+    --fs-title-sm: 1.125rem;
+    --fs-title: 1.375rem;
+    --fs-title-lg: 1.75rem;
+    --fs-number: 2rem;
+    --fs-number-lg: 2.5rem;
+    --fs-number-hero: clamp(2.5rem, 4.5vw, 4rem);
+    --fs-weight-regular: 400;
+    --fs-weight-medium: 500;
+    --fs-weight-semibold: 600;
+    --fs-weight-bold: 700;
+    --fs-canvas: #f4f6f3;
+    --fs-surface: #ffffff;
+    --fs-surface-soft: #eef3ef;
+    --fs-surface-warm: #faf8f1;
+    --fs-surface-estimate: #edf3f7;
+    --fs-ink: #18323b;
+    --fs-muted: #4d6065;
+    --fs-border: #dbe3e0;
+    --fs-brand: #16333d;
+    --fs-brand-hover: #244752;
+    --fs-on-brand: #ffffff;
+    --fs-on-brand-muted: #d5e5e6;
+    --fs-on-brand-accent: #a9dfcc;
+    --fs-brand-border: #57717a;
+    --fs-primary: #087566;
+    --fs-primary-hover: #065e53;
+    --fs-primary-soft: #e6f3ed;
+    --fs-on-primary: #ffffff;
+    --fs-positive: #087566;
+    --fs-negative: #a8412c;
+    --fs-negative-hover: #8b3322;
+    --fs-negative-soft: #fff0eb;
+    --fs-warning: #875718;
+    --fs-warning-soft: #fff6e3;
+    --fs-info: #385467;
+    --fs-info-soft: #edf3f7;
+    --fs-focus: #167dca;
+    --fs-overlay: rgb(22 51 61 / 52%);
+    --fs-focus-ring: 0 0 0 3px rgb(22 125 202 / 18%);
+    --fs-shadow: 0 4px 20px rgb(22 51 61 / 5%);
+    --fs-shadow-hover: 0 10px 26px rgb(22 51 61 / 10%);
+    --fs-shadow-modal: 0 24px 70px rgb(22 51 61 / 24%);
+    --fs-radius-control: 10px;
+    --fs-radius-card: 16px;
+    --fs-radius-modal: 20px;
+    --fs-space-1: 4px;
+    --fs-space-2: 8px;
+    --fs-space-3: 12px;
+    --fs-space-4: 16px;
+    --fs-space-5: 20px;
+    --fs-space-6: 24px;
+    --fs-space-8: 32px;
+    --fs-space-10: 40px;
+    --fs-space-12: 48px;
+    --fs-space-page: 20px;
+    --fs-space-card: 24px;
+}
+
+html {font-size:16px; color-scheme:light; accent-color:var(--fs-primary)}
+body {font-family:var(--fs-font); font-size:var(--fs-text-base); line-height:1.5; font-variant-numeric:tabular-nums; text-rendering:optimizeLegibility}
+button,input,select,textarea {font:inherit; letter-spacing:inherit}
+button {min-height:44px; padding:10px 16px; border:1px solid var(--fs-primary); border-radius:var(--fs-radius-control); background:var(--fs-primary); color:var(--fs-on-primary); font-weight:var(--fs-weight-semibold); cursor:pointer; touch-action:manipulation}
+button.secondary {background:var(--fs-surface); color:var(--fs-primary); border-color:var(--fs-primary)}
+button.secondary:hover:not(:disabled) {background:var(--fs-primary-soft)}
+button:disabled {cursor:not-allowed; opacity:.55}
+input,select,textarea {min-height:44px; border:1px solid var(--fs-border); border-radius:var(--fs-radius-control); background:var(--fs-surface); color:var(--fs-ink); padding:10px 12px}
+input[type=checkbox],input[type=radio] {min-height:0; padding:0; accent-color:var(--fs-primary)}
+input::placeholder,textarea::placeholder {color:var(--fs-muted); opacity:1}
+input:read-only {background:var(--fs-surface-soft)}
+h1,h2,h3,h4 {font-family:inherit; font-weight:var(--fs-weight-semibold); line-height:1.25; letter-spacing:-.025em}
+h1 {font-size:var(--fs-title-lg)}
+h2 {font-size:var(--fs-title)}
+h3,h4 {font-size:var(--fs-title-sm)}
+p,small,label,button,select,input,summary,table,svg text {font-family:inherit}
+code {font-family:inherit; overflow-wrap:anywhere}
+pre,pre code {font-family:var(--fs-font-code)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visible {outline:3px solid var(--fs-focus); outline-offset:3px}
+button:not(:disabled),a,summary {transition:background-color .16s ease, border-color .16s ease, box-shadow .16s ease}
+.recharts-wrapper,.recharts-text,.recharts-legend-wrapper,.recharts-default-tooltip {font-family:var(--fs-font); font-size:var(--fs-text-xs)}
+
+@media(prefers-reduced-motion:reduce) {
+    *,*::before,*::after {animation:none!important; transition:none!important; scroll-behavior:auto!important}
+}

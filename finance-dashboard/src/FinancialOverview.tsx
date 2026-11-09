@@ -4,7 +4,6 @@ import {Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxi
 import {api, type CategoryStat, type Forecast, type Movement, type Overview, type Product, type TrendPoint} from './api';
 import {isComputableMovement} from './movementTotals';
 import ForecastCard from './ForecastCard';
-import './overview.css';
 
 const eur = (n: number) => new Intl.NumberFormat('es-ES', {style:'currency', currency:'EUR'}).format(n);
 const movementAmount = (m: Movement) => m.currency && /^[A-Z]{3}$/.test(m.currency)
@@ -69,10 +68,10 @@ export default function FinancialOverview({overview: o, trend, categories, produ
                 {trend.length ? <>
                     <div className="overview-chart" aria-label="Gráfico de ingresos y gastos en euros; valores en la tabla siguiente">
                         <ResponsiveContainer width="100%" height={260}><BarChart data={trend} accessibilityLayer margin={{left:0,right:8,top:16,bottom:0}}>
-                            <CartesianGrid vertical={false} stroke="#e2e7e6"/><XAxis dataKey="date" tickFormatter={day} tick={{fill:'#4d6065',fontSize:11}} axisLine={false} tickLine={false}/>
-                            <YAxis width={62} tickFormatter={n => new Intl.NumberFormat('es-ES',{notation:'compact'}).format(Number(n)) + ' €'} tick={{fill:'#4d6065',fontSize:11}} axisLine={false} tickLine={false}/>
-                            <Tooltip labelFormatter={v => day(String(v))} formatter={v => eur(Number(v))}/><Legend/>
-                            <Bar isAnimationActive={false} dataKey="income" name="Ingresos (€)" fill="#087f70" radius={[3,3,0,0]} maxBarSize={36}/><Bar isAnimationActive={false} dataKey="expenses" name="Gastos (€)" fill="#b94f37" radius={[3,3,0,0]} maxBarSize={36}/>
+                            <CartesianGrid vertical={false} stroke="var(--fs-border)"/><XAxis dataKey="date" tickFormatter={day} tick={{fill:'var(--fs-muted)',fontSize:'var(--fs-text-xs)'}} axisLine={false} tickLine={false}/>
+                            <YAxis width={62} tickFormatter={n => new Intl.NumberFormat('es-ES',{notation:'compact'}).format(Number(n)) + ' €'} tick={{fill:'var(--fs-muted)',fontSize:'var(--fs-text-xs)'}} axisLine={false} tickLine={false}/>
+                            <Tooltip contentStyle={{backgroundColor:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:'var(--fs-radius-control)',color:'var(--fs-ink)'}} labelFormatter={v => day(String(v))} formatter={v => eur(Number(v))}/><Legend/>
+                            <Bar isAnimationActive={false} dataKey="income" name="Ingresos (€)" fill="var(--fs-positive)" radius={[3,3,0,0]} maxBarSize={36}/><Bar isAnimationActive={false} dataKey="expenses" name="Gastos (€)" fill="var(--fs-negative)" radius={[3,3,0,0]} maxBarSize={36}/>
                         </BarChart></ResponsiveContainer>
                     </div>
                     <details className="overview-chart-data"><summary>Ver valores de la evolución</summary><table><caption>Ingresos y gastos computables · EUR · {range}</caption><thead><tr><th scope="col">Fecha</th><th scope="col">Ingresos</th><th scope="col">Gastos</th></tr></thead><tbody>{trend.map(t=><tr key={t.date}><th scope="row">{day(t.date)}</th><td>{eur(t.income)}</td><td>{eur(t.expenses)}</td></tr>)}</tbody></table></details>

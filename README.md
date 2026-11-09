@@ -4,6 +4,10 @@
 
 Cambios y límites de validación en [la auditoría del resumen](docs/FINANCIAL-OVERVIEW-AUDIT.md). Implementación en revisión, sin nueva versión; el objetivo visual y E2E permanece pendiente.
 
+## Sistema visual compartido en revisión
+
+Todas las pantallas utilizan la misma tipografía, paleta y componentes visuales. [Alcance, pruebas y validación visual pendiente](docs/VISUAL-SYSTEM.md).
+
 ## Novedades 0.5.15
 
 - Importación de «Consulta de extractos» de tarjeta Kutxabank en Excel `.xls`.

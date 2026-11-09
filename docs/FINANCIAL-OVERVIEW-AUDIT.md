@@ -6,6 +6,8 @@ La consulta a GitHub confirmó la PR #40 fusionada y ninguna PR abierta. No se d
 
 **Estado: implementación terminada; validación visual e interacción E2E incompletas.** No se ha publicado, fusionado, desplegado ni cambiado la versión. No se han utilizado cuentas bancarias ni datos personales.
 
+La revisión posterior solicitada para homogeneizar **todas** las pantallas sustituye el tratamiento tipográfico y los colores locales iniciales. Está documentada en [VISUAL-SYSTEM.md](VISUAL-SYSTEM.md); la validación visual sigue pendiente.
+
 ## Alcance seleccionado
 
 | Orden | Mejora | Impacto | Riesgo | Esfuerzo |
