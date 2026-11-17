@@ -4,7 +4,7 @@ La autenticación centralizada es **opcional**. Finance Suite conserva su
 login por contraseña en el perfil por defecto y utiliza Keycloak exclusivamente
 cuando se activa el perfil de Spring Boot `keycloak`. El servidor de
 identidad, realm, PostgreSQL y clientes se definen en
-`rpendolero/clima-home/keycloak/` (realm `myaihome`).
+`rpendolero/myaihome-identity/` (realm `myaihome`).
 
 ## Activación
 
