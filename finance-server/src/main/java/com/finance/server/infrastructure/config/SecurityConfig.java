@@ -61,7 +61,7 @@ public class SecurityConfig {
           String allowedOrigins,
       @Value("${finance.security.mcp-api-key-sha256:}") String mcpApiKeySha256,
       Environment environment,
-      FinanceKeycloakOidcUserService financeOidc,
+      FinanceKeycloakOidcUserLoader financeOidc,
       ObjectProvider<ClientRegistrationRepository> registrations)
       throws Exception {
     var trustedOrigins =
