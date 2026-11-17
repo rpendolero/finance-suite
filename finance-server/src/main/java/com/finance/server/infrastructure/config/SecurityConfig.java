@@ -1,6 +1,11 @@
 package com.finance.server.infrastructure.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,7 +29,12 @@ public class SecurityConfig {
       @Value("${finance.security.reader-password}") String reader,
       @Value("${finance.security.admin-password}") String admin,
       @Value("${finance.security.importer-password}") String importer,
-      PasswordEncoder encoder) {
+      PasswordEncoder encoder,
+      Environment environment) {
+    if (environment.acceptsProfiles(Profiles.of("keycloak"))) {
+      // No local password authentication when centralized identity is enabled.
+      return new InMemoryUserDetailsManager();
+    }
     if (reader.equals(admin)
         || reader.equals(importer)
         || admin.equals(importer))
@@ -49,7 +59,10 @@ public class SecurityConfig {
       HttpSecurity http,
       @Value("${finance.security.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
           String allowedOrigins,
-      @Value("${finance.security.mcp-api-key-sha256:}") String mcpApiKeySha256)
+      @Value("${finance.security.mcp-api-key-sha256:}") String mcpApiKeySha256,
+      Environment environment,
+      FinanceKeycloakOidcUserLoader financeOidc,
+      ObjectProvider<ClientRegistrationRepository> registrations)
       throws Exception {
     var trustedOrigins =
         java.util.Arrays.stream(allowedOrigins.split(","))
@@ -57,7 +70,8 @@ public class SecurityConfig {
             .filter(value -> !value.isBlank())
             .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
-    return http.addFilterBefore(new McpApiKeyFilter(mcpApiKeySha256),
+    boolean keycloakEnabled = environment.acceptsProfiles(Profiles.of("keycloak"));
+    http.addFilterBefore(new McpApiKeyFilter(mcpApiKeySha256),
             org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)
         .addFilterBefore(
             new OriginFilter(trustedOrigins),
@@ -66,7 +80,8 @@ public class SecurityConfig {
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/api/auth/login", "/api/v1/banking/enable-banking/callback").permitAll()
+                a.requestMatchers("/api/auth/login", "/api/auth/config", "/api/v1/banking/enable-banking/callback",
+                    "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
                     .requestMatchers("/api/v1/banking/enable-banking/authorizations", "/api/v1/banking/enable-banking/banks", "/api/v1/banking/connections/**").hasRole("ADMIN")
                     .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
                     .requestMatchers("/api/importer/**")
@@ -79,7 +94,18 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
                     .anyRequest()
                     .denyAll())
-        .httpBasic(b -> b.disable())
-        .build();
+        .httpBasic(b -> b.disable());
+    if (keycloakEnabled) {
+      if (registrations.getIfAvailable() == null) {
+        throw new IllegalStateException("Keycloak requires a valid OAuth2 client registration");
+      }
+      http.oauth2Login(oauth -> oauth
+          .loginPage("/")
+          .userInfoEndpoint(info -> info.oidcUserService(financeOidc))
+          .successHandler((request, response, authentication) -> response.sendRedirect("/"))
+          .failureHandler((request, response, error) ->
+              response.sendRedirect("/?loginError=keycloak")));
+    }
+    return http.build();
   }
 }

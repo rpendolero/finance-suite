@@ -4,6 +4,7 @@ export type BankConnection = {id: string; bankName: string; country: string; sta
 export type BankAccount = {id: string; externalAccountId: string; productId?: string; name: string; currency: string; cashAccountType?: string};
 export type BankSyncResult = {read: number; inserted: number; duplicates: number; balancesUpdated: number; balancesSkipped: number};
 export type UserSession = { username: string; roles: string[] };
+export type AuthConfig = { keycloakEnabled: boolean };
 export type Product = {
     id: string;
     name: string;
@@ -191,6 +192,7 @@ export const api = {
     discoverBankAccounts: (id: string) => sendJson<BankAccount[]>(`/api/v1/banking/connections/${encodeURIComponent(id)}/discover`, 'POST'),
     linkBankAccount: (id: string, externalAccountId: string, productId: string) => sendJson<BankAccount>(`/api/v1/banking/connections/${encodeURIComponent(id)}/accounts/link`, 'POST', {externalAccountId, productId}),
     syncBank: (id: string) => sendJson<BankSyncResult>(`/api/v1/banking/connections/${encodeURIComponent(id)}/sync`, 'POST'),
+    authConfig: () => json<AuthConfig>('/api/auth/config'),
     login: (username: string, password: string) => json<UserSession>('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password})}),
     me: () => json<UserSession>('/api/auth/me'),
     logout: () => json<void>('/api/auth/logout', {method: 'POST'}),

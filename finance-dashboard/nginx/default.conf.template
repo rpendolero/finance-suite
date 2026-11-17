@@ -28,6 +28,21 @@ server {
         proxy_read_timeout 180s;
     }
 
+    # OIDC authorization code flow endpoints must reach Spring Security,
+    # otherwise the SPA fallback would intercept the Keycloak callback.
+    location /oauth2/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+    location /login/oauth2/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
     # Spring AI MCP Streamable HTTP endpoint (POST/GET, SSE)
     location = /mcp {
         proxy_pass ${API_UPSTREAM};

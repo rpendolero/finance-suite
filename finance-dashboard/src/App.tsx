@@ -69,13 +69,19 @@ const menu: [View, string, any][] = [['overview', 'Inicio', LayoutDashboard], ['
 
 export default function App() {
     const [session,setSession]=useState<any>(null),[authLoading,setAuthLoading]=useState(true);
-    useEffect(()=>{api.me().then(setSession).catch(()=>setSession(null)).finally(()=>setAuthLoading(false))},[]);
+    const [keycloakEnabled,setKeycloakEnabled]=useState(false);
+    useEffect(()=>{
+        void Promise.allSettled([api.me(), api.authConfig()]).then(([identity, configuration])=>{
+            setSession(identity.status === 'fulfilled' ? identity.value : null);
+            setKeycloakEnabled(configuration.status === 'fulfilled' && configuration.value.keycloakEnabled);
+        }).finally(()=>setAuthLoading(false));
+    },[]);
     if(authLoading)return <div className="auth-screen"><div className="login-card"><div className="login-logo"><img src="/favicon.svg" alt="Finance Suite" /></div><h1>Finance Suite</h1><p>Comprobando sesión…</p></div></div>;
-    if(!session)return <Login onLogin={setSession}/>;
+    if(!session)return <Login onLogin={setSession} keycloakEnabled={keycloakEnabled}/>;
     return <Dashboard session={session} onLogout={()=>api.logout().finally(()=>setSession(null))}/>;
 }
 
-function Login({onLogin}: {onLogin: (session: any) => void}) {
+function Login({onLogin,keycloakEnabled}: {onLogin: (session: any) => void; keycloakEnabled: boolean}) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -91,6 +97,20 @@ function Login({onLogin}: {onLogin: (session: any) => void}) {
             .catch(() => setError('Usuario o contraseña incorrectos'))
             .finally(() => setBusy(false));
     };
+
+    if (keycloakEnabled) return <div className="auth-screen">
+        <div className="login-card">
+            <div className="login-logo"><img src="/favicon.svg" alt="Finance Suite" /></div>
+            <h1>Finance Suite</h1>
+            <p>Accede mediante la identidad central de My AI Home.</p>
+            {new URLSearchParams(window.location.search).get('loginError') === 'keycloak' &&
+                <p className="login-error" role="alert">No tienes permisos de Finance Suite o no se pudo completar el acceso.</p>}
+            <a className="login-keycloak" href="/oauth2/authorization/keycloak">
+                Continuar con mi cuenta
+            </a>
+            <p className="login-help">Google y usuario/contraseña se gestionan desde Keycloak. La cuenta necesita permisos específicos para consultar tus finanzas.</p>
+        </div>
+    </div>;
 
     return <div className="auth-screen">
         <form className="login-card" onSubmit={submit}>
