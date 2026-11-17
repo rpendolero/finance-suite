@@ -867,7 +867,7 @@ button{touch-action:manipulation}
 
 /* Central SSO entry point. The password form stays available only in local mode. */
 .login-keycloak{display:flex;justify-content:center;align-items:center;min-height:47px;padding:11px 16px;
-  border-radius:9px;background:#2563eb;color:#fff;font-weight:700;font-size:14px;text-decoration:none;margin:18px 0}
-.login-keycloak:hover{background:#174ac7;color:#fff}
-.login-keycloak:focus-visible{outline:3px solid #ffb94c;outline-offset:3px}
-.login-help{color:#66778f;font-size:12px;line-height:1.6}
+  border-radius:9px;background:var(--fs-primary);color:var(--fs-on-primary);font-weight:700;font-size:14px;text-decoration:none;margin:18px 0}
+.login-keycloak:hover{background:var(--fs-primary-hover);color:var(--fs-on-primary)}
+.login-keycloak:focus-visible{outline:3px solid var(--fs-focus);outline-offset:3px}
+.login-help{color:var(--fs-muted);font-size:12px;line-height:1.6}
