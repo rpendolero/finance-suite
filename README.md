@@ -11,7 +11,7 @@ mantiene el inicio de sesión por contraseña existente.
 
 Consulta [configuración, seguridad y pruebas de Keycloak](docs/KEYCLOAK-SSO.md).
 El servidor Keycloak y el import del realm están definidos en el repositorio
-`rpendolero/clima-home/keycloak/` y deben desplegarse previamente.
+`rpendolero/myaihome-identity/` y deben desplegarse previamente.
 
 
 ## Resumen financiero y previsión
