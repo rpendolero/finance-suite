@@ -1,5 +1,19 @@
 # Finance Suite 0.5.15
 
+## Autenticación centralizada opcional (Keycloak SSO)
+
+Finance Suite puede integrarse con el realm `myaihome` para compartir identidad
+y sesión con Clima Home y Atlas Cloud. El nuevo perfil
+`SPRING_PROFILES_ACTIVE=keycloak` añade login OIDC a través del
+servidor de identidad y autoriza **únicamente roles del cliente**
+`finance-suite` (`READER`, `IMPORTER`, `ADMIN`). El perfil normal
+mantiene el inicio de sesión por contraseña existente.
+
+Consulta [configuración, seguridad y pruebas de Keycloak](docs/KEYCLOAK-SSO.md).
+El servidor Keycloak y el import del realm están definidos en el repositorio
+`rpendolero/clima-home/keycloak/` y deben desplegarse previamente.
+
+
 ## Resumen financiero y previsión
 
 Cambios y límites de validación en [la auditoría del resumen](docs/FINANCIAL-OVERVIEW-AUDIT.md). Cambios incorporados sin incrementar la versión. La inspección visual completa y las pruebas E2E de todas las pantallas permanecen pendientes.
