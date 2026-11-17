@@ -1,4 +1,11 @@
 server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8081}
 spring:
