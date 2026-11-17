@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
@@ -32,7 +33,7 @@ public class FinanceKeycloakOidcUserService extends OidcUserService {
             throw new OAuth2AuthenticationException(new OAuth2Error("finance_role_required"),
                     "Verified Keycloak identity with Finance Suite roles is required");
         }
-        var authorities = new HashSet<>(user.getAuthorities());
+        Set<GrantedAuthority> authorities = new HashSet<>(user.getAuthorities());
         roles.forEach(role -> authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
         log.info("Finance SSO authorized with roles={}", roles);
         return user.getUserInfo() != null
